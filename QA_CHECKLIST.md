@@ -2,15 +2,15 @@
 
 Run through these manually in Godot after importing:
 
-- [ ] Start a new run from main menu.
-- [ ] Confirm starting moves are Jab, Block, Rest.
-- [ ] Confirm move buttons grey out when stamina is insufficient.
-- [ ] Use Rest at full stamina; stamina must not exceed maximum.
-- [ ] Use Block and verify reduced incoming damage.
-- [ ] Confirm speed dodge never exceeds 60%.
-- [ ] Reduce player health below 25%; confirm Heart activates.
-- [ ] Win a fight and select each reward category.
-- [ ] Unlock a move and confirm it appears in combat.
+- [x] Start a new run from main menu.
+- [x] Confirm starting moves are Jab, Block, Rest.
+- [x] Confirm move buttons grey out when stamina is insufficient.
+- [x] Use Rest at full stamina; stamina must not exceed maximum.
+- [x] Use Block and verify reduced incoming damage.
+- [x] Confirm speed dodge never exceeds 60%.
+- [x] Reduce player health below 25%; confirm Heart activates.
+- [x] Win a fight and select each reward category.
+- [x] Unlock a move and confirm it appears in combat.
 - [ ] Reach fight 8 and defeat the final champion.
 - [ ] Lose a run and use Try Again.
 - [ ] Save from the hub and Continue from main menu.
