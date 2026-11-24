@@ -55,6 +55,7 @@ var respect := 0
 var lifetime_respect := 0
 var run_seed := 0
 var menu_notice := ""
+var tutorial_step := 0
 
 var log_lines: Array[String] = []
 
@@ -425,6 +426,7 @@ func _show_main_menu() -> void:
 		_continue_run,
 		not FileAccess.file_exists(SAVE_PATH)
 	)
+	_button("FIGHTER TRAINING", _show_tutorial)
 	_button("CODEX", _show_codex)
 	_button("SETTINGS", _show_settings)
 
@@ -1894,6 +1896,57 @@ func _save_meta() -> void:
 # ---------------------------------------------------------
 # CODEX AND SETTINGS
 # ---------------------------------------------------------
+
+func _show_tutorial() -> void:
+	_disable_realtime_combat()
+	game_state = "tutorial"
+
+	var lessons := [
+		{
+			"title": "1 — READ THE TELL",
+			"body": "Before each turn, study the opponent's telegraph. Their stance and tell hint at the incoming action. Use that information to decide whether to attack, block, slip or use utility."
+		},
+		{
+			"title": "2 — MANAGE YOUR GAS",
+			"body": "Every move has a stamina cost. If you run out, your options shrink and the opponent can take control. Rest restores 24 stamina. The corner break between rounds restores 14."
+		},
+		{
+			"title": "3 — CHOOSE YOUR RESPONSE",
+			"body": "Attacks deal damage but can be risky. Block reduces incoming damage. Slip avoids the response and can trigger Second Wind. Feints disrupt the opponent; clinches drain their stamina."
+		},
+		{
+			"title": "4 — SURVIVE THE BOUT",
+			"body": "Each fight lasts up to three rounds of six turns. Knock the opponent out or win the judges' decision by finishing with more health. At 25% health, Heart gives you a comeback critical chance."
+		},
+		{
+			"title": "5 — BUILD YOUR RUN",
+			"body": "After a win, choose exactly one reward: a new move, an owned-move damage upgrade, an item or a stat upgrade. Ice heals between fights. Smelling Salts are a rare item reward that automatically revives you once when owned."
+		}
+	]
+
+	_heading("FIGHTER TRAINING", "Five things to know before you step into the ring.")
+	_label(lessons[tutorial_step].title, 18, Color(0.9, 0.36, 0.22))
+	_label(lessons[tutorial_step].body, 15)
+	_label("LESSON %d / %d" % [tutorial_step + 1, lessons.size()], 12, Color(0.68, 0.64, 0.60))
+
+	if tutorial_step > 0:
+		_button("PREVIOUS", _tutorial_previous)
+	if tutorial_step < lessons.size() - 1:
+		_button("NEXT LESSON", _tutorial_next)
+	else:
+		_button("START A NEW RUN", _new_run)
+	_button("BACK TO MAIN MENU", _show_main_menu)
+
+
+func _tutorial_next() -> void:
+	tutorial_step = mini(4, tutorial_step + 1)
+	_show_tutorial()
+
+
+func _tutorial_previous() -> void:
+	tutorial_step = maxi(0, tutorial_step - 1)
+	_show_tutorial()
+
 
 func _show_codex() -> void:
 	_disable_realtime_combat()
