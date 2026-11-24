@@ -416,6 +416,11 @@ func _new_run() -> void:
 	respect = 0
 	bribe_ready = false
 	heart_active = false
+	loaded_bonus = 0
+	loaded_tape_risk = false
+	energy_penalty_pending = false
+	next_fight_speed_bonus = 0.0
+	enemy_next_action.clear()
 	log_lines.clear()
 
 	player = {
