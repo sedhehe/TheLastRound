@@ -46,7 +46,7 @@ Regression checks added after the turn-based combat pass:
 - [ ] Confirm saving over an existing checkpoint replaces it successfully and the resulting file remains readable.
 - [ ] Confirm a malformed JSON save returns to the main menu with a recovery message instead of silently starting a new run.
 - [x] Confirm incomplete saves (missing fighter stats, invalid fight index, unknown move/item IDs) are rejected safely.
-- [x] Confirm the Fighter Training lessons navigate forward/backward, the final lesson starts a new run, and returning to the menu works.
+- [x] Legacy text-tutorial navigation check is superseded by the interactive coach spar.
 
 ## Phase 2 — tournament progression and item reliability
 - [x] Complete a reward selection and verify the next fight index increments exactly once.
@@ -98,7 +98,7 @@ Regression checks added after the turn-based combat pass:
 
 
 ## Phase 4 development — implemented, runtime QA pending
-- [x] Replace the text-only Fighter Training lessons with a playable coach spar reachable from the main menu.
+- [x] Replace the text-only Fighter Training lessons with a playable six-exchange coach spar reachable from the main menu.
 - [x] Reuse the turn-based move selection, stamina costs, telegraphs and enemy-response flow for practice.
 - [x] Script five coach exchanges and provide response feedback based on the player's selected move.
 - [x] Keep practice isolated from tournament progression, Respect, inventory rewards and run saves.
@@ -112,11 +112,11 @@ Regression checks added after the turn-based combat pass:
 - [ ] Confirm hub Save Run displays immediate success and failure feedback without requiring a menu transition.
 - [ ] Confirm an unsupported save version is rejected and preserved as underdog_save.corrupt.json.
 - [ ] Confirm a malformed save is quarantined and Continue is disabled afterward.
-- [ ] Confirm Fighter Training starts a five-exchange spar against the coach.
+- [ ] Confirm Fighter Training starts a six-exchange spar against the coach (one full training round).
 - [ ] Confirm each scripted coach tell and expected action appears in the correct order.
 - [ ] Confirm the coach gives relevant feedback after defensive, attack and stamina-management choices.
 - [ ] Confirm the practice move set includes Jab, Block, Rest, Slip, Feint, Clinch, Counter and Body Shot.
-- [ ] Confirm the spar ends after five exchanges and offers Spar Again, Start a New Run and Back to Main Menu.
+- [ ] Confirm the spar ends after six exchanges and offers Spar Again, Start a New Run and Back to Main Menu.
 - [ ] Confirm ending/restarting the spar does not alter run Respect, lifetime Respect, tournament progress, inventory or the run save.
 - [ ] Confirm leaving the spar returns cleanly to the main menu and starting a new run enters fight 1 normally.
 
@@ -124,10 +124,11 @@ Regression checks added after the turn-based combat pass:
 ## Phase 4 — Interactive coach spar
 
 Implementation checklist:
-- [x] Replace the read-through tutorial with a playable, five-exchange turn-based spar against a coach.
-- [x] Give the coach scripted tells for a heavy right, body shot, quick jab, repeat heavy right and recovery window.
+- [x] Replace the read-through tutorial with a playable, six-exchange turn-based spar against a coach (one full round).
+- [x] Give the coach six scripted tells: heavy right, body shot, quick jab, repeat heavy right, recovery window and combination.
 - [x] Expose a practice loadout covering core attack, defence, counter and utility actions.
 - [x] Display contextual coach feedback between exchanges.
+- [x] Keep the training session to one complete six-turn round, matching the main fight's six-turn round structure.
 - [x] Keep training state separate from the tournament and persistent run data.
 
 Runtime checks remain open above; implementation is not a claim of Godot runtime verification.
