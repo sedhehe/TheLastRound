@@ -31,6 +31,7 @@ Regression checks added after the turn-based combat pass:
 - [x] Confirm the bracket shows the upcoming opponent, including after Continue.
 - [x] Confirm Corner Ice cannot be used during a fight and remains available between fights.
 - [ ] Confirm Smelling Salts cannot be manually consumed and automatically revives the player once on a lethal hit.
+- [ ] Confirm the combat and hub UI clearly show Smelling Salts as READY before the revive and SPENT afterward.
 - [ ] Confirm Smelling Salts are removed after the revive and cannot trigger a second time.
 
 ## Phase 2 — tournament progression and item reliability
@@ -47,8 +48,9 @@ Regression checks added after the turn-based combat pass:
 - [ ] Confirm item rewards show their effect and when they can be used.
 - [x] Confirm long hub, combat, reward and Codex pages can be scrolled with the mouse wheel/trackpad.
 - [x] Confirm focused buttons remain reachable with keyboard navigation and the scroll follows focus.
-- [ ] Confirm every page opens at the top rather than retaining the previous page's scroll offset.
+- [x] Confirm every page opens at the top rather than retaining the previous page's scroll offset (user-tested).
 - [x] Confirm the Codex has a visible back-to-menu action at the top.
+- [ ] Confirm the expanded Codex item descriptions and tournament rules are readable and scroll correctly.
 - [x] Confirm each enemy archetype's special mechanic works and its tell gives a useful clue.
 - [ ] Confirm the hub scouting report matches the upcoming opponent's archetype and gives useful counterplay advice, including the final champion.
 
@@ -66,7 +68,7 @@ Regression checks added after the turn-based combat pass:
 - [x] Show move reward costs, accuracy, damage/effect and descriptions.
 - [x] Label owned-move rewards as upgrades and explain their player-damage increase.
 - [x] Include item usage timing in item reward choices.
-- [x] Place all menu, hub, combat and Codex content inside a responsive vertical ScrollContainer.
+- [x] Place all menu, hub, combat and Codex content inside a responsive vertical ScrollContainer (user-tested).
 - [x] Make the UI panel resize to the available viewport and follow keyboard focus while scrolling.
 - [x] Reset scroll position when changing screens and add a visible Codex back action at the top.
 - [x] Give the brawler, speedster, tank, counter-puncher, dirty fighter and final champion distinct turn-based combat effects.
