@@ -1,0 +1,182 @@
+[
+  {
+    "id": "jab",
+    "name": "Jab",
+    "cost": 8,
+    "damage": [
+      7,
+      11
+    ],
+    "accuracy": 94,
+    "kind": "attack",
+    "description": "Fast, efficient and reliable."
+  },
+  {
+    "id": "block",
+    "name": "Block",
+    "cost": 5,
+    "damage": [
+      0,
+      0
+    ],
+    "accuracy": 100,
+    "kind": "defense",
+    "description": "Brace for the incoming blow. Reduces damage this turn."
+  },
+  {
+    "id": "rest",
+    "name": "Rest",
+    "cost": 0,
+    "damage": [
+      0,
+      0
+    ],
+    "accuracy": 100,
+    "kind": "utility",
+    "description": "Recover 24 stamina, but leave yourself open."
+  },
+  {
+    "id": "hook",
+    "name": "Hook",
+    "cost": 16,
+    "damage": [
+      15,
+      22
+    ],
+    "accuracy": 82,
+    "kind": "attack",
+    "description": "Heavy side shot. Good against patient opponents."
+  },
+  {
+    "id": "uppercut",
+    "name": "Uppercut",
+    "cost": 20,
+    "damage": [
+      19,
+      27
+    ],
+    "accuracy": 76,
+    "kind": "attack",
+    "description": "High-risk power punch with knockdown potential."
+  },
+  {
+    "id": "haymaker",
+    "name": "Haymaker",
+    "cost": 27,
+    "damage": [
+      27,
+      38
+    ],
+    "accuracy": 65,
+    "kind": "attack",
+    "description": "Huge damage. Leaves you exhausted if it misses."
+  },
+  {
+    "id": "body_shot",
+    "name": "Body Shot",
+    "cost": 14,
+    "damage": [
+      10,
+      15
+    ],
+    "accuracy": 88,
+    "kind": "attack",
+    "description": "Damages opponent stamina as well as health."
+  },
+  {
+    "id": "overhand",
+    "name": "Overhand Right",
+    "cost": 22,
+    "damage": [
+      22,
+      30
+    ],
+    "accuracy": 72,
+    "kind": "attack",
+    "description": "A looping shot that can crack a guard."
+  },
+  {
+    "id": "counter",
+    "name": "Counter",
+    "cost": 13,
+    "damage": [
+      17,
+      25
+    ],
+    "accuracy": 88,
+    "kind": "counter",
+    "description": "Strong only when you correctly read the enemy tell."
+  },
+  {
+    "id": "slip",
+    "name": "Slip",
+    "cost": 12,
+    "damage": [
+      0,
+      0
+    ],
+    "accuracy": 100,
+    "kind": "defense",
+    "description": "Guaranteed evade against the next incoming attack."
+  },
+  {
+    "id": "feint",
+    "name": "Feint",
+    "cost": 10,
+    "damage": [
+      0,
+      0
+    ],
+    "accuracy": 100,
+    "kind": "utility",
+    "description": "Disrupt the opponent's tell and lower their next accuracy."
+  },
+  {
+    "id": "clinch",
+    "name": "Clinch",
+    "cost": 15,
+    "damage": [
+      0,
+      0
+    ],
+    "accuracy": 100,
+    "kind": "utility",
+    "description": "Break a combo and recover a little stamina."
+  },
+  {
+    "id": "one_two",
+    "name": "One-Two",
+    "cost": 21,
+    "damage": [
+      18,
+      25
+    ],
+    "accuracy": 84,
+    "kind": "attack",
+    "description": "Two quick punches; reliable pressure."
+  },
+  {
+    "id": "headbutt",
+    "name": "Headbutt",
+    "cost": 12,
+    "damage": [
+      14,
+      20
+    ],
+    "accuracy": 85,
+    "kind": "dirty",
+    "description": "Dirty damage with a chance of disqualification."
+  },
+  {
+    "id": "low_blow",
+    "name": "Low Blow",
+    "cost": 16,
+    "damage": [
+      18,
+      26
+    ],
+    "accuracy": 78,
+    "kind": "dirty",
+    "description": "Huge stamina damage; high disqualification risk."
+  }
+]

@@ -1,0 +1,68 @@
+[
+  {
+    "name": "Mick 'The Meter' Doyle",
+    "archetype": "Brawler",
+    "health": 82,
+    "stamina": 80,
+    "damage": 10,
+    "speed": 12,
+    "defence": 3,
+    "tell": "Loads up his right hand",
+    "trick": "aggressive"
+  },
+  {
+    "name": "Glassjaw Gary",
+    "archetype": "Speedster",
+    "health": 74,
+    "stamina": 105,
+    "damage": 9,
+    "speed": 24,
+    "defence": 2,
+    "tell": "Bounces lightly on his toes",
+    "trick": "quick"
+  },
+  {
+    "name": "Concrete Cal",
+    "archetype": "Tank",
+    "health": 125,
+    "stamina": 90,
+    "damage": 11,
+    "speed": 6,
+    "defence": 12,
+    "tell": "Tucks his chin behind his gloves",
+    "trick": "guard"
+  },
+  {
+    "name": "Silk Moreno",
+    "archetype": "Counter-puncher",
+    "health": 105,
+    "stamina": 100,
+    "damage": 13,
+    "speed": 18,
+    "defence": 7,
+    "tell": "Invites you forward with a loose guard",
+    "trick": "counter"
+  },
+  {
+    "name": "Razor Venn",
+    "archetype": "Dirty Fighter",
+    "health": 112,
+    "stamina": 95,
+    "damage": 14,
+    "speed": 14,
+    "defence": 6,
+    "tell": "Edges close with an elbow tucked",
+    "trick": "dirty"
+  },
+  {
+    "name": "The Undertaker",
+    "archetype": "Final Champion",
+    "health": 180,
+    "stamina": 130,
+    "damage": 17,
+    "speed": 20,
+    "defence": 12,
+    "tell": "Goes completely still",
+    "trick": "boss"
+  }
+]

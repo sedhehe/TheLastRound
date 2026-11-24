@@ -1,0 +1,50 @@
+[
+  {
+    "id": "vaseline",
+    "name": "Vaseline in the Eyes",
+    "description": "Opponent accuracy -15 for two turns.",
+    "effect": "blind"
+  },
+  {
+    "id": "rosin",
+    "name": "Rosin Dust",
+    "description": "Opponent loses 8 stamina each turn for two turns.",
+    "effect": "drain"
+  },
+  {
+    "id": "salts",
+    "name": "Smelling Salts",
+    "description": "Once per run, recover from a knockdown with 30 health.",
+    "effect": "revive"
+  },
+  {
+    "id": "energy",
+    "name": "Energy Drink",
+    "description": "Restore 35 stamina now; lose 10 next turn.",
+    "effect": "energy"
+  },
+  {
+    "id": "loaded_tape",
+    "name": "Loaded Tape",
+    "description": "Next landed attack deals +18 damage; 12% DQ risk.",
+    "effect": "loaded"
+  },
+  {
+    "id": "bribe",
+    "name": "Cheap-shot Bribe",
+    "description": "Your next dirty move cannot disqualify you.",
+    "effect": "bribe"
+  },
+  {
+    "id": "ice",
+    "name": "Corner Ice Pack",
+    "description": "Restore 22 health between fights.",
+    "effect": "heal"
+  },
+  {
+    "id": "crowd",
+    "name": "Crowd's Favourite",
+    "description": "Gain +5 speed for the next fight.",
+    "effect": "speed"
+  }
+]
