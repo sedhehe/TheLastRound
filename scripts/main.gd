@@ -56,6 +56,10 @@ var lifetime_respect := 0
 var run_seed := 0
 var menu_notice := ""
 var tutorial_step := 0
+var training_active := false
+var training_turn := 0
+var training_feedback := ""
+const TRAINING_EXCHANGES := 5
 
 var log_lines: Array[String] = []
 
@@ -408,6 +412,7 @@ func _heading(fighter_name: String, sub: String) -> void:
 # ---------------------------------------------------------
 
 func _show_main_menu() -> void:
+	training_active = false
 	game_state = "menu"
 	_disable_realtime_combat()
 
@@ -438,6 +443,7 @@ func _show_main_menu() -> void:
 
 
 func _new_run() -> void:
+	training_active = false
 	run_ended = false
 	run_seed = int(Time.get_unix_time_from_system())
 	rng.seed = run_seed
@@ -699,10 +705,9 @@ func _show_item_summary(include_active_effects: bool) -> void:
 # ---------------------------------------------------------
 
 func _show_combat() -> void:
-	_heading(
-		"FIGHT %d — %s" % [fight_index + 1, str(enemy.get("name", "OPPONENT"))],
-		"ROUND %d  |  TURN %d / 6" % [round_no, turn_no]
-	)
+	var combat_title := "COACHING SPAR — COACH" if training_active else "FIGHT %d — %s" % [fight_index + 1, str(enemy.get("name", "OPPONENT"))]
+	var combat_subtitle := "EXCHANGE %d / %d" % [training_turn + 1, TRAINING_EXCHANGES] if training_active else "ROUND %d  |  TURN %d / 6" % [round_no, turn_no]
+	_heading(combat_title, combat_subtitle)
 
 	_label(
 		"YOU     HP %d/%d     STA %d/%d" % [
@@ -714,7 +719,8 @@ func _show_combat() -> void:
 		16,
 		Color(0.55, 0.82, 0.95)
 	)
-	_show_salts_status()
+	if not training_active:
+		_show_salts_status()
 	_label(
 		"OPPONENT     HP %d/%d     STA %d/%d" % [
 			int(enemy.get("health", 0)),
@@ -726,7 +732,10 @@ func _show_combat() -> void:
 		Color(0.95, 0.62, 0.48)
 	)
 
-	_show_item_summary(true)
+	if not training_active:
+		_show_item_summary(true)
+	else:
+		_label("COACH'S CORNER: " + training_feedback, 14, Color(0.72, 0.86, 0.78))
 
 	var tell := str(enemy_next_action.get("tell", enemy.get("tell", "Studies your guard.")))
 	var action_name := str(enemy_next_action.get("name", "Unknown attack"))
@@ -778,7 +787,10 @@ func _show_combat() -> void:
 	for i in range(first_log, log_lines.size()):
 		_label("• " + log_lines[i], 12, Color(0.72, 0.68, 0.64))
 
-	_button("FORFEIT RUN", _forfeit_run)
+	if training_active:
+		_button("END TRAINING", _finish_training)
+	else:
+		_button("FORFEIT RUN", _forfeit_run)
 
 
 
@@ -803,6 +815,8 @@ func _player_move(id: String) -> void:
 		return
 
 	player_last_move_id = id
+	if training_active:
+		training_feedback = _training_feedback_for_move(id)
 	var move := _get_move(id)
 	if move.is_empty():
 		return
@@ -905,6 +919,15 @@ func _player_move(id: String) -> void:
 	player_blocking = false
 	player_slipping = false
 
+	if training_active and game_state == "combat":
+		training_turn += 1
+		if training_turn >= TRAINING_EXCHANGES:
+			_finish_training()
+			return
+		_prepare_enemy_telegraph()
+		_show_combat()
+		return
+
 	if game_state == "combat":
 		_check_round()
 		if game_state == "combat":
@@ -980,6 +1003,17 @@ func id_is_crit() -> bool:
 
 
 func _prepare_enemy_telegraph() -> void:
+	if training_active:
+		var drills: Array[Dictionary] = [
+			{"name": "Heavy Right", "tell": "Coach loads his right shoulder and draws the glove back.", "damage": 1.0, "accuracy": 100.0, "cost": 0.0},
+			{"name": "Body Shot", "tell": "Coach dips his level and turns toward your ribs.", "damage": 0.85, "accuracy": 100.0, "cost": 0.0},
+			{"name": "Quick Jab", "tell": "Coach steps in with a short, quick jab.", "damage": 0.65, "accuracy": 100.0, "cost": 0.0},
+			{"name": "Heavy Right", "tell": "Coach repeats the loaded right. He wants to see if you learned.", "damage": 1.0, "accuracy": 100.0, "cost": 0.0},
+			{"name": "Reset", "tell": "Coach lowers his gloves and gives you room to breathe.", "damage": 0.0, "accuracy": 100.0, "cost": 0.0}
+		]
+		enemy_next_action = drills[mini(training_turn, drills.size() - 1)].duplicate(true)
+		return
+
 	var trick := str(enemy.get("trick", "")).to_lower()
 	var archetype := str(enemy.get("archetype", "")).to_lower()
 	var options: Array[Dictionary] = []
@@ -1917,54 +1951,105 @@ func _save_meta() -> void:
 # ---------------------------------------------------------
 
 func _show_tutorial() -> void:
+	_start_training()
+
+
+func _start_training() -> void:
 	_disable_realtime_combat()
-	game_state = "tutorial"
+	training_active = true
+	training_turn = 0
+	training_feedback = "Coach: Watch my right shoulder. When I load the right, block or slip. Don't just trade punches."
+	game_state = "combat"
+	run_ended = false
+	fight_index = 0
+	round_no = 1
+	turn_no = 1
+	owned_moves = ["jab", "block", "rest", "slip", "feint", "clinch", "counter", "body_shot"]
+	inventory.clear()
+	passive = {"damage": 0.0, "health": 0.0, "stamina": 0.0, "defence": 0.0, "speed": 0.0, "slots": 0, "wind": 0}
+	player = {
+		"health": 100.0,
+		"max_health": 100.0,
+		"stamina": 100.0,
+		"max_stamina": 100.0,
+		"damage": 10.0,
+		"speed": 0.0,
+		"defence": 5.0,
+		"heart": false,
+		"knockdowns": 0
+	}
+	enemy = {
+		"name": "COACH",
+		"archetype": "Training Partner",
+		"health": 9999.0,
+		"max_health": 9999.0,
+		"stamina": 100.0,
+		"max_stamina": 100.0,
+		"damage": 7.0,
+		"speed": 0.0,
+		"defence": 0.0,
+		"tell": "Studies your guard.",
+		"trick": "training",
+		"accuracy": 100.0
+	}
+	player_blocking = false
+	player_slipping = false
+	enemy_blinded = 0
+	enemy_drained = 0
+	loaded_bonus = 0
+	loaded_tape_risk = false
+	energy_penalty_pending = false
+	revive_used = false
+	bribe_ready = false
+	heart_active = false
+	next_fight_speed_bonus = 0.0
+	player_last_move_id = ""
+	log_lines.clear()
+	if is_instance_valid(opponent_mat):
+		opponent_mat.albedo_color = Color(0.28, 0.38, 0.40)
+	_prepare_enemy_telegraph()
+	_show_combat()
 
-	var lessons := [
-		{
-			"title": "1 — READ THE TELL",
-			"body": "Before each turn, study the opponent's telegraph. Their stance and tell hint at the incoming action. Use that information to decide whether to attack, block, slip or use utility."
-		},
-		{
-			"title": "2 — MANAGE YOUR GAS",
-			"body": "Every move has a stamina cost. If you run out, your options shrink and the opponent can take control. Rest restores 24 stamina. The corner break between rounds restores 14."
-		},
-		{
-			"title": "3 — CHOOSE YOUR RESPONSE",
-			"body": "Attacks deal damage but can be risky. Block reduces incoming damage. Slip avoids the response and can trigger Second Wind. Feints disrupt the opponent; clinches drain their stamina."
-		},
-		{
-			"title": "4 — SURVIVE THE BOUT",
-			"body": "Each fight lasts up to three rounds of six turns. Knock the opponent out or win the judges' decision by finishing with more health. At 25% health, Heart gives you a comeback critical chance."
-		},
-		{
-			"title": "5 — BUILD YOUR RUN",
-			"body": "After a win, choose exactly one reward: a new move, an owned-move damage upgrade, an item or a stat upgrade. Ice heals between fights. Smelling Salts are a rare item reward that automatically revives you once when owned."
-		}
-	]
 
-	_heading("FIGHTER TRAINING", "Five things to know before you step into the ring.")
-	_label(lessons[tutorial_step].title, 18, Color(0.9, 0.36, 0.22))
-	_label(lessons[tutorial_step].body, 15)
-	_label("LESSON %d / %d" % [tutorial_step + 1, lessons.size()], 12, Color(0.68, 0.64, 0.60))
+func _training_feedback_for_move(id: String) -> String:
+	var incoming := str(enemy_next_action.get("name", ""))
+	if incoming == "Heavy Right":
+		if id in ["block", "slip"]:
+			return "Coach: Good. You respected the loaded right and defended instead of trading."
+		return "Coach: You attacked into the big tell. A block cuts damage; a slip avoids it."
+	if incoming == "Body Shot":
+		if id in ["block", "slip", "clinch"]:
+			return "Coach: Nice. You shut down the body attack. A clinch can break pressure and recover gas."
+		return "Coach: Watch the level change. Body shots punish an open guard."
+	if incoming == "Quick Jab":
+		if id == "rest":
+			return "Coach: Rest gets stamina back, but you leave yourself open. Pick the moment."
+		return "Coach: Good exchange. Keep an eye on stamina; every action has a cost."
+	if incoming == "Reset":
+		return "Coach: That's your breathing window. Rest now if your gas tank needs it."
+	if id == "counter":
+		return "Coach: Counters need a read. Match the tell before you spend the stamina."
+	return "Coach: Keep reading my shoulders. Don't spend stamina just because you can."
 
-	if tutorial_step > 0:
-		_button("PREVIOUS", _tutorial_previous)
-	if tutorial_step < lessons.size() - 1:
-		_button("NEXT LESSON", _tutorial_next)
-	else:
-		_button("START A NEW RUN", _new_run)
+
+func _finish_training() -> void:
+	if not training_active:
+		return
+	training_active = false
+	_disable_realtime_combat()
+	game_state = "training_complete"
+	_heading("SPAR COMPLETE", "That's the rhythm. Read first, then choose.")
+	_label("You completed a five-exchange coaching spar.", 17)
+	_label("WHAT TO TAKE INTO THE CIRCUIT", 18, Color(0.9, 0.36, 0.22))
+	_label("• Read the telegraph before selecting a move.")
+	_label("• Block reduces damage; Slip guarantees an evade against the next attack.")
+	_label("• Rest restores 24 stamina, but leaves you open to the coach's response.")
+	_label("• Clinch disrupts pressure, drains opponent stamina and gives you a little gas back.")
+	_label("• Spend stamina with a plan. A powerful move is useless when you're exhausted.")
+	_label("This was a practice bout. No run progress, Respect, items or save data were changed.", 13, Color(0.72, 0.82, 0.68))
+	_button("SPAR AGAIN", _start_training)
+	_button("START A NEW RUN", _new_run)
 	_button("BACK TO MAIN MENU", _show_main_menu)
-
-
-func _tutorial_next() -> void:
-	tutorial_step = mini(4, tutorial_step + 1)
-	_show_tutorial()
-
-
-func _tutorial_previous() -> void:
-	tutorial_step = maxi(0, tutorial_step - 1)
-	_show_tutorial()
 
 
 func _show_codex() -> void:
