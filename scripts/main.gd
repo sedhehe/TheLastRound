@@ -585,7 +585,8 @@ func _show_combat() -> void:
 			float(player.get("stamina", 0.0)) < cost
 		)
 
-	if not inventory.is_empty():
+	# Ice is a between-fight recovery item, not a mid-fight action.
+	if not inventory.is_empty() and str(inventory[0]) != "ice":
 		_button(
 			"USE ITEM: " + str(inventory[0]).replace("_", " "),
 			_use_item
@@ -1214,6 +1215,24 @@ func _after_reward() -> void:
 	_show_bracket()
 
 
+func _next_opponent_name() -> String:
+	if fight_index >= FIGHT_COUNT:
+		return "THE CROWN"
+
+	var template: Dictionary
+	if fight_index == 7 and enemy_templates.size() > 5:
+		template = enemy_templates[5]
+	elif fight_index >= 4 and enemy_templates.size() > 3:
+		var late_index := mini(3 + (fight_index % 3), enemy_templates.size() - 1)
+		template = enemy_templates[late_index]
+	else:
+		template = enemy_templates[fight_index % mini(3, enemy_templates.size())]
+
+	if fight_index == 7:
+		return "THE UNDERTAKER"
+	return str(template.get("name", "Unknown Fighter"))
+
+
 func _show_bracket() -> void:
 	game_state = "hub"
 	_disable_realtime_combat()
@@ -1228,10 +1247,7 @@ func _show_bracket() -> void:
 		respect
 	])
 
-	_label(
-		"NEXT OPPONENT: "
-		+ str(enemy.get("name", "Unknown"))
-	)
+	_label("NEXT OPPONENT: " + _next_opponent_name())
 
 	_label(
 		"BUILD: HP %d | STA %d | DMG %d | DEF %d | SPEED %d%%" % [
@@ -1277,6 +1293,10 @@ func _use_heal_between() -> void:
 
 func _use_item() -> void:
 	if inventory.is_empty():
+		return
+
+	# Ice packs are reserved for the hub between fights.
+	if game_state == "combat" and str(inventory[0]) == "ice":
 		return
 
 	var id: String = str(inventory.pop_front())
