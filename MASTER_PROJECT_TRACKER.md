@@ -165,7 +165,7 @@ The roster is a deliberate current implementation. Rematches scale with fight in
 - [ ] Full tournament bracket presentation.
 - [x] Add enemy archetype explanations to the Codex.
 - [x] Add Codex entries for all corner items and tournament rules.
-- [ ] Complete Codex entries for reward categories and move upgrade rules.
+- [x] Complete Codex entries for reward categories, move upgrades and current stat reward effects/trade-offs.
 - [ ] Settings/accessibility completeness.
 - [ ] Interactive tutorial.
 - [ ] Clear item/effect and reward information in the UI.
