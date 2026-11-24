@@ -57,6 +57,8 @@ var log_lines: Array[String] = []
 var root_ui: Control
 var panel: PanelContainer
 var content: VBoxContainer
+var ui_scroll: ScrollContainer
+var player_last_move_id := ""
 
 var arena_light: OmniLight3D
 var opponent_mesh: Node3D
@@ -269,14 +271,40 @@ func _build_ui() -> void:
 	root_ui.add_child(shade)
 
 	panel = PanelContainer.new()
-	panel.position = Vector2(35, 28)
-	panel.size = Vector2(500, 660)
 	panel.add_theme_stylebox_override("panel", _panel_style())
 	root_ui.add_child(panel)
 
+	ui_scroll = ScrollContainer.new()
+	ui_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	ui_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+	ui_scroll.follow_focus = true
+	ui_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	ui_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	panel.add_child(ui_scroll)
+
 	content = VBoxContainer.new()
 	content.add_theme_constant_override("separation", 10)
-	panel.add_child(content)
+	content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	ui_scroll.add_child(content)
+
+	root_ui.resized.connect(_layout_ui)
+	_layout_ui()
+
+
+func _layout_ui() -> void:
+	if not is_instance_valid(panel) or not is_instance_valid(root_ui):
+		return
+
+	var viewport_size := root_ui.size
+	var margin := 20.0
+	var available_width := maxf(240.0, viewport_size.x - margin * 2.0)
+	var available_height := maxf(180.0, viewport_size.y - margin * 2.0)
+
+	panel.position = Vector2(margin, margin)
+	panel.size = Vector2(
+		minf(500.0, available_width),
+		minf(660.0, available_height)
+	)
 
 
 func _panel_style() -> StyleBoxFlat:
@@ -469,6 +497,7 @@ func _start_fight() -> void:
 	player.speed = minf(60.0, float(player.get("speed", 0.0)) + next_fight_speed_bonus)
 	next_fight_speed_bonus = 0.0
 	enemy_next_action.clear()
+	player_last_move_id = ""
 	_disable_realtime_combat()
 
 	var roster_index := _opponent_template_index(fight_index)
@@ -631,7 +660,7 @@ func _show_item_summary(include_active_effects: bool) -> void:
 
 
 # ---------------------------------------------------------
-# REAL-TIME COMBAT SCREEN
+# TURN-BASED COMBAT SCREEN
 # ---------------------------------------------------------
 
 func _show_combat() -> void:
@@ -723,9 +752,7 @@ func _forfeit_run() -> void:
 
 
 # ---------------------------------------------------------
-# LEGACY TURN-BASED COMBAT HELPERS
-# Kept for compatibility with the original move and item data.
-# Real-time combat is currently handled by PlayerCombat and CombatManager.
+# TURN-BASED COMBAT RESOLUTION
 # ---------------------------------------------------------
 
 func _speed_chance(speed: float) -> float:
@@ -739,6 +766,7 @@ func _player_move(id: String) -> void:
 	if not owned_moves.has(id):
 		return
 
+	player_last_move_id = id
 	var move := _get_move(id)
 	if move.is_empty():
 		return
@@ -883,6 +911,12 @@ func _deal_player_damage(move: Dictionary, multiplier: float) -> void:
 		amount * (1.0 - float(enemy.defence) / 100.0)
 	)
 
+	# Tanks keep a compact guard while they have stamina. Exhaust them to
+	# remove this additional damage reduction.
+	if str(enemy.get("trick", "")) == "guard" and float(enemy.stamina) > 0.0:
+		reduced *= 0.88
+		_log("Their tight guard absorbs part of the impact.")
+
 	enemy.health = maxf(0.0, enemy.health - reduced)
 
 	if arena_visuals and arena_visuals.has_method("opponent_hit"):
@@ -987,8 +1021,12 @@ func _enemy_turn() -> void:
 		enemy_accuracy -= 15.0
 		enemy_blinded -= 1
 
+	var archetype_damage_bonus := 1.0
+	if str(enemy.get("trick", "")) == "aggressive" and str(action.get("name", "")) == "Heavy Right":
+		archetype_damage_bonus = 1.12
+
 	var enemy_damage := (
-		float(enemy.damage) * float(action.get("damage", 1.0))
+		float(enemy.damage) * float(action.get("damage", 1.0)) * archetype_damage_bonus
 		+ rng.randf_range(-2.0, 2.0)
 	)
 
@@ -1023,11 +1061,20 @@ func _enemy_turn() -> void:
 	if player_blocking:
 		damage *= 0.32
 
-	# Counter-punchers punish an attacking turn when the player neither blocks
-	# nor slips. This gives the archetype a distinct tactical identity.
-	if str(enemy.get("trick", "")) == "counter" and not player_blocking:
-		damage *= 1.15
-		_log("The counter-puncher catches your opening.")
+	# The speedster's flurries tax stamina when they get through.
+	if str(enemy.get("trick", "")) == "quick":
+		player.stamina = maxf(0.0, player.stamina - 4.0)
+		_log("The speedster's flurry leaves you winded.")
+
+	# The champion changes gears on the third and sixth turns of each round.
+	if str(enemy.get("trick", "")) == "boss" and turn_no in [3, 6]:
+		damage *= 1.18
+		_log("The champion's timed surge lands with extra force.")
+
+	var last_move := _get_move(player_last_move_id)
+	if str(enemy.get("trick", "")) == "counter" and str(last_move.get("kind", "")) == "attack":
+		damage *= 1.20
+		_log("The counter-puncher reads your committed attack and fires back.")
 
 	player.health = maxf(0.0, player.health - damage)
 
@@ -1434,6 +1481,7 @@ func _use_item(id: String) -> void:
 		return
 
 	inventory.remove_at(item_index)
+	player_last_move_id = "item"
 
 	match id:
 		"vaseline":
