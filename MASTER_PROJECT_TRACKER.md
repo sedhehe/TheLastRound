@@ -3,7 +3,7 @@
 **Project:** UNDERDOG  
 **Engine:** Godot 4.7  
 **Genre:** First-person-presented, turn-based boxing roguelike  
-**Tracker updated:** 24 November 2026  
+**Tracker updated:** 25 November 2026  
 **Repository:** https://github.com/sedhehe/UNDERDOG  
 **Active branch:** `main`  
 **Current priority:** Finish progression and tournament systems; defer visual/audio polish.
@@ -46,6 +46,9 @@
 
 - Turn-based combat was restored as the active combat flow; the real-time combat path is not the intended gameplay loop.
 - The user confirmed Phase 1 was working and asked development to continue.
+- Menu, hub, combat and Codex content now use a responsive vertical scroll container; the panel adapts to the viewport, follows keyboard focus and resets scroll on screen changes.
+- The Codex has a top-level back action and a guide to enemy archetype mechanics.
+- Enemy mechanics now differ: the brawler's Heavy Right hits harder; the speedster's landed attacks drain stamina; the tank's guard reduces incoming damage while it has stamina; the counter-puncher punishes committed attack moves; the dirty fighter drains stamina on a hit; and the final champion surges on turns 3 and 6.
 - Enemy telegraphs, stamina/action handling, Heart, rounds and decisions are part of the current turn-based combat foundation.
 - Corner Ice is reserved for between-fight use.
 - Smelling Salts are intended to trigger automatically on a lethal hit, not through a manual item button.
