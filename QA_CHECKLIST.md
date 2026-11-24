@@ -18,6 +18,9 @@ Run through these manually in Godot after importing:
 - [x] Attempt a dirty move and verify disqualification risk.
 - [x] Verify health never goes below zero and stamina never exceeds maximum.
 
+- [ ] Confirm Career Respect persists after restarting the game and increases only once when a run ends.
+- [ ] Confirm career rank thresholds: Unknown Fighter (0), Local Prospect (50), Known Contender (200), Circuit Headliner (500), Underground Legend (1000).
+
 Known next-stage tests:
 - deterministic seed replay
 - 10,000-run balance simulation
