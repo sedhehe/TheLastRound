@@ -25,3 +25,8 @@ Known next-stage tests:
 - every item effect and item-cap tests
 - judge decision tie-break handling
 - save-file corruption recovery
+
+
+Regression checks added after the turn-based combat pass:
+- [ ] Confirm the bracket shows the upcoming opponent, including after Continue.
+- [ ] Confirm Corner Ice cannot be used during a fight and remains available between fights.
