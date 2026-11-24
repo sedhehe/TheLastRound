@@ -34,10 +34,14 @@ Regression checks added after the turn-based combat pass:
 - [x] Confirm the bracket shows the upcoming opponent, including after Continue.
 - [x] Confirm Corner Ice cannot be used during a fight and remains available between fights.
 - [ ] Confirm Smelling Salts cannot be manually consumed and automatically revives the player once on a lethal hit.
-- [ ] Confirm the combat HUD and hub show a prominent LAST STAND READY status before the revive and SPENT afterward.
+- [ ] Confirm the combat HUD, hub and reward screen show READY when owned, SPENT after use, and NOT IN YOUR BAG when not owned.
 - [ ] Confirm the revive message remains visible in recent corner talk after the lethal hit.
 - [ ] Confirm Smelling Salts are removed after the revive and cannot trigger a second time.
+- [ ] Confirm a new run clearly reports NOT IN YOUR BAG until Salts are selected as an item reward.
+- [ ] Confirm the item reward pool does not offer duplicate Salts while owned or after the revive has been spent.
+- [ ] Confirm the corner bag slot count and full item acquisition message update correctly.
 - [ ] Confirm Career Respect perks unlock cumulatively at 50/200/500/1000 and apply only once on a fresh run.
+- [ ] Confirm repeated/overlapping run-end calls cannot award lifetime Respect more than once.
 - [ ] Confirm Continue does not stack Career Respect perks a second time.
 
 ## Phase 2 — tournament progression and item reliability
@@ -67,6 +71,10 @@ Regression checks added after the turn-based combat pass:
 - [x] Remove the reward-screen bypass so the tournament cannot advance without resolving the fight reward.
 - [x] Use one explicit eight-fight roster for both opponent selection and hub preview.
 - [x] Add a proper item/effect summary to the hub and combat UI.
+- [x] Always display Smelling Salts ownership state (READY / SPENT / NOT IN YOUR BAG) in combat, hub and rewards.
+- [x] Exclude already-owned or spent Smelling Salts from subsequent item rewards.
+- [x] Display corner-bag slot usage and full item names on acquisition.
+- [x] Make run-end processing idempotent to prevent duplicate career Respect awards.
 - [x] Add distinct reward descriptions and clearer upgrade choices.
 - [x] Implement a tournament opponent progression pass so each fight has a deliberate archetype and difficulty identity.
 - [x] Add item descriptions and usage timing to the hub inventory summary.
