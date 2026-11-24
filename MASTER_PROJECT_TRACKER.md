@@ -98,7 +98,8 @@ Legend:
 - [x] Expose each manually usable combat item with its own button; consume the selected item.
 - [x] Keep Ice and Smelling Salts out of manual combat-use actions.
 - [x] Add a clear item/effect summary to hub and combat UI.
-- [ ] Improve reward descriptions so move/stat/item choices communicate their actual effects and trade-offs.
+- [x] Improve move and item reward descriptions so choices communicate costs, accuracy, damage/effects and usage timing.
+- [ ] Improve stat reward descriptions and trade-offs where needed.
 - [ ] Finish regression coverage for move-slot overflow, duplicate upgrades, item capacity and every item effect.
 
 **Status:** In progress. Core progression mechanics exist; reward clarity and item/effect presentation are the next development targets.
@@ -222,11 +223,11 @@ Recent inventory/reward fixes are committed, but the corresponding unchecked reg
 
 **Milestone: Make progression choices readable and reliable.**
 
-1. Improve move reward choices with effect, stamina cost, accuracy/damage and whether the choice is new or an upgrade, using the actual data fields.
-2. Improve stat and item reward descriptions so the player can compare effects and trade-offs before choosing.
-3. Inspect the reward selection paths for duplicate move upgrade behavior and capped inventory edge cases.
+1. Inspect each enemy template and current telegraph/turn-resolution logic.
+2. Give the slugger, speedster, tank, counter-puncher, dirty fighter and final champion distinct tactical behavior without changing the turn-based structure.
+3. Ensure the tells communicate the behavior clearly enough for the player to respond strategically.
 4. Update `QA_CHECKLIST.md` alongside implementation.
-5. Once reward clarity is implemented, run one grouped regression pass covering Phase 2 and the full eight-fight run.
+5. After archetype behavior is in place, run one grouped regression pass covering progression and a complete eight-fight run.
 
 Do not begin visual/audio polish yet.
 
@@ -259,5 +260,5 @@ Open the project in Godot 4.7 and run with F5. Stop the running game before pull
 
 **Tracker status:** Active  
 **Current phase:** Phase 2 — Progression  
-**Next milestone:** Clearer move, stat and item reward choices  
+**Next milestone:** Distinct enemy archetype mechanics and tournament progression depth  
 **Visual/audio polish:** Deferred
