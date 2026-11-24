@@ -532,6 +532,76 @@ func _get_item_name(id: String) -> String:
 			return str(item.get("name", id))
 	return id.replace("_", " ").capitalize()
 
+func _get_item_data(id: String) -> Dictionary:
+	for item in item_templates:
+		if str(item.get("id", "")) == id:
+			return item
+	return {}
+
+
+func _item_timing(id: String) -> String:
+	match id:
+		"ice":
+			return "Between fights — restore 22 health in the hub."
+		"salts":
+			return "Passive — automatically revive once after a lethal hit."
+		"crowd":
+			return "Between fights — +5 speed for the next fight."
+		_:
+			return "Combat-use — activate during your turn."
+
+
+func _show_item_summary(include_active_effects: bool) -> void:
+	_label("CORNER BAG", 15, Color(0.9, 0.36, 0.22))
+
+	if inventory.is_empty():
+		_label("No items in your corner bag.", 12)
+	else:
+		for item_variant in inventory:
+			var item_id := str(item_variant)
+			var item_data := _get_item_data(item_id)
+			var item_name := str(item_data.get("name", _get_item_name(item_id)))
+			var description := str(item_data.get("description", "No description available."))
+			var status := _item_timing(item_id)
+
+			if item_id == "salts" and revive_used:
+				status += " Revive already used this run."
+
+			_label(
+				"%s — %s\n%s" % [item_name, description, status],
+				12,
+				Color(0.78, 0.73, 0.68)
+			)
+
+	if not include_active_effects:
+		return
+
+	var active_effects: Array[String] = []
+
+	if enemy_blinded > 0:
+		active_effects.append("Opponent accuracy reduced for %d more turn(s)." % enemy_blinded)
+	if enemy_drained > 0:
+		active_effects.append("Opponent loses 8 stamina for %d more turn(s)." % enemy_drained)
+	if loaded_bonus > 0:
+		active_effects.append("Next landed attack gains +%d damage." % loaded_bonus)
+	if loaded_tape_risk:
+		active_effects.append("Loaded tape disqualification risk is pending.")
+	if bribe_ready:
+		active_effects.append("Next dirty move is protected from disqualification.")
+	if energy_penalty_pending:
+		active_effects.append("Energy drink crash: lose 10 stamina after the enemy response.")
+	if next_fight_speed_bonus > 0.0:
+		active_effects.append("+%d speed is waiting for the next fight." % int(next_fight_speed_bonus))
+	if float(passive.get("wind", 0.0)) > 0.0:
+		active_effects.append("+%d stamina on a successful dodge." % int(passive.get("wind", 0.0)))
+
+	_label("ACTIVE EFFECTS", 15, Color(0.9, 0.36, 0.22))
+	if active_effects.is_empty():
+		_label("No temporary effects currently active.", 12)
+	else:
+		for effect in active_effects:
+			_label("• " + effect, 12, Color(0.82, 0.76, 0.68))
+
 
 # ---------------------------------------------------------
 # REAL-TIME COMBAT SCREEN
@@ -563,6 +633,8 @@ func _show_combat() -> void:
 		15,
 		Color(0.95, 0.62, 0.48)
 	)
+
+	_show_item_summary(true)
 
 	var tell := str(enemy_next_action.get("tell", enemy.get("tell", "Studies your guard.")))
 	var action_name := str(enemy_next_action.get("name", "Unknown attack"))
@@ -1283,10 +1355,7 @@ func _show_bracket() -> void:
 
 	_label("MOVES: " + ", ".join(owned_moves))
 
-	_label(
-		"ITEMS: "
-		+ (", ".join(inventory) if not inventory.is_empty() else "None")
-	)
+	_show_item_summary(false)
 
 	_button("ENTER THE RING", _start_fight)
 	_button(
