@@ -40,6 +40,8 @@ Regression checks added after the turn-based combat pass:
 - [x] Verify run save/continue preserves the current build and all pending effects.
 - [ ] Confirm every usable combat item has its own button, even when Ice or Smelling Salts are earlier in the inventory.
 - [ ] Confirm a full move loadout offers upgrades to owned moves rather than repeatedly offering an unselectable new move.
+- [ ] Confirm the hub item summary shows item names, descriptions and correct usage timing.
+- [ ] Confirm combat shows inventory details and accurately updates active temporary effects after item use.
 
 ## Phase 2 development — implemented
 - [x] Expose every combat-usable item separately; selecting one removes that specific item rather than always consuming the first inventory entry.
@@ -50,3 +52,5 @@ Regression checks added after the turn-based combat pass:
 - [ ] Add a proper item/effect summary to the hub and combat UI.
 - [ ] Add distinct reward descriptions and clearer upgrade choices.
 - [x] Implement a tournament opponent progression pass so each fight has a deliberate archetype and difficulty identity.
+- [x] Add item descriptions and usage timing to the hub inventory summary.
+- [x] Add combat inventory details and a live summary of temporary effects.
