@@ -38,3 +38,13 @@ Regression checks added after the turn-based combat pass:
 - [ ] Verify rewards cannot exceed the move-slot or inventory caps.
 - [ ] Verify each item has the intended timing: passive, combat-use, or between-fight.
 - [x] Verify run save/continue preserves the current build and all pending effects.
+- [ ] Confirm every usable combat item has its own button, even when Ice or Smelling Salts are earlier in the inventory.
+- [ ] Confirm a full move loadout offers upgrades to owned moves rather than repeatedly offering an unselectable new move.
+
+## Phase 2 development — implemented
+- [x] Expose every combat-usable item separately; selecting one removes that specific item rather than always consuming the first inventory entry.
+- [x] Keep Corner Ice (between-fight) and Smelling Salts (automatic revive) out of manual combat-use actions.
+- [x] When move slots are full, restrict move rewards to upgrades for moves already owned.
+- [ ] Add a proper item/effect summary to the hub and combat UI.
+- [ ] Add distinct reward descriptions and clearer upgrade choices.
+- [ ] Implement a tournament opponent progression pass so each fight has a deliberate archetype and difficulty identity.
