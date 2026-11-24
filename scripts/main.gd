@@ -1735,6 +1735,11 @@ func _save_run() -> void:
 	file.flush()
 	file.close()
 
+	# Godot's rename operation does not replace an existing destination on
+	# every platform, so remove the previous checkpoint before promoting temp.
+	if FileAccess.file_exists(SAVE_PATH):
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(SAVE_PATH))
+
 	var rename_error := DirAccess.rename_absolute(
 		ProjectSettings.globalize_path(temp_path),
 		ProjectSettings.globalize_path(SAVE_PATH)
