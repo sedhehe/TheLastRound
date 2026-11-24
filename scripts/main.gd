@@ -526,6 +526,13 @@ func _get_move(id: String) -> Dictionary:
 	return {}
 
 
+func _get_item_name(id: String) -> String:
+	for item in item_templates:
+		if str(item.get("id", "")) == id:
+			return str(item.get("name", id))
+	return id.replace("_", " ").capitalize()
+
+
 # ---------------------------------------------------------
 # REAL-TIME COMBAT SCREEN
 # ---------------------------------------------------------
@@ -585,16 +592,22 @@ func _show_combat() -> void:
 			float(player.get("stamina", 0.0)) < cost
 		)
 
-	# Ice is used between fights; Smelling Salts trigger automatically
-	# when a knockout would otherwise end the run.
-	if (
-		not inventory.is_empty()
-		and str(inventory[0]) not in ["ice", "salts"]
-	):
+	# Show every combat-usable item. Passive and between-fight items
+	# remain in the bag without blocking items stored behind them.
+	var usable_item_count := 0
+	for item_variant in inventory:
+		var item_id := str(item_variant)
+		if item_id in ["ice", "salts"]:
+			continue
+
+		usable_item_count += 1
 		_button(
-			"USE ITEM: " + str(inventory[0]).replace("_", " "),
-			_use_item
+			"USE ITEM: " + _get_item_name(item_id),
+			_use_item.bind(item_id)
 		)
+
+	if usable_item_count == 0 and not inventory.is_empty():
+		_label("CORNER ITEMS: Ice is saved for the hub; Smelling Salts trigger on a knockout.", 12)
 
 	_label("RECENT CORNER TALK", 13, Color(0.68, 0.58, 0.52))
 	var first_log := maxi(0, log_lines.size() - 3)
@@ -1016,10 +1029,14 @@ func _show_rewards() -> void:
 
 	var options: Array = []
 
+	var has_move_space := (
+		owned_moves.size() < 4 + int(passive.get("slots", 0))
+	)
 	var pool := moves.filter(
 		func(move):
 			var id := str(move.get("id", ""))
-			return not owned_moves.has(id) or id in ["jab", "block", "rest"]
+			# At the move cap, offer upgrades to owned moves only.
+			return owned_moves.has(id) or has_move_space
 	)
 
 	if fight_index < 3 and not pool.is_empty():
@@ -1295,21 +1312,20 @@ func _use_heal_between() -> void:
 # ITEMS
 # ---------------------------------------------------------
 
-func _use_item() -> void:
-	if inventory.is_empty():
-		return
-
-	# This action is only available during a fight.
+func _use_item(id: String) -> void:
+	# Combat items can only be activated during a fight.
 	if game_state != "combat":
 		return
 
-	var item_id := str(inventory[0])
-	# Ice is a between-fight recovery item. Smelling Salts are passive:
-	# they must stay in the bag until a knockout triggers their revive.
-	if item_id in ["ice", "salts"]:
+	# Passive Smelling Salts and between-fight Ice are never manually used.
+	if id in ["ice", "salts"]:
 		return
 
-	var id: String = str(inventory.pop_front())
+	var item_index := inventory.find(id)
+	if item_index == -1:
+		return
+
+	inventory.remove_at(item_index)
 
 	match id:
 		"vaseline":
@@ -1317,9 +1333,6 @@ func _use_item() -> void:
 
 		"rosin":
 			enemy_drained = 2
-
-		"salts":
-			revive_used = false
 
 		"energy":
 			player.stamina = minf(
@@ -1334,12 +1347,6 @@ func _use_item() -> void:
 
 		"bribe":
 			bribe_ready = true
-
-		"ice":
-			player.health = minf(
-				player.max_health,
-				player.health + 22.0
-			)
 
 		"crowd":
 			next_fight_speed_bonus = minf(5.0, 60.0 - float(player.get("speed", 0.0)))
