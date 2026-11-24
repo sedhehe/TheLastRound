@@ -64,6 +64,8 @@ Regression checks added after the turn-based combat pass:
 - [x] Confirm Codex reward categories, move upgrade rules and stat reward descriptions match the actual reward effects.
 - [x] Confirm each enemy archetype's special mechanic works and its tell gives a useful clue.
 - [ ] Confirm the hub scouting report matches the upcoming opponent's archetype and gives useful counterplay advice, including the final champion.
+- [ ] Confirm the hub bracket shows all eight bouts and correctly marks cleared, next and locked fights after Continue.
+- [ ] Confirm run summary career Respect and rank include the just-completed run award.
 
 ## Phase 2 development — implemented
 - [x] Expose every combat-usable item separately; selecting one removes that specific item rather than always consuming the first inventory entry.
