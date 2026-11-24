@@ -18,6 +18,23 @@
 - Rest restores 24 stamina and leaves the player open.
 - Six turns form a round; three rounds per fight.
 
+## Tournament opponent order
+
+The eight-fight circuit uses one explicit roster shared by fight setup and hub preview:
+
+| Fight | Opponent | Role |
+|---:|---|---|
+| 1 | Mick "The Meter" Doyle | Opening brawler |
+| 2 | Glassjaw Gary | Opening speedster |
+| 3 | Concrete Cal | Opening tank |
+| 4 | Silk Moreno | Opening counter-puncher |
+| 5 | Glassjaw Gary | Semi-final rematch, scaled up |
+| 6 | Concrete Cal | Semi-final rematch, scaled up |
+| 7 | Razor Venn | Title eliminator / dirty fighter |
+| 8 | The Undertaker | Final champion |
+
+Enemy health, stamina, damage, speed, and defence continue scaling with fight index, so rematches are intended to feel like tougher return bouts rather than fresh copies.
+
 ## Initial archetype strategies
 - Glass cannon: stack damage, accept low defence, finish fights quickly.
 - Evasive counterpuncher: prioritize speed and Counter/Slip, manage stamina.
