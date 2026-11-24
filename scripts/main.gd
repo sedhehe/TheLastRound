@@ -7,6 +7,7 @@ const MOVE_FILE = "res://data/moves.json"
 const ENEMY_FILE = "res://data/enemies.json"
 const ITEM_FILE = "res://data/items.json"
 const SAVE_PATH = "user://underdog_save.json"
+const META_PATH = "user://underdog_meta.json"
 
 const FIGHT_COUNT := 8
 # Four opening opponents, two rematches in the semi-finals, the eliminator,
@@ -50,6 +51,7 @@ var heart_active := false
 
 var game_state := "menu"
 var respect := 0
+var lifetime_respect := 0
 var run_seed := 0
 
 var log_lines: Array[String] = []
@@ -76,6 +78,7 @@ var enemy_start_position := Vector3.ZERO
 func _ready() -> void:
 	rng.randomize()
 
+	_load_meta()
 	moves = _read_json(MOVE_FILE)
 	enemy_templates = _read_json(ENEMY_FILE)
 	item_templates = _read_json(ITEM_FILE)
@@ -408,6 +411,7 @@ func _show_main_menu() -> void:
 	_heading("UNDERDOG", "NO CONTRACT. NO CORNER. NO WAY OUT.")
 	_label("An underground boxing roguelike.", 17)
 	_label("Eight fights stand between you and the Crown.", 14)
+	_label("CAREER RESPECT: %d  |  RANK: %s" % [lifetime_respect, _respect_rank()], 14, Color(0.88, 0.68, 0.38))
 
 	_button("NEW RUN", _new_run)
 	_button(
@@ -1599,6 +1603,7 @@ func _end_run(won: bool, reason: String) -> void:
 	)
 
 	_label("Respect earned this run: %d" % respect, 17)
+	_label("Career Respect: %d — %s" % [lifetime_respect, _respect_rank()], 14, Color(0.88, 0.68, 0.38))
 	_label("Final build: " + ", ".join(owned_moves))
 
 	_label(
@@ -1690,25 +1695,42 @@ func _continue_run() -> void:
 	_show_bracket()
 
 
+func _load_meta() -> void:
+	if not FileAccess.file_exists(META_PATH):
+		lifetime_respect = 0
+		return
+
+	var file := FileAccess.open(META_PATH, FileAccess.READ)
+	if file == null:
+		lifetime_respect = 0
+		return
+
+	var data = JSON.parse_string(file.get_as_text())
+	if data is Dictionary:
+		lifetime_respect = maxi(0, int(data.get("respect_total", 0)))
+	else:
+		lifetime_respect = 0
+
+
+func _respect_rank() -> String:
+	if lifetime_respect >= 1000:
+		return "UNDERGROUND LEGEND"
+	if lifetime_respect >= 500:
+		return "CIRCUIT HEADLINER"
+	if lifetime_respect >= 200:
+		return "KNOWN CONTENDER"
+	if lifetime_respect >= 50:
+		return "LOCAL PROSPECT"
+	return "UNKNOWN FIGHTER"
+
+
 func _save_meta() -> void:
-	var path := "user://underdog_meta.json"
-	var current := {"respect_total": respect}
-
-	if FileAccess.file_exists(path):
-		var old_file := FileAccess.open(path, FileAccess.READ)
-		var old_data = JSON.parse_string(
-			old_file.get_as_text()
-		) if old_file else {}
-
-		if old_data is Dictionary:
-			current["respect_total"] = (
-				int(old_data.get("respect_total", 0)) + respect
-			)
-
-	var file := FileAccess.open(path, FileAccess.WRITE)
+	lifetime_respect += respect
+	var data := {"respect_total": lifetime_respect}
+	var file := FileAccess.open(META_PATH, FileAccess.WRITE)
 
 	if file:
-		file.store_string(JSON.stringify(current))
+		file.store_string(JSON.stringify(data))
 
 
 # ---------------------------------------------------------
