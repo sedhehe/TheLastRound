@@ -1415,6 +1415,29 @@ func _next_opponent_name() -> String:
 	return str(enemy_templates[roster_index].get("name", "Unknown Fighter"))
 
 
+func _next_opponent_scouting_note() -> String:
+	var roster_index := _opponent_template_index(fight_index)
+	if roster_index < 0 or roster_index >= enemy_templates.size():
+		return "No scouting report is available."
+
+	var upcoming: Dictionary = enemy_templates[roster_index]
+	match str(upcoming.get("trick", "")).to_lower():
+		"aggressive":
+			return "Heavy right hands hit hard. Slip the loaded punch instead of trading."
+		"quick":
+			return "Fast flurries wear down stamina. Defend the rush and punish the recovery."
+		"guard":
+			return "A tight guard absorbs damage while stamina lasts. Use body shots and clinches to wear it down."
+		"counter":
+			return "Committed attack moves invite counters. Mix in defence, feints and utility."
+		"dirty":
+			return "Clean hits drain your stamina. Avoid wasting turns and protect your gas tank."
+		"boss":
+			return "The champion surges on turns 3 and 6. Keep stamina ready to defend those turns."
+		_:
+			return str(upcoming.get("tell", "Study the opponent's tell carefully."))
+
+
 func _show_bracket() -> void:
 	game_state = "hub"
 	_disable_realtime_combat()
@@ -1430,6 +1453,15 @@ func _show_bracket() -> void:
 	])
 
 	_label("NEXT OPPONENT: " + _next_opponent_name())
+
+	var preview_index := _opponent_template_index(fight_index)
+	if preview_index >= 0 and preview_index < enemy_templates.size():
+		var upcoming: Dictionary = enemy_templates[preview_index]
+		_label(
+			"STYLE: " + str(upcoming.get("archetype", "Unknown"))
+			+ " | " + str(upcoming.get("tell", "No tell recorded."))
+		)
+		_label("SCOUTING REPORT: " + _next_opponent_scouting_note(), 13, Color(0.82, 0.76, 0.68))
 
 	_label(
 		"BUILD: HP %d | STA %d | DMG %d | DEF %d | SPEED %d%%" % [
