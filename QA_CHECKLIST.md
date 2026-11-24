@@ -33,13 +33,13 @@ Known next-stage tests:
 Regression checks added after the turn-based combat pass:
 - [x] Confirm the bracket shows the upcoming opponent, including after Continue.
 - [x] Confirm Corner Ice cannot be used during a fight and remains available between fights.
-- [ ] Confirm Smelling Salts cannot be manually consumed and automatically revives the player once on a lethal hit.
-- [ ] Confirm the combat HUD, hub and reward screen show READY when owned, SPENT after use, and NOT IN YOUR BAG when not owned.
-- [ ] Confirm the revive message remains visible in recent corner talk after the lethal hit.
-- [ ] Confirm Smelling Salts are removed after the revive and cannot trigger a second time.
-- [ ] Confirm a new run clearly reports NOT IN YOUR BAG until Salts are selected as an item reward.
-- [ ] Confirm the item reward pool does not offer duplicate Salts while owned or after the revive has been spent.
-- [ ] Confirm the corner bag slot count and full item acquisition message update correctly.
+- [x] Confirm Smelling Salts cannot be manually consumed and automatically revives the player once on a lethal hit.
+- [x] Confirm the combat HUD, hub and reward screen show READY when owned, SPENT after use, and NOT IN YOUR BAG when not owned.
+- [x] Confirm the revive message remains visible in recent corner talk after the lethal hit.
+- [x] Confirm Smelling Salts are removed after the revive and cannot trigger a second time.
+- [x] Confirm a new run clearly reports NOT IN YOUR BAG until Salts are selected as an item reward.
+- [x] Confirm the item reward pool does not offer duplicate Salts while owned or after the revive has been spent.
+- [x] Confirm the corner bag slot count and full item acquisition message update correctly.
 - [ ] Confirm Career Respect perks unlock cumulatively at 50/200/500/1000 and apply only once on a fresh run.
 - [ ] Confirm repeated/overlapping run-end calls cannot award lifetime Respect more than once.
 - [ ] Confirm Continue does not stack Career Respect perks a second time.
