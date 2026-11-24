@@ -103,10 +103,15 @@ Regression checks added after the turn-based combat pass:
 - [x] Script five coach exchanges and provide response feedback based on the player's selected move.
 - [x] Keep practice isolated from tournament progression, Respect, inventory rewards and run saves.
 - [x] Write run checkpoints through a temporary file before promoting them to the save path.
-- [x] Validate loaded save structure, fight index, fighter stats, move IDs and item IDs before restoring a run.
+- [x] Show immediate save success/failure feedback from the hub checkpoint action.
+- [x] Validate loaded save structure, schema version, fight index, fighter stats, move IDs and item IDs before restoring a run.
+- [x] Preserve rejected save files in a quarantine file when recovery allows it.
 - [x] Return to the main menu with an explanatory message when a save is invalid instead of silently starting a fresh run.
 - [x] Verify checkpoint overwrite and malformed-save recovery in Godot.
 - [x] Verify the previous text tutorial navigation and start-run transitions in Godot (superseded by the coach spar).
+- [ ] Confirm hub Save Run displays immediate success and failure feedback without requiring a menu transition.
+- [ ] Confirm an unsupported save version is rejected and preserved as underdog_save.corrupt.json.
+- [ ] Confirm a malformed save is quarantined and Continue is disabled afterward.
 - [ ] Confirm Fighter Training starts a five-exchange spar against the coach.
 - [ ] Confirm each scripted coach tell and expected action appears in the correct order.
 - [ ] Confirm the coach gives relevant feedback after defensive, attack and stamina-management choices.
