@@ -55,6 +55,7 @@ var respect := 0
 var lifetime_respect := 0
 var run_seed := 0
 var menu_notice := ""
+var hub_notice := ""
 var tutorial_step := 0
 var training_active := false
 var training_turn := 0
@@ -1525,6 +1526,9 @@ func _show_bracket() -> void:
 		"THE CIRCUIT",
 		"Your name is getting around. Don't let it go to your head."
 	)
+	if not hub_notice.is_empty():
+		_label(hub_notice, 13, Color(0.72, 0.86, 0.78))
+		hub_notice = ""
 
 	_label("FIGHTS CLEARED: %d / 8     RESPECT: %d" % [
 		fight_index,
@@ -1764,6 +1768,9 @@ func _save_run() -> void:
 	var file := FileAccess.open(temp_path, FileAccess.WRITE)
 	if file == null:
 		push_error("Could not create temporary run save.")
+		hub_notice = "SAVE FAILED — could not create a checkpoint."
+		if game_state == "hub":
+			_show_bracket()
 		return
 
 	file.store_string(JSON.stringify(data))
@@ -1786,18 +1793,26 @@ func _save_run() -> void:
 		if backup_error != OK:
 			push_error("Could not back up previous run save. Error: %d" % backup_error)
 			DirAccess.remove_absolute(temp_absolute)
+			hub_notice = "SAVE FAILED — your previous checkpoint was left untouched."
+			if game_state == "hub":
+				_show_bracket()
 			return
 
 	var rename_error := DirAccess.rename_absolute(temp_absolute, save_absolute)
 	if rename_error != OK:
 		push_error("Could not replace run save. Error: %d" % rename_error)
 		DirAccess.remove_absolute(temp_absolute)
+		var restore_error := OK
 		if had_previous_save:
-			DirAccess.rename_absolute(backup_absolute, save_absolute)
+			restore_error = DirAccess.rename_absolute(backup_absolute, save_absolute)
+		hub_notice = "SAVE FAILED — previous checkpoint restored." if restore_error == OK else "SAVE FAILED — checkpoint restoration needs attention."
 	else:
 		if FileAccess.file_exists(backup_path):
 			DirAccess.remove_absolute(backup_absolute)
-		menu_notice = "RUN SAVED — your corner is waiting."
+		hub_notice = "RUN SAVED — your corner is waiting."
+
+	if game_state == "hub":
+		_show_bracket()
 
 
 func _continue_run() -> void:
@@ -1813,6 +1828,10 @@ func _continue_run() -> void:
 		return
 
 	var data: Dictionary = parsed
+	if int(data.get("version", -1)) != 2:
+		_reject_run_save("This run save uses an unsupported version.")
+		return
+
 	var saved_player = data.get("player", {})
 	var saved_moves = data.get("owned_moves", [])
 	var saved_inventory = data.get("inventory", [])
@@ -1874,8 +1893,20 @@ func _continue_run() -> void:
 
 func _reject_run_save(reason: String) -> void:
 	push_warning(reason)
-	DirAccess.remove_absolute(ProjectSettings.globalize_path(SAVE_PATH))
-	menu_notice = "SAVE UNAVAILABLE: %s Your old save was removed; start a fresh run." % reason
+	var save_absolute := ProjectSettings.globalize_path(SAVE_PATH)
+	var corrupt_path := "user://underdog_save.corrupt.json"
+	var corrupt_absolute := ProjectSettings.globalize_path(corrupt_path)
+	var quarantine_error := OK
+	if FileAccess.file_exists(SAVE_PATH):
+		if FileAccess.file_exists(corrupt_path):
+			DirAccess.remove_absolute(corrupt_absolute)
+		quarantine_error = DirAccess.rename_absolute(save_absolute, corrupt_absolute)
+
+	if quarantine_error == OK:
+		menu_notice = "SAVE UNAVAILABLE: %s Damaged save preserved as underdog_save.corrupt.json; start a fresh run." % reason
+	else:
+		menu_notice = "SAVE UNAVAILABLE: %s The damaged save could not be moved; the original file was left in place." % reason
+		push_error("Could not quarantine invalid run save. Error: %d" % quarantine_error)
 	_show_main_menu()
 
 
