@@ -36,7 +36,7 @@ The prototype is menu-driven:
 - Codex and basic visual settings.
 
 ## Prototype limitations
-This is a functional gameplay foundation, not a finished commercial release. The current build uses procedural primitive models and a compact UI. It does not yet include bespoke boxer animations, full controller remapping, production audio, a complete tutorial sequence, full bracket visualization, comprehensive meta-unlocks, or a polished CRT post-processing shader. Some item definitions are included as data before all have dedicated acquisition routes. These are suitable next development tasks.
+This is a functional gameplay foundation, not a finished commercial release. The current build uses procedural primitive models and a compact UI. It does not yet include bespoke boxer animations, full controller remapping, production audio, comprehensive meta-unlocks, or a polished CRT post-processing shader. Fighter Training now includes a playable coach spar; its pacing and feedback still need in-engine validation. Some item definitions are included as data before all have dedicated acquisition routes. These are suitable next development tasks.
 
 ## Design defaults
 - Eight fights per run.
