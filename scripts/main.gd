@@ -9,6 +9,9 @@ const ITEM_FILE = "res://data/items.json"
 const SAVE_PATH = "user://underdog_save.json"
 
 const FIGHT_COUNT := 8
+# Four opening opponents, two rematches in the semi-finals, the eliminator,
+# then the final champion. Rematches scale with fight_index.
+const FIGHT_ROSTER := [0, 1, 2, 3, 1, 2, 4, 5]
 
 var player_controller: PlayerController
 var player_combat: PlayerCombat
@@ -468,16 +471,13 @@ func _start_fight() -> void:
 	enemy_next_action.clear()
 	_disable_realtime_combat()
 
-	var template: Dictionary
+	var roster_index := _opponent_template_index(fight_index)
+	if roster_index < 0 or roster_index >= enemy_templates.size():
+		push_error("Tournament roster references a missing opponent.")
+		_end_run(false, "The next opponent could not be loaded.")
+		return
 
-	if fight_index == 7 and enemy_templates.size() > 5:
-		template = enemy_templates[5].duplicate(true)
-	elif fight_index >= 4 and enemy_templates.size() > 3:
-		var late_index := 3 + (fight_index % 3)
-		late_index = mini(late_index, enemy_templates.size() - 1)
-		template = enemy_templates[late_index].duplicate(true)
-	else:
-		template = enemy_templates[fight_index % mini(3, enemy_templates.size())].duplicate(true)
+	var template: Dictionary = enemy_templates[roster_index].duplicate(true)
 
 	var visual_scale := 1.0 + float(fight_index) * 0.115
 
@@ -1235,22 +1235,24 @@ func _after_reward() -> void:
 	_show_bracket()
 
 
+func _opponent_template_index(index: int) -> int:
+	if index < 0 or index >= FIGHT_ROSTER.size():
+		return -1
+	return int(FIGHT_ROSTER[index])
+
+
 func _next_opponent_name() -> String:
 	if fight_index >= FIGHT_COUNT:
 		return "THE CROWN"
 
-	var template: Dictionary
-	if fight_index == 7 and enemy_templates.size() > 5:
-		template = enemy_templates[5]
-	elif fight_index >= 4 and enemy_templates.size() > 3:
-		var late_index := mini(3 + (fight_index % 3), enemy_templates.size() - 1)
-		template = enemy_templates[late_index]
-	else:
-		template = enemy_templates[fight_index % mini(3, enemy_templates.size())]
+	var roster_index := _opponent_template_index(fight_index)
+	if roster_index < 0 or roster_index >= enemy_templates.size():
+		return "UNKNOWN FIGHTER"
 
-	if fight_index == 7:
+	if fight_index == FIGHT_COUNT - 1:
 		return "THE UNDERTAKER"
-	return str(template.get("name", "Unknown Fighter"))
+
+	return str(enemy_templates[roster_index].get("name", "Unknown Fighter"))
 
 
 func _show_bracket() -> void:
