@@ -12,9 +12,9 @@ Run through these manually in Godot after importing:
 - [x] Win a fight and select each reward category.
 - [x] Unlock a move and confirm it appears in combat.
 - [ ] Reach fight 8 and defeat the final champion.
-- [ ] Lose a run and use Try Again.
-- [ ] Save from the hub and Continue from main menu.
-- [ ] Use an item and verify it is consumed.
+- [x] Lose a run and use Try Again.
+- [x] Save from the hub and Continue from main menu.
+- [x] Use an item and verify it is consumed.
 - [ ] Attempt a dirty move and verify disqualification risk.
 - [ ] Verify health never goes below zero and stamina never exceeds maximum.
 
@@ -28,13 +28,13 @@ Known next-stage tests:
 
 
 Regression checks added after the turn-based combat pass:
-- [ ] Confirm the bracket shows the upcoming opponent, including after Continue.
-- [ ] Confirm Corner Ice cannot be used during a fight and remains available between fights.
+- [x] Confirm the bracket shows the upcoming opponent, including after Continue.
+- [x] Confirm Corner Ice cannot be used during a fight and remains available between fights.
 - [ ] Confirm Smelling Salts cannot be manually consumed and automatically revives the player once on a lethal hit.
 - [ ] Confirm Smelling Salts are removed after the revive and cannot trigger a second time.
 
 ## Phase 2 — tournament progression and item reliability
-- [ ] Complete a reward selection and verify the next fight index increments exactly once.
+- [x] Complete a reward selection and verify the next fight index increments exactly once.
 - [ ] Verify rewards cannot exceed the move-slot or inventory caps.
 - [ ] Verify each item has the intended timing: passive, combat-use, or between-fight.
-- [ ] Verify run save/continue preserves the current build and all pending effects.
+- [x] Verify run save/continue preserves the current build and all pending effects.
