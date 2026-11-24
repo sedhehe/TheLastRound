@@ -50,6 +50,7 @@ Regression checks added after the turn-based combat pass:
 - [ ] Confirm every page opens at the top rather than retaining the previous page's scroll offset.
 - [ ] Confirm the Codex has a visible back-to-menu action at the top.
 - [ ] Confirm each enemy archetype's special mechanic works and its tell gives a useful clue.
+- [ ] Confirm the hub scouting report matches the upcoming opponent's archetype and gives useful counterplay advice, including the final champion.
 
 ## Phase 2 development — implemented
 - [x] Expose every combat-usable item separately; selecting one removes that specific item rather than always consuming the first inventory entry.
@@ -70,3 +71,4 @@ Regression checks added after the turn-based combat pass:
 - [x] Reset scroll position when changing screens and add a visible Codex back action at the top.
 - [x] Give the brawler, speedster, tank, counter-puncher, dirty fighter and final champion distinct turn-based combat effects.
 - [x] Add enemy archetype explanations to the Codex.
+- [x] Add a tactical scouting report for the next opponent to the hub.
