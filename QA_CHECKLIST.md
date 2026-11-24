@@ -30,3 +30,11 @@ Known next-stage tests:
 Regression checks added after the turn-based combat pass:
 - [ ] Confirm the bracket shows the upcoming opponent, including after Continue.
 - [ ] Confirm Corner Ice cannot be used during a fight and remains available between fights.
+- [ ] Confirm Smelling Salts cannot be manually consumed and automatically revives the player once on a lethal hit.
+- [ ] Confirm Smelling Salts are removed after the revive and cannot trigger a second time.
+
+## Phase 2 — tournament progression and item reliability
+- [ ] Complete a reward selection and verify the next fight index increments exactly once.
+- [ ] Verify rewards cannot exceed the move-slot or inventory caps.
+- [ ] Verify each item has the intended timing: passive, combat-use, or between-fight.
+- [ ] Verify run save/continue preserves the current build and all pending effects.
