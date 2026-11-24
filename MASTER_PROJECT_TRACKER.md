@@ -6,7 +6,7 @@
 **Tracker updated:** 25 November 2026  
 **Repository:** https://github.com/sedhehe/UNDERDOG  
 **Active branch:** `main`  
-**Current priority:** Finish progression and tournament systems; defer visual/audio polish.
+**Current priority:** Complete remaining core gameplay, interactive training and save/UI lifecycle; defer visual/audio polish.
 
 ---
 
@@ -34,7 +34,7 @@
 
 ## 2. Current overall status
 
-**Current milestone:** Phase 4 — tutorial, save reliability and functional UI  
+**Current milestone:** Phase 4 — interactive coach training, save reliability and functional UI  
 **Architecture correction:** Complete  
 **Phase 1 core combat:** Implemented and user-confirmed in Godot  
 **Phase 2 progression:** Partially implemented; remaining UI and regression work  
@@ -48,7 +48,7 @@
 - Turn-based combat was restored as the active combat flow; the real-time combat path is not the intended gameplay loop.
 - The user confirmed Phase 1 was working and asked development to continue.
 - Menu, hub, combat and Codex content now use a responsive vertical scroll container; the panel adapts to the viewport, follows keyboard focus and resets scroll on screen changes.
-- A five-lesson Fighter Training screen is now accessible from the main menu. It explains telegraphs, stamina, defensive/utility responses, rounds/Heart and reward/item progression.
+- Fighter Training now launches a five-exchange playable spar against a coach. Scripted tells teach reading a heavy right, body shot, quick jab and recovery window; contextual corner feedback explains the player's choices. The practice loadout exposes core attack, defence, counter and utility moves. Training is isolated from run progression, Respect and save data.
 - Run checkpoints now write to a temporary file before promoting it to the save path. Continue validates the save structure and fighter stats, and rejects malformed or incompatible data with a clear menu message rather than silently starting a new run.
 - The Codex has a top-level back action and a guide to enemy archetype mechanics.
 - Enemy mechanics now differ: the brawler's Heavy Right hits harder; the speedster's landed attacks drain stamina; the tank's guard reduces incoming damage while it has stamina; the counter-puncher punishes committed attack moves; the dirty fighter drains stamina on a hit; and the final champion surges on turns 3 and 6.
@@ -169,7 +169,10 @@ The roster is a deliberate current implementation. Rematches scale with fight in
 - [x] Add Codex entries for all corner items and tournament rules.
 - [x] Complete Codex entries for reward categories, move upgrades and current stat reward effects/trade-offs.
 - [ ] Settings/accessibility completeness.
-- [x] Add a step-by-step Fighter Training tutorial covering combat decisions, stamina, rounds, Heart and rewards.
+- [x] Replace the text-only Fighter Training tutorial with a playable five-exchange coach spar using the turn-based combat flow.
+- [x] Add scripted coach telegraphs and contextual feedback after player actions.
+- [x] Keep practice runs isolated from tournament progression, Respect, rewards and save data.
+- [ ] Validate the coach spar and its exit/restart/new-run transitions in Godot.
 - [ ] Clear item/effect and reward information in the UI.
 
 **Status:** Partial. Existing functional UI should be extended rather than replaced wholesale.
@@ -247,17 +250,17 @@ Recent inventory/reward fixes are committed, but the corresponding unchecked reg
 
 ## 5. Immediate next milestone
 
-**Milestone: Make progression choices readable and reliable.**
+**Milestone: Finish the remaining core gameplay and functional UI before the grouped QA pass.**
 
-Recent reliability work: Smelling Salts ownership is explicit, duplicate one-use rewards are filtered, and run-end processing is idempotent. The hub now shows the complete tournament route. Run summaries now persist Respect before rendering, so the displayed career total/rank includes the completed run award. These changes are implemented but still need Godot regression testing.
+The text-only tutorial has been replaced by a playable coach spar. Save validation/recovery and the tournament bracket are implemented, but the newest work still needs runtime validation. Smelling Salts testing remains in the later grouped QA pass and is not a development blocker.
 
-1. Expand the hub into a full tournament bracket with clear cleared/next/locked states. (Implemented.)
-2. Ensure run summaries show the newly updated lifetime Respect and rank after the run award. (Implemented.)
-3. Add and validate a step-by-step training tutorial. (Implemented.)
-4. Harden save checkpoint writes and reject invalid run saves with a clear recovery message. (Implemented; runtime QA pending.)
-5. Keep Smelling Salts runtime verification in the later grouped QA pass; it is not a development blocker.
+1. Finish save lifecycle UX: show immediate save success/failure feedback in the hub, validate the save version, and preserve damaged saves for diagnosis where safe.
+2. Review run lifecycle edge cases: exactly-once Respect, defeat/retry, Continue, and stale checkpoint cleanup.
+3. Complete settings/accessibility and menu navigation, including a practical pause/back flow where appropriate for the menu-driven combat design.
+4. Finish reward/item/loadout edge cases and ensure the Codex, reward descriptions and live UI agree.
+5. Update the coach spar after its runtime check, then batch-test the complete eight-fight run, items (including Smelling Salts when obtained), save/load and all archetypes.
 
-Do not begin visual/audio polish yet.
+Do not begin visual/audio polish until the core systems and grouped QA are complete.
 
 ---
 
