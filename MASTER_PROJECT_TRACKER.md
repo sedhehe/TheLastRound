@@ -33,7 +33,7 @@
 
 ## 2. Current overall status
 
-**Current milestone:** Phase 3 — distinct enemy archetypes and tournament progression  
+**Current milestone:** Phase 2/3 — progression clarity, Respect meta-progression and run lifecycle  
 **Architecture correction:** Complete  
 **Phase 1 core combat:** Implemented and user-confirmed in Godot  
 **Phase 2 progression:** Partially implemented; remaining UI and regression work  
@@ -53,6 +53,8 @@
 - Corner Ice is reserved for between-fight use.
 - Smelling Salts are intended to trigger automatically on a lethal hit, not through a manual item button.
 - Combat inventory now exposes each usable item separately and consumes the selected item.
+- Smelling Salts now have an explicit READY/SPENT status in the hub and combat UI, clarifying their passive lethal-hit trigger.
+- The Codex now includes item timing/effects and tournament rules, including reward resolution, between-fight recovery, run defeat and decisions.
 - When move slots are full, move rewards are restricted to upgrades for already-owned moves.
 - Reward resolution is required before advancing to the next fight.
 - One explicit eight-fight roster is shared by opponent selection and the hub preview.
@@ -101,6 +103,8 @@ Legend:
 - [x] Expose each manually usable combat item with its own button; consume the selected item.
 - [x] Keep Ice and Smelling Salts out of manual combat-use actions.
 - [x] Add a clear item/effect summary to hub and combat UI.
+- [x] Show Smelling Salts as READY before the automatic revive and SPENT after use.
+- [x] Expand Codex with item definitions, usage timing and tournament rules.
 - [x] Improve move and item reward descriptions so choices communicate costs, accuracy, damage/effects and usage timing.
 - [ ] Improve stat reward descriptions and trade-offs where needed.
 - [ ] Finish regression coverage for move-slot overflow, duplicate upgrades, item capacity and every item effect.
@@ -149,7 +153,8 @@ The roster is a deliberate current implementation. Rematches scale with fight in
 - [ ] Main menu and pause-menu completeness.
 - [ ] Full tournament bracket presentation.
 - [x] Add enemy archetype explanations to the Codex.
-- [ ] Complete Codex entries for items, rewards and tournament rules.
+- [x] Add Codex entries for all corner items and tournament rules.
+- [ ] Complete Codex entries for reward categories and move upgrade rules.
 - [ ] Settings/accessibility completeness.
 - [ ] Interactive tutorial.
 - [ ] Clear item/effect and reward information in the UI.
@@ -231,7 +236,7 @@ Recent inventory/reward fixes are committed, but the corresponding unchecked reg
 
 **Milestone: Make progression choices readable and reliable.**
 
-1. Expand the Codex with item, reward and tournament explanations.
+1. Complete Codex reward-category and move-upgrade explanations.
 2. Continue building Respect meta-progression and run-to-run unlocks without undermining the roguelike reset.
 3. Review defeat/run summaries and reset behavior for meaningful long-term progression.
 4. At the next milestone, batch-test scroll navigation, scouting, all archetypes, progression and one complete eight-fight run.
