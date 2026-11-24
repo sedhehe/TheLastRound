@@ -1603,6 +1603,7 @@ func _end_run(won: bool, reason: String) -> void:
 
 	_label("Respect earned this run: %d" % respect, 17)
 	_label("Career Respect: %d — %s" % [lifetime_respect, _respect_rank()], 14, Color(0.88, 0.68, 0.38))
+	_label("Permanent career perks: " + _career_perk_summary(), 12, Color(0.72, 0.82, 0.68))
 	_label("Final build: " + ", ".join(owned_moves))
 
 	_label(
@@ -1798,6 +1799,13 @@ func _show_codex() -> void:
 		var item_id := str(item.get("id", ""))
 		_label("%s — %s" % [item_name, item_description], 13)
 		_label(_item_timing(item_id), 12, Color(0.68, 0.64, 0.60))
+
+	_label("CAREER RESPECT PERKS", 18, Color(0.9, 0.36, 0.22))
+	_label("50 Respect — Grit: +5 max health on fresh runs.")
+	_label("200 Respect — Conditioning: +5 max stamina on fresh runs.")
+	_label("500 Respect — Power: +1 damage on fresh runs.")
+	_label("1000 Respect — Guard: +1 defence on fresh runs.")
+	_label("Perks are cumulative and never stack again when continuing a saved run.")
 
 	_label("TOURNAMENT RULES", 18, Color(0.9, 0.36, 0.22))
 	_label("Win a fight to choose one reward. Resolve that choice before the next bout.")
