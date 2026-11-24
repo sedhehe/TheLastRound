@@ -609,9 +609,23 @@ func _move_reward_details(move: Dictionary) -> String:
 
 func _show_salts_status() -> void:
 	if revive_used:
-		_label("LAST STAND: SMELLING SALTS SPENT — revive already used.", 13, Color(0.95, 0.62, 0.35))
+		_label(
+			"LAST STAND — SPENT | Smelling Salts were used. No second revive this run.",
+			13,
+			Color(0.95, 0.62, 0.35)
+		)
 	elif inventory.has("salts"):
-		_label("LAST STAND READY: SMELLING SALTS — automatic revive at 0 HP, restores 30 HP.", 13, Color(0.55, 0.85, 0.65))
+		_label(
+			"LAST STAND — READY | Smelling Salts are in your bag. They automatically revive you from a lethal hit with 30 HP.",
+			13,
+			Color(0.55, 0.85, 0.65)
+		)
+	else:
+		_label(
+			"LAST STAND — NOT IN YOUR BAG | Smelling Salts are not owned. Look for them in an ITEM reward after a fight.",
+			13,
+			Color(0.95, 0.72, 0.42)
+		)
 
 
 func _show_item_summary(include_active_effects: bool) -> void:
@@ -1205,13 +1219,23 @@ func _show_rewards() -> void:
 			"data": pool[rng.randi_range(0, pool.size() - 1)]
 		})
 
+	var available_items: Array = []
+	for item_variant in item_templates:
+		var candidate: Dictionary = item_variant
+		var candidate_id := str(candidate.get("id", ""))
+		# Smelling Salts are a once-per-run revive. Never offer a duplicate
+		# while one is owned or after its revive has already been spent.
+		if candidate_id == "salts" and (inventory.has("salts") or revive_used):
+			continue
+		available_items.append(candidate)
+
 	if (
 		inventory.size() < 3
 		and rng.randf() < 0.55
-		and not item_templates.is_empty()
+		and not available_items.is_empty()
 	):
-		var item: Dictionary = item_templates[
-			rng.randi_range(0, item_templates.size() - 1)
+		var item: Dictionary = available_items[
+			rng.randi_range(0, available_items.size() - 1)
 		]
 		options.append({"type": "item", "data": item})
 	else:
@@ -1344,7 +1368,7 @@ func _choose_item(id: String) -> void:
 		return
 
 	inventory.append(id)
-	_log("Added to your corner bag: " + id.replace("_", " "))
+	_log("Added to your corner bag: " + _get_item_name(id) + ".")
 	_after_reward()
 
 
