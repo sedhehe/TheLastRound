@@ -37,6 +37,8 @@ var enemy_blinded := 0
 var enemy_drained := 0
 var loaded_bonus := 0
 var loaded_tape_risk := false
+var energy_penalty_pending := false
+var next_fight_speed_bonus := 0.0
 var enemy_next_action: Dictionary = {}
 
 var bribe_ready := false
@@ -455,6 +457,9 @@ func _start_fight() -> void:
 	enemy_drained = 0
 	loaded_bonus = 0
 	loaded_tape_risk = false
+	energy_penalty_pending = false
+	player.speed = minf(60.0, float(player.get("speed", 0.0)) + next_fight_speed_bonus)
+	next_fight_speed_bonus = 0.0
 	enemy_next_action.clear()
 	_disable_realtime_combat()
 
@@ -705,6 +710,10 @@ func _player_move(id: String) -> void:
 		return
 
 	_enemy_turn()
+	if energy_penalty_pending and game_state == "combat":
+		player.stamina = maxf(0.0, player.stamina - 10.0)
+		energy_penalty_pending = false
+		_log("The energy drink crash costs 10 stamina.")
 	# Defensive actions last for exactly one enemy response, even if it misses
 	# or the opponent is too exhausted to attack.
 	player_blocking = false
@@ -1282,6 +1291,7 @@ func _use_item() -> void:
 				player.max_stamina,
 				player.stamina + 35.0
 			)
+			energy_penalty_pending = true
 
 		"loaded_tape":
 			loaded_bonus = 18
@@ -1297,7 +1307,7 @@ func _use_item() -> void:
 			)
 
 		"crowd":
-			player.speed = minf(60.0, player.speed + 5.0)
+			next_fight_speed_bonus = minf(5.0, 60.0 - float(player.get("speed", 0.0)))
 
 	_log("Used " + id.replace("_", " ") + ".")
 
@@ -1384,7 +1394,9 @@ func _save_run() -> void:
 		"passive": passive,
 		"revive_used": revive_used,
 		"bribe_ready": bribe_ready,
-		"heart_active": heart_active
+		"heart_active": heart_active,
+		"energy_penalty_pending": energy_penalty_pending,
+		"next_fight_speed_bonus": next_fight_speed_bonus
 	}
 
 	var file := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
@@ -1427,6 +1439,8 @@ func _continue_run() -> void:
 	revive_used = bool(data.get("revive_used", false))
 	bribe_ready = bool(data.get("bribe_ready", false))
 	heart_active = bool(data.get("heart_active", false))
+	energy_penalty_pending = bool(data.get("energy_penalty_pending", false))
+	next_fight_speed_bonus = float(data.get("next_fight_speed_bonus", 0.0))
 
 	rng.seed = run_seed + fight_index * 991
 
