@@ -1101,7 +1101,6 @@ func _show_rewards() -> void:
 				_choose_upgrade.bind(upgrade)
 			)
 
-	_button("SCOUT NEXT FIGHT", _show_bracket)
 
 
 func _random_upgrade() -> Dictionary:
