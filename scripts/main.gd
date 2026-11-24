@@ -60,7 +60,7 @@ var tutorial_step := 0
 var training_active := false
 var training_turn := 0
 var training_feedback := ""
-const TRAINING_EXCHANGES := 5
+const TRAINING_EXCHANGES := 6
 
 var log_lines: Array[String] = []
 
@@ -1010,7 +1010,8 @@ func _prepare_enemy_telegraph() -> void:
 			{"name": "Body Shot", "tell": "Coach dips his level and turns toward your ribs.", "damage": 0.85, "accuracy": 100.0, "cost": 0.0},
 			{"name": "Quick Jab", "tell": "Coach steps in with a short, quick jab.", "damage": 0.65, "accuracy": 100.0, "cost": 0.0},
 			{"name": "Heavy Right", "tell": "Coach repeats the loaded right. He wants to see if you learned.", "damage": 1.0, "accuracy": 100.0, "cost": 0.0},
-			{"name": "Reset", "tell": "Coach lowers his gloves and gives you room to breathe.", "damage": 0.0, "accuracy": 100.0, "cost": 0.0}
+			{"name": "Reset", "tell": "Coach lowers his gloves and gives you room to breathe.", "damage": 0.0, "accuracy": 100.0, "cost": 0.0},
+			{"name": "Combination", "tell": "Coach rolls his shoulders and steps in with a controlled two-punch combination.", "damage": 1.05, "accuracy": 100.0, "cost": 0.0}
 		]
 		enemy_next_action = drills[mini(training_turn, drills.size() - 1)].duplicate(true)
 		return
@@ -2065,6 +2066,10 @@ func _training_feedback_for_move(id: String) -> String:
 		return "Coach: Good exchange. Keep an eye on stamina; every action has a cost."
 	if incoming == "Reset":
 		return "Coach: That's your breathing window. Rest now if your gas tank needs it."
+	if incoming == "Combination":
+		if id in ["block", "slip"]:
+			return "Coach: Good defence. A combination needs a committed guard or a clean evade."
+		return "Coach: Don't admire your work after landing a punch. Be ready for the follow-up."
 	if id == "counter":
 		return "Coach: Counters need a read. Match the tell before you spend the stamina."
 	return "Coach: Keep reading my shoulders. Don't spend stamina just because you can."
@@ -2077,7 +2082,7 @@ func _finish_training() -> void:
 	_disable_realtime_combat()
 	game_state = "training_complete"
 	_heading("SPAR COMPLETE", "That's the rhythm. Read first, then choose.")
-	_label("You completed a five-exchange coaching spar.", 17)
+	_label("You completed a full six-turn training round with the coach.", 17)
 	_label("WHAT TO TAKE INTO THE CIRCUIT", 18, Color(0.9, 0.36, 0.22))
 	_label("• Read the telegraph before selecting a move.")
 	_label("• Block reduces damage; Slip guarantees an evade against the next attack.")
