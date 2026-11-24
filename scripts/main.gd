@@ -1095,7 +1095,8 @@ func _enemy_turn() -> void:
 	if str(enemy.get("trick", "")) == "aggressive" and str(action.get("name", "")) == "Heavy Right":
 		archetype_damage_bonus = 1.12
 
-	var enemy_damage := (
+	var enemy_damage := maxf(
+		0.0,
 		float(enemy.damage) * float(action.get("damage", 1.0)) * archetype_damage_bonus
 		+ rng.randf_range(-2.0, 2.0)
 	)
@@ -2016,10 +2017,16 @@ func _training_feedback_for_move(id: String) -> String:
 	if incoming == "Heavy Right":
 		if id in ["block", "slip"]:
 			return "Coach: Good. You respected the loaded right and defended instead of trading."
+		if id == "counter":
+			return "Coach: Excellent read. You saw the right hand coming and timed the counter."
+		if id == "rest":
+			return "Coach: Rest refills stamina, but leaves you open. Save it for a safer window."
 		return "Coach: You attacked into the big tell. A block cuts damage; a slip avoids it."
 	if incoming == "Body Shot":
 		if id in ["block", "slip", "clinch"]:
 			return "Coach: Nice. You shut down the body attack. A clinch can break pressure and recover gas."
+		if id == "rest":
+			return "Coach: Rest is useful, but you left your body open during my level change."
 		return "Coach: Watch the level change. Body shots punish an open guard."
 	if incoming == "Quick Jab":
 		if id == "rest":
