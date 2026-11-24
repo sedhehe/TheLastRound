@@ -54,6 +54,7 @@ var run_ended := false
 var respect := 0
 var lifetime_respect := 0
 var run_seed := 0
+var menu_notice := ""
 
 var log_lines: Array[String] = []
 
@@ -414,6 +415,9 @@ func _show_main_menu() -> void:
 	_label("Eight fights stand between you and the Crown.", 14)
 	_label("CAREER RESPECT: %d  |  RANK: %s" % [lifetime_respect, _respect_rank()], 14, Color(0.88, 0.68, 0.38))
 	_label("CAREER PERKS: " + _career_perk_summary(), 12, Color(0.72, 0.82, 0.68))
+	if not menu_notice.is_empty():
+		_label(menu_notice, 13, Color(1.0, 0.72, 0.42))
+		menu_notice = ""
 
 	_button("NEW RUN", _new_run)
 	_button(
@@ -1704,6 +1708,7 @@ func _end_run(won: bool, reason: String) -> void:
 
 func _save_run() -> void:
 	var data := {
+		"version": 2,
 		"fight_index": fight_index,
 		"player": player,
 		"owned_moves": owned_moves,
@@ -1718,44 +1723,88 @@ func _save_run() -> void:
 		"next_fight_speed_bonus": next_fight_speed_bonus
 	}
 
-	var file := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
+	var temp_path := "user://underdog_save.tmp"
+	var file := FileAccess.open(temp_path, FileAccess.WRITE)
+	if file == null:
+		push_error("Could not create temporary run save.")
+		return
 
-	if file:
-		file.store_string(JSON.stringify(data))
+	file.store_string(JSON.stringify(data))
+	file.flush()
+	file.close()
+
+	var rename_error := DirAccess.rename_absolute(
+		ProjectSettings.globalize_path(temp_path),
+		ProjectSettings.globalize_path(SAVE_PATH)
+	)
+	if rename_error != OK:
+		push_error("Could not replace run save. Error: %d" % rename_error)
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(temp_path))
+	else:
+		menu_notice = "RUN SAVED — your corner is waiting."
 
 
 func _continue_run() -> void:
 	var file := FileAccess.open(SAVE_PATH, FileAccess.READ)
-
 	if file == null:
-		_new_run()
+		menu_notice = "NO VALID RUN SAVE FOUND. Start a new run."
+		_show_main_menu()
 		return
 
-	var data = JSON.parse_string(file.get_as_text())
-
-	if not data is Dictionary:
-		_new_run()
+	var parsed = JSON.parse_string(file.get_as_text())
+	if not parsed is Dictionary:
+		_reject_run_save("The run save is damaged or unreadable.")
 		return
+
+	var data: Dictionary = parsed
+	var saved_player = data.get("player", {})
+	var saved_moves = data.get("owned_moves", [])
+	var saved_inventory = data.get("inventory", [])
+	var saved_passive = data.get("passive", {})
+	var saved_fight := int(data.get("fight_index", -1))
+
+	if (
+		saved_fight < 0
+		or saved_fight >= FIGHT_COUNT
+		or not saved_player is Dictionary
+		or saved_player.is_empty()
+		or not saved_moves is Array
+		or saved_moves.is_empty()
+		or not saved_inventory is Array
+		or not saved_passive is Dictionary
+	):
+		_reject_run_save("The run save is incomplete or has invalid data.")
+		return
+
+	for required_stat in ["health", "max_health", "stamina", "max_stamina", "damage", "speed", "defence"]:
+		if not saved_player.has(required_stat) or not (saved_player[required_stat] is int or saved_player[required_stat] is float):
+			_reject_run_save("The run save is missing valid fighter stats.")
+			return
+
+	if float(saved_player.health) <= 0.0 or float(saved_player.max_health) <= 0.0:
+		_reject_run_save("The saved fighter state cannot be continued.")
+		return
+
+	for move_id in saved_moves:
+		if _get_move(str(move_id)).is_empty():
+			_reject_run_save("The run save contains an unknown move.")
+			return
+
+	for item_id in saved_inventory:
+		if _get_item_data(str(item_id)).is_empty():
+			_reject_run_save("The run save contains an unknown item.")
+			return
 
 	run_ended = false
-	fight_index = int(data.get("fight_index", 0))
-	player = data.get("player", {})
-
-	if player.is_empty():
-		_new_run()
-		return
-
-	owned_moves.assign(
-		data.get("owned_moves", ["jab", "block", "rest"])
-	)
-
-	inventory = data.get("inventory", [])
-	respect = int(data.get("respect", 0))
+	fight_index = saved_fight
+	player = saved_player.duplicate(true)
+	owned_moves.clear()
+	for move_id in saved_moves:
+		owned_moves.append(str(move_id))
+	inventory = saved_inventory.duplicate()
+	respect = maxi(0, int(data.get("respect", 0)))
 	run_seed = int(data.get("seed", 0))
-	passive = data.get("passive", {
-		"damage": 0.0, "health": 0.0, "stamina": 0.0,
-		"defence": 0.0, "speed": 0.0, "slots": 0, "wind": 0
-	})
+	passive = saved_passive.duplicate(true)
 	revive_used = bool(data.get("revive_used", false))
 	bribe_ready = bool(data.get("bribe_ready", false))
 	heart_active = bool(data.get("heart_active", false))
@@ -1763,8 +1812,15 @@ func _continue_run() -> void:
 	next_fight_speed_bonus = float(data.get("next_fight_speed_bonus", 0.0))
 
 	rng.seed = run_seed + fight_index * 991
-
+	menu_notice = "RUN CONTINUED — back to the circuit."
 	_show_bracket()
+
+
+func _reject_run_save(reason: String) -> void:
+	push_warning(reason)
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(SAVE_PATH))
+	menu_notice = "SAVE UNAVAILABLE: %s Your old save was removed; start a fresh run." % reason
+	_show_main_menu()
 
 
 func _load_meta() -> void:
