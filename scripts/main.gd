@@ -1490,6 +1490,44 @@ func _show_bracket() -> void:
 		respect
 	])
 
+	# Show the entire tournament route so every run has a clear destination.
+	_label("TOURNAMENT BRACKET", 18, Color(0.9, 0.36, 0.22))
+	var stage_names := [
+		"OPENING BOUT",
+		"OPENING BOUT",
+		"OPENING BOUT",
+		"OPENING BOUT",
+		"SEMI-FINAL",
+		"SEMI-FINAL",
+		"TITLE ELIMINATOR",
+		"CHAMPIONSHIP"
+	]
+	for bracket_index in range(FIGHT_ROSTER.size()):
+		var roster_index := int(FIGHT_ROSTER[bracket_index])
+		var bracket_name := "Unknown Fighter"
+		if roster_index >= 0 and roster_index < enemy_templates.size():
+			bracket_name = str(enemy_templates[roster_index].get("name", bracket_name))
+
+		var bracket_status := "LOCKED"
+		var bracket_color := Color(0.52, 0.49, 0.47)
+		if bracket_index < fight_index:
+			bracket_status = "CLEARED"
+			bracket_color = Color(0.55, 0.78, 0.58)
+		elif bracket_index == fight_index:
+			bracket_status = "NEXT"
+			bracket_color = Color(1.0, 0.76, 0.35)
+
+		_label(
+			"%d. %s — %s  [%s]" % [
+				bracket_index + 1,
+				stage_names[bracket_index],
+				bracket_name,
+				bracket_status
+			],
+			13,
+			bracket_color
+		)
+
 	_label("NEXT OPPONENT: " + _next_opponent_name())
 
 	var preview_index := _opponent_template_index(fight_index)
