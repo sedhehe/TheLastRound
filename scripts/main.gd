@@ -36,6 +36,8 @@ var player_slipping := false
 var enemy_blinded := 0
 var enemy_drained := 0
 var loaded_bonus := 0
+var loaded_tape_risk := false
+var enemy_next_action: Dictionary = {}
 
 var bribe_ready := false
 var revive_used := false
@@ -452,6 +454,9 @@ func _start_fight() -> void:
 	enemy_blinded = 0
 	enemy_drained = 0
 	loaded_bonus = 0
+	loaded_tape_risk = false
+	enemy_next_action.clear()
+	_disable_realtime_combat()
 
 	var template: Dictionary
 
@@ -491,17 +496,12 @@ func _start_fight() -> void:
 	_configure_enemy_ai()
 	_reset_fighter_positions()
 
-	# Start the real-time combat manager.
-	# Its current defaults are used here; stat synchronisation with
-	# tournament upgrades will be completed in the manager integration pass.
-	combat_manager.begin_fight(
-	float(player.get("health", 100.0)),
-	float(player.get("stamina", 100.0)),
-	float(enemy.get("health", 100.0))
-)
-
-	_enable_realtime_combat()
+	# Turn-based combat is authoritative. Keep the real-time actors disabled.
+	_disable_realtime_combat()
+	_prepare_enemy_telegraph()
 	_show_combat()
+
+
 
 
 func enemy_mat_color(color: Color) -> void:
@@ -523,38 +523,71 @@ func _get_move(id: String) -> Dictionary:
 func _show_combat() -> void:
 	_heading(
 		"FIGHT %d — %s" % [fight_index + 1, str(enemy.get("name", "OPPONENT"))],
-		"FIGHT IN PROGRESS"
+		"ROUND %d  |  TURN %d / 6" % [round_no, turn_no]
 	)
 
 	_label(
-		"YOUR CONDITION: HP %d / %d    STA %d / %d" % [
+		"YOU     HP %d/%d     STA %d/%d" % [
 			int(player.get("health", 0)),
 			int(player.get("max_health", 100)),
 			int(player.get("stamina", 0)),
 			int(player.get("max_stamina", 100))
-		]
+		],
+		16,
+		Color(0.55, 0.82, 0.95)
 	)
-
 	_label(
-		"OPPONENT: %s" % str(enemy.get("archetype", "Boxer")),
-		14,
-		Color(0.4, 0.75, 1.0)
+		"OPPONENT     HP %d/%d     STA %d/%d" % [
+			int(enemy.get("health", 0)),
+			int(enemy.get("max_health", 100)),
+			int(enemy.get("stamina", 0)),
+			int(enemy.get("max_stamina", 100))
+		],
+		15,
+		Color(0.95, 0.62, 0.48)
 	)
 
-	_label("WASD  -  Move around opponent", 16, Color.WHITE)
-	_label("J  -  Jab", 16, Color.WHITE)
-	_label("K  -  Cross", 16, Color.WHITE)
-	_label("L  -  Hook", 16, Color.WHITE)
-	_label("I  -  Uppercut", 16, Color.WHITE)
-	_label("SHIFT  -  Block", 16, Color.WHITE)
-	_label("SPACE  -  Dodge", 16, Color.WHITE)
+	var tell := str(enemy_next_action.get("tell", enemy.get("tell", "Studies your guard.")))
+	var action_name := str(enemy_next_action.get("name", "Unknown attack"))
+	_label("THEY'RE TELEGRAPHING: " + tell, 15, Color(1.0, 0.76, 0.35))
+	_label("Expected action: " + action_name, 13, Color(0.82, 0.72, 0.62))
 
-	_label("Opponent: Target locked", 14, Color(0.4, 0.75, 1.0))
+	var line := HSeparator.new()
+	content.add_child(line)
+	_label("CHOOSE YOUR MOVE", 18, Color(0.9, 0.36, 0.22))
+
+	for id in owned_moves:
+		var move := _get_move(str(id))
+		if move.is_empty():
+			continue
+
+		var cost := float(move.get("cost", 0.0))
+		var move_name := str(move.get("name", id))
+		var description := str(move.get("description", ""))
+		var label_text := "%s  [%d STA] — %s" % [
+			move_name,
+			int(cost),
+			description
+		]
+		_button(
+			label_text,
+			_player_move.bind(str(id)),
+			float(player.get("stamina", 0.0)) < cost
+		)
 
 	if not inventory.is_empty():
-		_button("USE ITEM: " + str(inventory[0]).replace("_", " "), _use_item)
+		_button(
+			"USE ITEM: " + str(inventory[0]).replace("_", " "),
+			_use_item
+		)
+
+	_label("RECENT CORNER TALK", 13, Color(0.68, 0.58, 0.52))
+	var first_log := maxi(0, log_lines.size() - 3)
+	for i in range(first_log, log_lines.size()):
+		_label("• " + log_lines[i], 12, Color(0.72, 0.68, 0.64))
 
 	_button("FORFEIT RUN", _forfeit_run)
+
 
 
 func _forfeit_run() -> void:
@@ -576,11 +609,18 @@ func _player_move(id: String) -> void:
 	if game_state != "combat":
 		return
 
+	if not owned_moves.has(id):
+		return
+
 	var move := _get_move(id)
 	if move.is_empty():
 		return
 
 	var cost := float(move.get("cost", 0))
+	if float(player.get("stamina", 0.0)) < cost:
+		_log("You're too exhausted to use %s." % str(move.get("name", id)))
+		_show_combat()
+		return
 
 	if arena_visuals and arena_visuals.has_method("player_action"):
 		arena_visuals.player_action(id)
@@ -616,8 +656,9 @@ func _player_move(id: String) -> void:
 	elif id == "counter":
 		player.stamina -= cost
 
-		var tell := str(enemy.get("tell", "")).to_lower()
-		var guessed := tell.contains("right") or tell.contains("loads")
+		var tell := str(enemy_next_action.get("tell", enemy.get("tell", ""))).to_lower()
+		var action_name := str(enemy_next_action.get("name", "")).to_lower()
+		var guessed := tell.contains("right") or tell.contains("loads") or action_name.contains("right")
 
 		if guessed:
 			_deal_player_damage(move, 1.35)
@@ -657,15 +698,23 @@ func _player_move(id: String) -> void:
 	if game_state != "combat":
 		return
 
+	player.stamina = clampf(player.stamina, 0.0, player.max_stamina)
+
 	if enemy.health <= 0.0:
 		_win_fight()
 		return
 
 	_enemy_turn()
+	# Defensive actions last for exactly one enemy response, even if it misses
+	# or the opponent is too exhausted to attack.
+	player_blocking = false
+	player_slipping = false
 
 	if game_state == "combat":
 		_check_round()
-		_show_combat()
+		if game_state == "combat":
+			_prepare_enemy_telegraph()
+			_show_combat()
 
 
 func _deal_player_damage(move: Dictionary, multiplier: float) -> void:
@@ -687,8 +736,16 @@ func _deal_player_damage(move: Dictionary, multiplier: float) -> void:
 	amount += loaded_bonus
 	loaded_bonus = 0
 
-	if player.health <= player.max_health * 0.25:
-		amount *= 1.0 + (0.08 if player.heart else 0.0)
+	if loaded_tape_risk:
+		loaded_tape_risk = false
+		if rng.randf() < 0.12:
+			_log("The referee spots the loaded tape. DISQUALIFIED.")
+			_end_run(false, "Disqualified for using loaded tape.")
+			return
+
+	var critical := id_is_crit()
+	if critical:
+		amount *= 1.5
 
 	var reduced := maxf(
 		1.0,
@@ -700,7 +757,7 @@ func _deal_player_damage(move: Dictionary, multiplier: float) -> void:
 	if arena_visuals and arena_visuals.has_method("opponent_hit"):
 		arena_visuals.opponent_hit()
 
-	if id_is_crit():
+	if critical:
 		_log("CRITICAL! %s lands for %d." % [
 			str(move.get("name", "Your move")),
 			int(reduced)
@@ -721,6 +778,60 @@ func id_is_crit() -> bool:
 	return rng.randf() < chance
 
 
+func _prepare_enemy_telegraph() -> void:
+	var trick := str(enemy.get("trick", "")).to_lower()
+	var archetype := str(enemy.get("archetype", "")).to_lower()
+	var options: Array[Dictionary] = []
+
+	match trick:
+		"aggressive":
+			options = [
+				{"name": "Heavy Right", "tell": "Loads up his right hand.", "damage": 1.25, "accuracy": 78.0, "cost": 14.0},
+				{"name": "Pressure Jab", "tell": "Steps forward behind a quick jab.", "damage": 0.82, "accuracy": 91.0, "cost": 8.0}
+			]
+		"quick":
+			options = [
+				{"name": "Quick Flurry", "tell": "Bounces in, shoulders twitching.", "damage": 0.78, "accuracy": 92.0, "cost": 12.0},
+				{"name": "Fast Jab", "tell": "Flicks a glove toward your guard.", "damage": 0.72, "accuracy": 95.0, "cost": 7.0}
+			]
+		"guard":
+			options = [
+				{"name": "Guarded Hook", "tell": "Tucks his chin, then loads a short hook.", "damage": 1.05, "accuracy": 82.0, "cost": 13.0},
+				{"name": "Body Jab", "tell": "Keeps his guard high and dips toward your ribs.", "damage": 0.88, "accuracy": 89.0, "cost": 9.0}
+			]
+		"counter":
+			options = [
+				{"name": "Counter Right", "tell": "Leaves an opening and waits for you to commit.", "damage": 1.18, "accuracy": 88.0, "cost": 12.0},
+				{"name": "Sharp Counter", "tell": "Shifts his weight onto the back foot.", "damage": 0.95, "accuracy": 93.0, "cost": 10.0}
+			]
+		"dirty":
+			options = [
+				{"name": "Elbow Smash", "tell": "Edges close with an elbow tucked.", "damage": 1.12, "accuracy": 82.0, "cost": 13.0},
+				{"name": "Rough Body Shot", "tell": "Crowds you and dips below the guard.", "damage": 0.95, "accuracy": 89.0, "cost": 11.0}
+			]
+		_:
+			options = [
+				{"name": "Champion's Right", "tell": "Goes completely still, then draws back his right.", "damage": 1.35, "accuracy": 84.0, "cost": 16.0},
+				{"name": "Champion's Combination", "tell": "Rolls his shoulders and steps into range.", "damage": 1.08, "accuracy": 91.0, "cost": 14.0},
+				{"name": "Short Hook", "tell": "Turns his lead shoulder toward you.", "damage": 0.92, "accuracy": 94.0, "cost": 10.0}
+			]
+
+	if enemy.stamina < 18.0:
+		enemy_next_action = {
+			"name": "Desperate Swing",
+			"tell": "Breathes heavily and drops his guard.",
+			"damage": 0.72,
+			"accuracy": 70.0,
+			"cost": 5.0
+		}
+	else:
+		enemy_next_action = options[rng.randi_range(0, options.size() - 1)].duplicate(true)
+
+	# Keep the existing fighter-specific tell as a fallback for custom data.
+	if str(enemy_next_action.get("tell", "")).is_empty():
+		enemy_next_action["tell"] = str(enemy.get("tell", "Studies your guard."))
+
+
 func _enemy_turn() -> void:
 	if enemy_drained > 0:
 		enemy.stamina = maxf(0.0, enemy.stamina - 8.0)
@@ -735,13 +846,25 @@ func _enemy_turn() -> void:
 		player.stamina = minf(player.max_stamina, player.stamina + 4.0)
 		return
 
-	var enemy_accuracy := float(enemy.accuracy)
+	var action := enemy_next_action
+	if action.is_empty():
+		_prepare_enemy_telegraph()
+		action = enemy_next_action
 
+	var enemy_accuracy := float(action.get("accuracy", enemy.accuracy))
 	if enemy_blinded > 0:
 		enemy_accuracy -= 15.0
 		enemy_blinded -= 1
 
-	var enemy_damage := float(enemy.damage) + rng.randf_range(-2.0, 3.0)
+	var enemy_damage := (
+		float(enemy.damage) * float(action.get("damage", 1.0))
+		+ rng.randf_range(-2.0, 2.0)
+	)
+
+	enemy.stamina = maxf(
+		0.0,
+		enemy.stamina - float(action.get("cost", 10.0))
+	)
 
 	if arena_visuals and arena_visuals.has_method("enemy_attack"):
 		arena_visuals.enemy_attack()
@@ -750,18 +873,16 @@ func _enemy_turn() -> void:
 		rng.randf() * 100.0 < _speed_chance(player.speed)
 	)
 
-	player_slipping = false
-
 	if dodged:
-		_log("DODGED! Their glove cuts through empty air.")
+		_log("DODGED! " + str(action.get("name", "Their attack")) + " cuts through empty air.")
 		player.stamina = minf(
 			player.max_stamina,
-			player.stamina + (3.0 if player.heart else 0.0)
+			player.stamina + float(passive.get("wind", 0.0))
 		)
 		return
 
 	if rng.randf() * 100.0 > enemy_accuracy:
-		_log("Opponent swings and misses.")
+		_log("Opponent's %s misses." % str(action.get("name", "attack")))
 		return
 
 	var damage := enemy_damage * (
@@ -770,20 +891,27 @@ func _enemy_turn() -> void:
 
 	if player_blocking:
 		damage *= 0.32
-		player_blocking = false
+
+	# Counter-punchers punish an attacking turn when the player neither blocks
+	# nor slips. This gives the archetype a distinct tactical identity.
+	if str(enemy.get("trick", "")) == "counter" and not player_blocking:
+		damage *= 1.15
+		_log("The counter-puncher catches your opening.")
 
 	player.health = maxf(0.0, player.health - damage)
+
+	if str(enemy.get("trick", "")) == "dirty":
+		player.stamina = maxf(0.0, player.stamina - 5.0)
 
 	if player.health <= player.max_health * 0.25:
 		player.heart = true
 
 	heart_active = player.health <= player.max_health * 0.25
-
 	if heart_active:
 		_log("HEART: You refuse to stay down.")
 
 	_log(
-		("BLOCKED — " if damage < enemy_damage * 0.7 else "")
+		("BLOCKED — " if player_blocking else "")
 		+ "You take %d damage." % int(damage)
 	)
 
@@ -795,6 +923,7 @@ func _enemy_turn() -> void:
 			_log("SMELLING SALTS! You drag yourself back to your feet.")
 		else:
 			_end_run(false, "You were knocked out.")
+
 
 
 func _check_round() -> void:
@@ -1156,6 +1285,7 @@ func _use_item() -> void:
 
 		"loaded_tape":
 			loaded_bonus = 18
+			loaded_tape_risk = true
 
 		"bribe":
 			bribe_ready = true
@@ -1171,7 +1301,17 @@ func _use_item() -> void:
 
 	_log("Used " + id.replace("_", " ") + ".")
 
-	_show_combat()
+	if game_state == "combat":
+		_enemy_turn()
+		player_blocking = false
+		player_slipping = false
+		if game_state == "combat":
+			_check_round()
+		if game_state == "combat":
+			_prepare_enemy_telegraph()
+			_show_combat()
+	else:
+		_show_combat()
 
 
 # ---------------------------------------------------------
@@ -1240,7 +1380,11 @@ func _save_run() -> void:
 		"owned_moves": owned_moves,
 		"inventory": inventory,
 		"respect": respect,
-		"seed": run_seed
+		"seed": run_seed,
+		"passive": passive,
+		"revive_used": revive_used,
+		"bribe_ready": bribe_ready,
+		"heart_active": heart_active
 	}
 
 	var file := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
@@ -1276,6 +1420,13 @@ func _continue_run() -> void:
 	inventory = data.get("inventory", [])
 	respect = int(data.get("respect", 0))
 	run_seed = int(data.get("seed", 0))
+	passive = data.get("passive", {
+		"damage": 0.0, "health": 0.0, "stamina": 0.0,
+		"defence": 0.0, "speed": 0.0, "slots": 0, "wind": 0
+	})
+	revive_used = bool(data.get("revive_used", false))
+	bribe_ready = bool(data.get("bribe_ready", false))
+	heart_active = bool(data.get("heart_active", false))
 
 	rng.seed = run_seed + fight_index * 991
 
