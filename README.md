@@ -32,7 +32,7 @@ The prototype is menu-driven:
 - Unlockable moves and a three-choice reward flow.
 - Eight-fight run structure with escalating opponents and a final champion.
 - Basic archetypes, enemy telegraphs, items, dirty-move disqualification risk.
-- Run save/continue and Respect meta-save.
+- Run save/continue and Respect meta-save with permanent career perks at 50/200/500/1000 Respect.
 - Codex and basic visual settings.
 
 ## Prototype limitations
