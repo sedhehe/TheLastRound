@@ -97,7 +97,7 @@ Legend:
 - [x] Require reward selection before tournament advancement.
 - [x] Expose each manually usable combat item with its own button; consume the selected item.
 - [x] Keep Ice and Smelling Salts out of manual combat-use actions.
-- [ ] Add a clear item/effect summary to hub and combat UI.
+- [x] Add a clear item/effect summary to hub and combat UI.
 - [ ] Improve reward descriptions so move/stat/item choices communicate their actual effects and trade-offs.
 - [ ] Finish regression coverage for move-slot overflow, duplicate upgrades, item capacity and every item effect.
 
@@ -222,12 +222,11 @@ Recent inventory/reward fixes are committed, but the corresponding unchecked reg
 
 **Milestone: Make progression choices readable and reliable.**
 
-1. Inspect the current reward, hub, combat and item UI code before editing.
-2. Add a useful item/effect summary: what the player owns, what triggers automatically, what is usable now, and what persists into the next fight.
-3. Improve move reward cards/choices with effect, stamina cost, accuracy/damage and whether the choice is new or an upgrade, using the actual data fields.
-4. Improve stat/item reward descriptions and trade-offs without changing balance arbitrarily.
-5. Update `QA_CHECKLIST.md` alongside implementation.
-6. Once these systems are in place, run one grouped regression pass covering Phase 2 and the full eight-fight run.
+1. Improve move reward choices with effect, stamina cost, accuracy/damage and whether the choice is new or an upgrade, using the actual data fields.
+2. Improve stat and item reward descriptions so the player can compare effects and trade-offs before choosing.
+3. Inspect the reward selection paths for duplicate move upgrade behavior and capped inventory edge cases.
+4. Update `QA_CHECKLIST.md` alongside implementation.
+5. Once reward clarity is implemented, run one grouped regression pass covering Phase 2 and the full eight-fight run.
 
 Do not begin visual/audio polish yet.
 
@@ -260,5 +259,5 @@ Open the project in Godot 4.7 and run with F5. Stop the running game before pull
 
 **Tracker status:** Active  
 **Current phase:** Phase 2 — Progression  
-**Next milestone:** Item/effect summary and clearer reward choices  
+**Next milestone:** Clearer move, stat and item reward choices  
 **Visual/audio polish:** Deferred
