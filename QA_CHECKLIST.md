@@ -98,10 +98,31 @@ Regression checks added after the turn-based combat pass:
 
 
 ## Phase 4 development — implemented, runtime QA pending
-- [x] Add a five-step Fighter Training screen reachable from the main menu.
-- [x] Explain enemy tells, stamina, attack/defence/utility choices, rounds/Heart and reward/item progression.
+- [x] Replace the text-only Fighter Training lessons with a playable coach spar reachable from the main menu.
+- [x] Reuse the turn-based move selection, stamina costs, telegraphs and enemy-response flow for practice.
+- [x] Script five coach exchanges and provide response feedback based on the player's selected move.
+- [x] Keep practice isolated from tournament progression, Respect, inventory rewards and run saves.
 - [x] Write run checkpoints through a temporary file before promoting them to the save path.
 - [x] Validate loaded save structure, fight index, fighter stats, move IDs and item IDs before restoring a run.
 - [x] Return to the main menu with an explanatory message when a save is invalid instead of silently starting a fresh run.
 - [x] Verify checkpoint overwrite and malformed-save recovery in Godot.
-- [x] Verify all tutorial navigation and start-run transitions in Godot.
+- [x] Verify the previous text tutorial navigation and start-run transitions in Godot (superseded by the coach spar).
+- [ ] Confirm Fighter Training starts a five-exchange spar against the coach.
+- [ ] Confirm each scripted coach tell and expected action appears in the correct order.
+- [ ] Confirm the coach gives relevant feedback after defensive, attack and stamina-management choices.
+- [ ] Confirm the practice move set includes Jab, Block, Rest, Slip, Feint, Clinch, Counter and Body Shot.
+- [ ] Confirm the spar ends after five exchanges and offers Spar Again, Start a New Run and Back to Main Menu.
+- [ ] Confirm ending/restarting the spar does not alter run Respect, lifetime Respect, tournament progress, inventory or the run save.
+- [ ] Confirm leaving the spar returns cleanly to the main menu and starting a new run enters fight 1 normally.
+
+
+## Phase 4 — Interactive coach spar
+
+Implementation checklist:
+- [x] Replace the read-through tutorial with a playable, five-exchange turn-based spar against a coach.
+- [x] Give the coach scripted tells for a heavy right, body shot, quick jab, repeat heavy right and recovery window.
+- [x] Expose a practice loadout covering core attack, defence, counter and utility actions.
+- [x] Display contextual coach feedback between exchanges.
+- [x] Keep training state separate from the tournament and persistent run data.
+
+Runtime checks remain open above; implementation is not a claim of Godot runtime verification.
