@@ -34,7 +34,7 @@
 
 ## 2. Current overall status
 
-**Current milestone:** Phase 3/4 — tournament readability, career progression feedback and run lifecycle  
+**Current milestone:** Phase 4 — tutorial, save reliability and functional UI  
 **Architecture correction:** Complete  
 **Phase 1 core combat:** Implemented and user-confirmed in Godot  
 **Phase 2 progression:** Partially implemented; remaining UI and regression work  
@@ -48,6 +48,8 @@
 - Turn-based combat was restored as the active combat flow; the real-time combat path is not the intended gameplay loop.
 - The user confirmed Phase 1 was working and asked development to continue.
 - Menu, hub, combat and Codex content now use a responsive vertical scroll container; the panel adapts to the viewport, follows keyboard focus and resets scroll on screen changes.
+- A five-lesson Fighter Training screen is now accessible from the main menu. It explains telegraphs, stamina, defensive/utility responses, rounds/Heart and reward/item progression.
+- Run checkpoints now write to a temporary file before promoting it to the save path. Continue validates the save structure and fighter stats, and rejects malformed or incompatible data with a clear menu message rather than silently starting a new run.
 - The Codex has a top-level back action and a guide to enemy archetype mechanics.
 - Enemy mechanics now differ: the brawler's Heavy Right hits harder; the speedster's landed attacks drain stamina; the tank's guard reduces incoming damage while it has stamina; the counter-puncher punishes committed attack moves; the dirty fighter drains stamina on a hit; and the final champion surges on turns 3 and 6.
 - Enemy telegraphs, stamina/action handling, Heart, rounds and decisions are part of the current turn-based combat foundation.
@@ -167,7 +169,7 @@ The roster is a deliberate current implementation. Rematches scale with fight in
 - [x] Add Codex entries for all corner items and tournament rules.
 - [x] Complete Codex entries for reward categories, move upgrades and current stat reward effects/trade-offs.
 - [ ] Settings/accessibility completeness.
-- [ ] Interactive tutorial.
+- [x] Add a step-by-step Fighter Training tutorial covering combat decisions, stamina, rounds, Heart and rewards.
 - [ ] Clear item/effect and reward information in the UI.
 
 **Status:** Partial. Existing functional UI should be extended rather than replaced wholesale.
@@ -179,7 +181,7 @@ The roster is a deliberate current implementation. Rematches scale with fight in
 - [ ] Test a complete eight-fight run after current progression changes.
 - [ ] Test every move and item.
 - [ ] Test KO, knockdown and decision outcomes, including judge tie-breaks.
-- [ ] Test save/load and run reset edge cases.
+- [ ] Test save/load and run reset edge cases, including overwriting an existing checkpoint and malformed save recovery.
 - [ ] Balance enemy scaling and rewards.
 - [ ] Test multiple viable builds.
 - [ ] Add deterministic seed replay.
@@ -251,8 +253,9 @@ Recent reliability work: Smelling Salts ownership is explicit, duplicate one-use
 
 1. Expand the hub into a full tournament bracket with clear cleared/next/locked states. (Implemented.)
 2. Ensure run summaries show the newly updated lifetime Respect and rank after the run award. (Implemented.)
-3. Continue completing the main menu/settings/tutorial and save lifecycle before refinement.
-4. Keep Smelling Salts runtime verification in the later grouped QA pass; it is not a development blocker.
+3. Add and validate a step-by-step training tutorial. (Implemented.)
+4. Harden save checkpoint writes and reject invalid run saves with a clear recovery message. (Implemented; runtime QA pending.)
+5. Keep Smelling Salts runtime verification in the later grouped QA pass; it is not a development blocker.
 
 Do not begin visual/audio polish yet.
 
