@@ -1824,6 +1824,22 @@ func _show_codex() -> void:
 	_label("DIRTY FIGHTER: Successful hits also drain your stamina.")
 	_label("FINAL CHAMPION: Timed surges hit harder on turns 3 and 6 of each round.")
 
+	_label("REWARD TYPES & MOVE UPGRADES", 18, Color(0.9, 0.36, 0.22))
+	_label("After a win, choose ONE reward before entering the next fight. Move rewards are available in the opening stretch of the tournament.")
+	_label("NEW MOVE: Adds that move to your loadout and gives you another action option. You start with 3 moves and have room for 4 by default.")
+	_label("MOVE UPGRADE: If the offered move is already in your loadout, choosing it does not create a duplicate. It permanently adds +1 to your fighter's overall damage for the current run; it is not a move-specific level.")
+	_label("FULL LOADOUT: When all move slots are occupied, move rewards are limited to moves you already own, so the choice becomes a damage upgrade.")
+	_label("ITEM: Adds one item to your corner bag. The bag holds up to 3 items. Read its timing: some items are used in combat, Ice is for the hub, and Smelling Salts are an automatic one-time revive.")
+	_label("STAT UPGRADE: Improves your fighter for the rest of the current run. Some upgrades trade one stat for another; read the full description before choosing.")
+	_label("STAT REWARDS", 18, Color(0.9, 0.36, 0.22))
+	_label("ROADWORK: +12 maximum stamina and recover 12 now.")
+	_label("HEAVY HANDS: +3 damage, but -2 speed.")
+	_label("OLD LEATHER: +15 maximum health and heal 10 now.")
+	_label("TIGHT GUARD: +4 defence.")
+	_label("QUICK FEET: +5 speed, up to the 60% cap.")
+	_label("SECOND WIND: Recover +8 stamina after every successful dodge.")
+	_label("CORNER'S WISDOM: Heal 12 health immediately.")
+
 	_label("CORNER ITEMS", 18, Color(0.9, 0.36, 0.22))
 	_label("Smelling Salts are not part of the starting kit. They must be selected as an ITEM reward; once owned, they automatically trigger on one lethal hit and are then gone for the rest of that run.", 13)
 	for item in item_templates:
