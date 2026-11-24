@@ -11,12 +11,12 @@ Run through these manually in Godot after importing:
 - [x] Reduce player health below 25%; confirm Heart activates.
 - [x] Win a fight and select each reward category.
 - [x] Unlock a move and confirm it appears in combat.
-- [ ] Reach fight 8 and defeat the final champion.
+- [x] Reach fight 8 and defeat the final champion.
 - [x] Lose a run and use Try Again.
 - [x] Save from the hub and Continue from main menu.
 - [x] Use an item and verify it is consumed.
-- [ ] Attempt a dirty move and verify disqualification risk.
-- [ ] Verify health never goes below zero and stamina never exceeds maximum.
+- [x] Attempt a dirty move and verify disqualification risk.
+- [x] Verify health never goes below zero and stamina never exceeds maximum.
 
 Known next-stage tests:
 - deterministic seed replay
@@ -46,6 +46,7 @@ Regression checks added after the turn-based combat pass:
 - [x] Keep Corner Ice (between-fight) and Smelling Salts (automatic revive) out of manual combat-use actions.
 - [x] When move slots are full, restrict move rewards to upgrades for moves already owned.
 - [x] Remove the reward-screen bypass so the tournament cannot advance without resolving the fight reward.
+- [x] Use one explicit eight-fight roster for both opponent selection and hub preview.
 - [ ] Add a proper item/effect summary to the hub and combat UI.
 - [ ] Add distinct reward descriptions and clearer upgrade choices.
 - [ ] Implement a tournament opponent progression pass so each fight has a deliberate archetype and difficulty identity.
