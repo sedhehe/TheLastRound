@@ -42,6 +42,9 @@ Regression checks added after the turn-based combat pass:
 - [ ] Confirm a full move loadout offers upgrades to owned moves rather than repeatedly offering an unselectable new move.
 - [ ] Confirm the hub item summary shows item names, descriptions and correct usage timing.
 - [ ] Confirm combat shows inventory details and accurately updates active temporary effects after item use.
+- [ ] Confirm new-move rewards show stamina cost, accuracy, damage/effect and description.
+- [ ] Confirm owned-move upgrades are clearly identified and explain their +1 player-damage effect.
+- [ ] Confirm item rewards show their effect and when they can be used.
 
 ## Phase 2 development — implemented
 - [x] Expose every combat-usable item separately; selecting one removes that specific item rather than always consuming the first inventory entry.
@@ -54,3 +57,6 @@ Regression checks added after the turn-based combat pass:
 - [x] Implement a tournament opponent progression pass so each fight has a deliberate archetype and difficulty identity.
 - [x] Add item descriptions and usage timing to the hub inventory summary.
 - [x] Add combat inventory details and a live summary of temporary effects.
+- [x] Show move reward costs, accuracy, damage/effect and descriptions.
+- [x] Label owned-move rewards as upgrades and explain their player-damage increase.
+- [x] Include item usage timing in item reward choices.
