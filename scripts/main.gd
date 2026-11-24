@@ -412,6 +412,7 @@ func _show_main_menu() -> void:
 	_label("An underground boxing roguelike.", 17)
 	_label("Eight fights stand between you and the Crown.", 14)
 	_label("CAREER RESPECT: %d  |  RANK: %s" % [lifetime_respect, _respect_rank()], 14, Color(0.88, 0.68, 0.38))
+	_label("CAREER PERKS: " + _career_perk_summary(), 12, Color(0.72, 0.82, 0.68))
 
 	_button("NEW RUN", _new_run)
 	_button(
@@ -472,6 +473,7 @@ func _new_run() -> void:
 		"heart": false,
 		"knockdowns": 0
 	}
+	_apply_career_perks()
 
 	_start_fight()
 
@@ -605,6 +607,13 @@ func _move_reward_details(move: Dictionary) -> String:
 	return " | ".join(details)
 
 
+func _show_salts_status() -> void:
+	if revive_used:
+		_label("LAST STAND: SMELLING SALTS SPENT — revive already used.", 13, Color(0.95, 0.62, 0.35))
+	elif inventory.has("salts"):
+		_label("LAST STAND READY: SMELLING SALTS — automatic revive at 0 HP, restores 30 HP.", 13, Color(0.55, 0.85, 0.65))
+
+
 func _show_item_summary(include_active_effects: bool) -> void:
 	_label("CORNER BAG", 15, Color(0.9, 0.36, 0.22))
 
@@ -623,19 +632,6 @@ func _show_item_summary(include_active_effects: bool) -> void:
 				12,
 				Color(0.78, 0.73, 0.68)
 			)
-
-	if revive_used:
-		_label(
-			"SMELLING SALTS: SPENT — your one revive has been used this run.",
-			13,
-			Color(0.95, 0.62, 0.35)
-		)
-	elif inventory.has("salts"):
-		_label(
-			"SMELLING SALTS: READY — automatic revive at 0 HP (restores 30 HP). No button needed.",
-			13,
-			Color(0.55, 0.85, 0.65)
-		)
 
 	var active_effects: Array[String] = []
 
@@ -696,6 +692,7 @@ func _show_combat() -> void:
 		16,
 		Color(0.55, 0.82, 0.95)
 	)
+	_show_salts_status()
 	_label(
 		"OPPONENT     HP %d/%d     STA %d/%d" % [
 			int(enemy.get("health", 0)),
@@ -1490,6 +1487,8 @@ func _show_bracket() -> void:
 	_label("MOVES: " + ", ".join(owned_moves))
 
 	_show_item_summary(false)
+	_show_salts_status()
+	_label("CAREER EDGE: " + _career_perk_summary(), 12, Color(0.72, 0.82, 0.68))
 
 	_button("ENTER THE RING", _start_fight)
 	_button(
@@ -1722,6 +1721,36 @@ func _respect_rank() -> String:
 	if lifetime_respect >= 50:
 		return "LOCAL PROSPECT"
 	return "UNKNOWN FIGHTER"
+
+
+func _apply_career_perks() -> void:
+	# Permanent, cumulative career rewards. Applied only when a fresh run starts;
+	# Continue loads the already-modified saved fighter and must not stack them.
+	if lifetime_respect >= 50:
+		player.max_health += 5.0
+		player.health += 5.0
+	if lifetime_respect >= 200:
+		player.max_stamina += 5.0
+		player.stamina += 5.0
+	if lifetime_respect >= 500:
+		player.damage += 1.0
+	if lifetime_respect >= 1000:
+		player.defence += 1.0
+
+
+func _career_perk_summary() -> String:
+	var perks: Array[String] = []
+	if lifetime_respect >= 50:
+		perks.append("Grit (+5 max HP)")
+	if lifetime_respect >= 200:
+		perks.append("Conditioning (+5 max stamina)")
+	if lifetime_respect >= 500:
+		perks.append("Power (+1 damage)")
+	if lifetime_respect >= 1000:
+		perks.append("Guard (+1 defence)")
+	if perks.is_empty():
+		return "No permanent perks yet — reach 50 Career Respect for Grit."
+	return " | ".join(perks)
 
 
 func _save_meta() -> void:
