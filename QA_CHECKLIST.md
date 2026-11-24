@@ -61,6 +61,7 @@ Regression checks added after the turn-based combat pass:
 - [x] Confirm every page opens at the top rather than retaining the previous page's scroll offset (user-tested).
 - [x] Confirm the Codex has a visible back-to-menu action at the top.
 - [ ] Confirm the expanded Codex item descriptions and tournament rules are readable and scroll correctly.
+- [ ] Confirm Codex reward categories, move upgrade rules and stat reward descriptions match the actual reward effects.
 - [x] Confirm each enemy archetype's special mechanic works and its tell gives a useful clue.
 - [ ] Confirm the hub scouting report matches the upcoming opponent's archetype and gives useful counterplay advice, including the final champion.
 
