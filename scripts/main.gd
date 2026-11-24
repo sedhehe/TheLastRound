@@ -629,7 +629,7 @@ func _show_salts_status() -> void:
 
 
 func _show_item_summary(include_active_effects: bool) -> void:
-	_label("CORNER BAG", 15, Color(0.9, 0.36, 0.22))
+	_label("CORNER BAG — %d / 3 SLOTS" % inventory.size(), 15, Color(0.9, 0.36, 0.22))
 
 	if inventory.is_empty():
 		_label("No items in your corner bag.", 12)
@@ -1200,6 +1200,7 @@ func _show_rewards() -> void:
 			int(player.stamina)
 		]
 	)
+	_show_salts_status()
 
 	var options: Array = []
 
@@ -1817,6 +1818,7 @@ func _show_codex() -> void:
 	_label("FINAL CHAMPION: Timed surges hit harder on turns 3 and 6 of each round.")
 
 	_label("CORNER ITEMS", 18, Color(0.9, 0.36, 0.22))
+	_label("Smelling Salts are not part of the starting kit. They must be selected as an ITEM reward; once owned, they automatically trigger on one lethal hit and are then gone for the rest of that run.", 13)
 	for item in item_templates:
 		var item_name := str(item.get("name", "Unknown item"))
 		var item_description := str(item.get("description", ""))
