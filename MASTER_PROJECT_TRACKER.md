@@ -34,7 +34,7 @@
 
 ## 2. Current overall status
 
-**Current milestone:** Phase 2/3 — progression clarity, permanent Respect perks and run lifecycle  
+**Current milestone:** Phase 3/4 — tournament readability, career progression feedback and run lifecycle  
 **Architecture correction:** Complete  
 **Phase 1 core combat:** Implemented and user-confirmed in Godot  
 **Phase 2 progression:** Partially implemented; remaining UI and regression work  
@@ -162,7 +162,7 @@ The roster is a deliberate current implementation. Rematches scale with fight in
 - [x] Add visible Codex back navigation and reset scroll position between screens.
 - [x] Show lifetime Respect and career rank on the main menu and run summary.
 - [ ] Main menu and pause-menu completeness.
-- [ ] Full tournament bracket presentation.
+- [x] Add a full eight-fight tournament bracket to the hub, showing cleared, next and locked bouts.
 - [x] Add enemy archetype explanations to the Codex.
 - [x] Add Codex entries for all corner items and tournament rules.
 - [x] Complete Codex entries for reward categories, move upgrades and current stat reward effects/trade-offs.
@@ -247,12 +247,12 @@ Recent inventory/reward fixes are committed, but the corresponding unchecked reg
 
 **Milestone: Make progression choices readable and reliable.**
 
-Recent reliability work: Smelling Salts ownership is now explicit, duplicate one-use rewards are filtered, and run-end processing is idempotent. These changes are implemented but still need Godot regression testing.
+Recent reliability work: Smelling Salts ownership is explicit, duplicate one-use rewards are filtered, and run-end processing is idempotent. The hub now shows the complete tournament route. Run summaries now persist Respect before rendering, so the displayed career total/rank includes the completed run award. These changes are implemented but still need Godot regression testing.
 
-1. Complete Codex reward-category and move-upgrade explanations.
-2. Review defeat/run summaries and reset behavior for meaningful long-term progression.
-3. Consider additional Respect unlock choices only after the first four permanent perks are balanced.
-4. At the next milestone, batch-test scroll navigation, scouting, all archetypes, progression and one complete eight-fight run.
+1. Expand the hub into a full tournament bracket with clear cleared/next/locked states. (Implemented.)
+2. Ensure run summaries show the newly updated lifetime Respect and rank after the run award. (Implemented.)
+3. Continue completing the main menu/settings/tutorial and save lifecycle before refinement.
+4. Keep Smelling Salts runtime verification in the later grouped QA pass; it is not a development blocker.
 
 Do not begin visual/audio polish yet.
 
