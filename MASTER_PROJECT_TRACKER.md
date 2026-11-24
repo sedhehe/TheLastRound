@@ -54,8 +54,10 @@
 - Corner Ice is reserved for between-fight use.
 - Smelling Salts are intended to trigger automatically on a lethal hit, not through a manual item button.
 - Combat inventory now exposes each usable item separately and consumes the selected item.
-- Smelling Salts have a prominent LAST STAND READY/SPENT status in the combat HUD and hub, clarifying their passive lethal-hit trigger.
+- Smelling Salts now always show one of three explicit states in combat, the hub and the reward screen: READY (owned), SPENT (revive used), or NOT IN YOUR BAG (not owned). The NOT IN YOUR BAG message explains that Salts come from an item reward.
+- The corner bag shows its current slot count, item acquisition logs use full item names, and duplicate/after-use Smelling Salts are excluded from future item rewards.
 - Career Respect now grants cumulative permanent starting perks on fresh runs: 50 Respect = +5 max HP (Grit), 200 = +5 max stamina (Conditioning), 500 = +1 damage (Power), and 1000 = +1 defence (Guard). Continue loads the saved fighter without reapplying perks.
+- Run completion is guarded against duplicate end calls so a single run cannot award lifetime Respect twice.
 - The Codex now includes item timing/effects and tournament rules, including reward resolution, between-fight recovery, run defeat and decisions.
 - Career Respect is now loaded from the persistent meta save, displayed on the main menu and run summary, and converted into a lifetime rank. It remains separate from the current run's Respect.
 - When move slots are full, move rewards are restricted to upgrades for already-owned moves.
@@ -106,7 +108,9 @@ Legend:
 - [x] Expose each manually usable combat item with its own button; consume the selected item.
 - [x] Keep Ice and Smelling Salts out of manual combat-use actions.
 - [x] Add a clear item/effect summary to hub and combat UI.
-- [x] Show Smelling Salts as READY before the automatic revive and SPENT after use.
+- [x] Show Smelling Salts as READY, SPENT or NOT IN YOUR BAG across combat, hub and reward screens.
+- [x] Prevent duplicate Smelling Salts rewards while owned or after the revive has been spent.
+- [x] Show current corner-bag capacity and full item names when acquired.
 - [x] Expand Codex with item definitions, usage timing and tournament rules.
 - [x] Improve move and item reward descriptions so choices communicate costs, accuracy, damage/effects and usage timing.
 - [ ] Improve stat reward descriptions and trade-offs where needed.
@@ -125,6 +129,7 @@ Legend:
 - [ ] Verify all eight fights as one uninterrupted run after the recent progression changes.
 - [x] Implement distinct turn-based mechanics for the brawler, speedster, tank, counter-puncher, dirty fighter and final champion.
 - [ ] Validate each archetype's special mechanic and tell in Godot.
+- [x] Guard run completion against duplicate end calls and duplicate lifetime Respect awards.
 - [ ] Complete defeat/full-run reset and run-summary edge-case coverage.
 - [x] Persist lifetime Respect separately from run Respect and display career rank thresholds.
 - [x] Add cumulative permanent career perks at 50/200/500/1000 Respect; apply them only when starting a fresh run.
@@ -241,6 +246,8 @@ Recent inventory/reward fixes are committed, but the corresponding unchecked reg
 ## 5. Immediate next milestone
 
 **Milestone: Make progression choices readable and reliable.**
+
+Recent reliability work: Smelling Salts ownership is now explicit, duplicate one-use rewards are filtered, and run-end processing is idempotent. These changes are implemented but still need Godot regression testing.
 
 1. Complete Codex reward-category and move-upgrade explanations.
 2. Review defeat/run summaries and reset behavior for meaningful long-term progression.
