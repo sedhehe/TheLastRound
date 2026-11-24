@@ -546,7 +546,7 @@ func _item_timing(id: String) -> String:
 		"salts":
 			return "Passive — automatically revive once after a lethal hit."
 		"crowd":
-			return "Between fights — +5 speed for the next fight."
+			return "Combat-use — activate during a fight; +5 speed for the next fight."
 		_:
 			return "Combat-use — activate during your turn."
 
@@ -573,10 +573,19 @@ func _show_item_summary(include_active_effects: bool) -> void:
 				Color(0.78, 0.73, 0.68)
 			)
 
-	if not include_active_effects:
-		return
-
 	var active_effects: Array[String] = []
+
+	if not include_active_effects:
+		if next_fight_speed_bonus > 0.0:
+			active_effects.append("+%d speed is waiting for the next fight." % int(next_fight_speed_bonus))
+		if float(passive.get("wind", 0.0)) > 0.0:
+			active_effects.append("+%d stamina on a successful dodge." % int(passive.get("wind", 0.0)))
+
+		if not active_effects.is_empty():
+			_label("PERSISTENT / NEXT-FIGHT EFFECTS", 15, Color(0.9, 0.36, 0.22))
+			for effect in active_effects:
+				_label("• " + effect, 12, Color(0.82, 0.76, 0.68))
+		return
 
 	if enemy_blinded > 0:
 		active_effects.append("Opponent accuracy reduced for %d more turn(s)." % enemy_blinded)
