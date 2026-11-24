@@ -324,6 +324,9 @@ func _clear_ui() -> void:
 	for child in content.get_children():
 		child.queue_free()
 
+	if is_instance_valid(ui_scroll):
+		ui_scroll.scroll_vertical = 0
+
 
 func _label(
 	text: String,
@@ -1678,6 +1681,8 @@ func _show_codex() -> void:
 		"Knowledge is the only thing you keep after a loss."
 	)
 
+	_button("BACK TO MAIN MENU", _show_main_menu)
+
 	_label("HEALTH: At zero, you are knocked out.")
 	_label("STAMINA: Moves cost stamina. Rest to recover; exhaustion is dangerous.")
 	_label("SPEED: Percentage chance to completely evade an incoming hit. Capped at 60%.")
@@ -1685,6 +1690,13 @@ func _show_codex() -> void:
 	_label("HEART: Below 25% health, gain a comeback critical chance.")
 	_label("TELL: The opponent's body language hints at their next attack.")
 	_label("MOVE SLOTS: You begin with 3 moves. The move limit is 4.")
+	_label("ENEMY TYPES", 18, Color(0.9, 0.36, 0.22))
+	_label("BRAWLER: Heavy loaded punches. Respect the big right-hand tell.")
+	_label("SPEEDSTER: Fast flurries that wear down your stamina.")
+	_label("TANK: A tight guard absorbs extra damage while the tank has stamina.")
+	_label("COUNTER-PUNCHER: Punishes committed attack moves. Mix in defence and utility.")
+	_label("DIRTY FIGHTER: Successful hits also drain your stamina.")
+	_label("FINAL CHAMPION: Timed surges hit harder on turns 3 and 6 of each round.")
 
 	for move in moves:
 		_label(
