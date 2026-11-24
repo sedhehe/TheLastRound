@@ -34,7 +34,7 @@
 
 ## 2. Current overall status
 
-**Current milestone:** Phase 2/3 — progression clarity, Respect meta-progression and run lifecycle  
+**Current milestone:** Phase 2/3 — progression clarity, permanent Respect perks and run lifecycle  
 **Architecture correction:** Complete  
 **Phase 1 core combat:** Implemented and user-confirmed in Godot  
 **Phase 2 progression:** Partially implemented; remaining UI and regression work  
@@ -54,7 +54,8 @@
 - Corner Ice is reserved for between-fight use.
 - Smelling Salts are intended to trigger automatically on a lethal hit, not through a manual item button.
 - Combat inventory now exposes each usable item separately and consumes the selected item.
-- Smelling Salts now have an explicit READY/SPENT status in the hub and combat UI, clarifying their passive lethal-hit trigger.
+- Smelling Salts have a prominent LAST STAND READY/SPENT status in the combat HUD and hub, clarifying their passive lethal-hit trigger.
+- Career Respect now grants cumulative permanent starting perks on fresh runs: 50 Respect = +5 max HP (Grit), 200 = +5 max stamina (Conditioning), 500 = +1 damage (Power), and 1000 = +1 defence (Guard). Continue loads the saved fighter without reapplying perks.
 - The Codex now includes item timing/effects and tournament rules, including reward resolution, between-fight recovery, run defeat and decisions.
 - Career Respect is now loaded from the persistent meta save, displayed on the main menu and run summary, and converted into a lifetime rank. It remains separate from the current run's Respect.
 - When move slots are full, move rewards are restricted to upgrades for already-owned moves.
@@ -126,7 +127,8 @@ Legend:
 - [ ] Validate each archetype's special mechanic and tell in Godot.
 - [ ] Complete defeat/full-run reset and run-summary edge-case coverage.
 - [x] Persist lifetime Respect separately from run Respect and display career rank thresholds.
-- [ ] Expand Respect meta-progression into meaningful permanent unlock paths.
+- [x] Add cumulative permanent career perks at 50/200/500/1000 Respect; apply them only when starting a fresh run.
+- [ ] Expand Respect meta-progression into further unlockable options beyond the four starting-stat perks.
 - [ ] Ensure scouting previews communicate useful tactical information, not only opponent names.
 
 **Current roster:**
@@ -240,10 +242,9 @@ Recent inventory/reward fixes are committed, but the corresponding unchecked reg
 
 **Milestone: Make progression choices readable and reliable.**
 
-1. Design and implement permanent Respect unlocks (starting bonuses or unlockable options) without compromising the run-reset loop.
-2. Complete Codex reward-category and move-upgrade explanations.
-2. Continue building Respect meta-progression and run-to-run unlocks without undermining the roguelike reset.
-3. Review defeat/run summaries and reset behavior for meaningful long-term progression.
+1. Complete Codex reward-category and move-upgrade explanations.
+2. Review defeat/run summaries and reset behavior for meaningful long-term progression.
+3. Consider additional Respect unlock choices only after the first four permanent perks are balanced.
 4. At the next milestone, batch-test scroll navigation, scouting, all archetypes, progression and one complete eight-fight run.
 
 Do not begin visual/audio polish yet.
