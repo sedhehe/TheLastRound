@@ -614,14 +614,24 @@ func _show_item_summary(include_active_effects: bool) -> void:
 			var description := str(item_data.get("description", "No description available."))
 			var status := _item_timing(item_id)
 
-			if item_id == "salts" and revive_used:
-				status += " Revive already used this run."
-
 			_label(
 				"%s — %s\n%s" % [item_name, description, status],
 				12,
 				Color(0.78, 0.73, 0.68)
 			)
+
+	if revive_used:
+		_label(
+			"SMELLING SALTS: SPENT — your one revive has been used this run.",
+			13,
+			Color(0.95, 0.62, 0.35)
+		)
+	elif inventory.has("salts"):
+		_label(
+			"SMELLING SALTS: READY — automatic revive at 0 HP (restores 30 HP). No button needed.",
+			13,
+			Color(0.55, 0.85, 0.65)
+		)
 
 	var active_effects: Array[String] = []
 
@@ -1729,6 +1739,20 @@ func _show_codex() -> void:
 	_label("COUNTER-PUNCHER: Punishes committed attack moves. Mix in defence and utility.")
 	_label("DIRTY FIGHTER: Successful hits also drain your stamina.")
 	_label("FINAL CHAMPION: Timed surges hit harder on turns 3 and 6 of each round.")
+
+	_label("CORNER ITEMS", 18, Color(0.9, 0.36, 0.22))
+	for item in item_templates:
+		var item_name := str(item.get("name", "Unknown item"))
+		var item_description := str(item.get("description", ""))
+		var item_id := str(item.get("id", ""))
+		_label("%s — %s" % [item_name, item_description], 13)
+		_label(_item_timing(item_id), 12, Color(0.68, 0.64, 0.60))
+
+	_label("TOURNAMENT RULES", 18, Color(0.9, 0.36, 0.22))
+	_label("Win a fight to choose one reward. Resolve that choice before the next bout.")
+	_label("A win restores 10 health and 20 stamina before the next fight.")
+	_label("A loss ends the run. Your current build and run Respect are lost; lifetime Respect is tracked separately.")
+	_label("The final decision after three rounds is based on remaining health if neither fighter is knocked out.")
 
 	for move in moves:
 		_label(
