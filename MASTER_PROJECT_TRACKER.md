@@ -26,6 +26,7 @@
 - Enemies telegraph their next attacks.
 - Rewards, items, move upgrades and stat upgrades shape each run.
 - Respect provides meta-progression between runs.
+- Lifetime Respect persists across runs and determines a career rank: Unknown Fighter, Local Prospect (50), Known Contender (200), Circuit Headliner (500), Underground Legend (1000).
 
 **Design note:** The current build uses 3 rounds of 6 turns per fight. The earlier broad brief said 3–5 rounds; the concrete current implementation and README specify 3. Treat changing this as a design decision, not an automatic cleanup.
 
@@ -55,6 +56,7 @@
 - Combat inventory now exposes each usable item separately and consumes the selected item.
 - Smelling Salts now have an explicit READY/SPENT status in the hub and combat UI, clarifying their passive lethal-hit trigger.
 - The Codex now includes item timing/effects and tournament rules, including reward resolution, between-fight recovery, run defeat and decisions.
+- Career Respect is now loaded from the persistent meta save, displayed on the main menu and run summary, and converted into a lifetime rank. It remains separate from the current run's Respect.
 - When move slots are full, move rewards are restricted to upgrades for already-owned moves.
 - Reward resolution is required before advancing to the next fight.
 - One explicit eight-fight roster is shared by opponent selection and the hub preview.
@@ -123,7 +125,8 @@ Legend:
 - [x] Implement distinct turn-based mechanics for the brawler, speedster, tank, counter-puncher, dirty fighter and final champion.
 - [ ] Validate each archetype's special mechanic and tell in Godot.
 - [ ] Complete defeat/full-run reset and run-summary edge-case coverage.
-- [ ] Expand Respect meta-progression and unlock paths.
+- [x] Persist lifetime Respect separately from run Respect and display career rank thresholds.
+- [ ] Expand Respect meta-progression into meaningful permanent unlock paths.
 - [ ] Ensure scouting previews communicate useful tactical information, not only opponent names.
 
 **Current roster:**
@@ -150,6 +153,7 @@ The roster is a deliberate current implementation. Rematches scale with fight in
 - [x] Save and continue foundation; user-confirmed Phase 1 save/continue check.
 - [x] Make menu, hub, combat and Codex content vertically scrollable with responsive panel sizing.
 - [x] Add visible Codex back navigation and reset scroll position between screens.
+- [x] Show lifetime Respect and career rank on the main menu and run summary.
 - [ ] Main menu and pause-menu completeness.
 - [ ] Full tournament bracket presentation.
 - [x] Add enemy archetype explanations to the Codex.
@@ -236,7 +240,8 @@ Recent inventory/reward fixes are committed, but the corresponding unchecked reg
 
 **Milestone: Make progression choices readable and reliable.**
 
-1. Complete Codex reward-category and move-upgrade explanations.
+1. Design and implement permanent Respect unlocks (starting bonuses or unlockable options) without compromising the run-reset loop.
+2. Complete Codex reward-category and move-upgrade explanations.
 2. Continue building Respect meta-progression and run-to-run unlocks without undermining the roguelike reset.
 3. Review defeat/run summaries and reset behavior for meaningful long-term progression.
 4. At the next milestone, batch-test scroll navigation, scouting, all archetypes, progression and one complete eight-fight run.
