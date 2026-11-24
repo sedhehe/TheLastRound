@@ -45,6 +45,11 @@ Regression checks added after the turn-based combat pass:
 - [ ] Confirm new-move rewards show stamina cost, accuracy, damage/effect and description.
 - [ ] Confirm owned-move upgrades are clearly identified and explain their +1 player-damage effect.
 - [ ] Confirm item rewards show their effect and when they can be used.
+- [ ] Confirm long hub, combat, reward and Codex pages can be scrolled with the mouse wheel/trackpad.
+- [ ] Confirm focused buttons remain reachable with keyboard navigation and the scroll follows focus.
+- [ ] Confirm every page opens at the top rather than retaining the previous page's scroll offset.
+- [ ] Confirm the Codex has a visible back-to-menu action at the top.
+- [ ] Confirm each enemy archetype's special mechanic works and its tell gives a useful clue.
 
 ## Phase 2 development — implemented
 - [x] Expose every combat-usable item separately; selecting one removes that specific item rather than always consuming the first inventory entry.
@@ -60,3 +65,8 @@ Regression checks added after the turn-based combat pass:
 - [x] Show move reward costs, accuracy, damage/effect and descriptions.
 - [x] Label owned-move rewards as upgrades and explain their player-damage increase.
 - [x] Include item usage timing in item reward choices.
+- [x] Place all menu, hub, combat and Codex content inside a responsive vertical ScrollContainer.
+- [x] Make the UI panel resize to the available viewport and follow keyboard focus while scrolling.
+- [x] Reset scroll position when changing screens and add a visible Codex back action at the top.
+- [x] Give the brawler, speedster, tank, counter-puncher, dirty fighter and final champion distinct turn-based combat effects.
+- [x] Add enemy archetype explanations to the Codex.
