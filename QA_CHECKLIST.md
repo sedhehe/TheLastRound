@@ -49,4 +49,4 @@ Regression checks added after the turn-based combat pass:
 - [x] Use one explicit eight-fight roster for both opponent selection and hub preview.
 - [ ] Add a proper item/effect summary to the hub and combat UI.
 - [ ] Add distinct reward descriptions and clearer upgrade choices.
-- [ ] Implement a tournament opponent progression pass so each fight has a deliberate archetype and difficulty identity.
+- [x] Implement a tournament opponent progression pass so each fight has a deliberate archetype and difficulty identity.
