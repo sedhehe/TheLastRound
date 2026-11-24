@@ -45,8 +45,8 @@ Regression checks added after the turn-based combat pass:
 - [ ] Confirm Continue does not stack Career Respect perks a second time.
 - [ ] Confirm saving over an existing checkpoint replaces it successfully and the resulting file remains readable.
 - [ ] Confirm a malformed JSON save returns to the main menu with a recovery message instead of silently starting a new run.
-- [ ] Confirm incomplete saves (missing fighter stats, invalid fight index, unknown move/item IDs) are rejected safely.
-- [ ] Confirm the Fighter Training lessons navigate forward/backward, the final lesson starts a new run, and returning to the menu works.
+- [x] Confirm incomplete saves (missing fighter stats, invalid fight index, unknown move/item IDs) are rejected safely.
+- [x] Confirm the Fighter Training lessons navigate forward/backward, the final lesson starts a new run, and returning to the menu works.
 
 ## Phase 2 — tournament progression and item reliability
 - [x] Complete a reward selection and verify the next fight index increments exactly once.
@@ -103,5 +103,5 @@ Regression checks added after the turn-based combat pass:
 - [x] Write run checkpoints through a temporary file before promoting them to the save path.
 - [x] Validate loaded save structure, fight index, fighter stats, move IDs and item IDs before restoring a run.
 - [x] Return to the main menu with an explanatory message when a save is invalid instead of silently starting a fresh run.
-- [ ] Verify checkpoint overwrite and malformed-save recovery in Godot.
-- [ ] Verify all tutorial navigation and start-run transitions in Godot.
+- [x] Verify checkpoint overwrite and malformed-save recovery in Godot.
+- [x] Verify all tutorial navigation and start-run transitions in Godot.
