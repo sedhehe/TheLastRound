@@ -1658,6 +1658,10 @@ func _end_run(won: bool, reason: String) -> void:
 	if won:
 		respect += 100
 
+	# Persist career progress before rendering the summary so the displayed
+	# lifetime total and rank include this run's Respect award.
+	_save_meta()
+
 	_heading(
 		"THE CROWN" if won else "LIGHTS OUT",
 		reason
@@ -1684,8 +1688,6 @@ func _end_run(won: bool, reason: String) -> void:
 			int(_speed_chance(float(player.get("speed", 0))))
 		]
 	)
-
-	_save_meta()
 
 	if FileAccess.file_exists(SAVE_PATH):
 		DirAccess.remove_absolute(
