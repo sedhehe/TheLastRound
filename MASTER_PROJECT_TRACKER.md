@@ -113,6 +113,7 @@ Legend:
 - [x] Enemy stats scale with fight index.
 - [x] Opponent progression has deliberate archetype/difficulty identities.
 - [x] Hub/bracket preview identifies the next opponent.
+- [x] Hub scouting report shows the next opponent's archetype, tell and tactical counterplay.
 - [x] Reward-to-next-fight transition requires reward resolution.
 - [ ] Verify all eight fights as one uninterrupted run after the recent progression changes.
 - [x] Implement distinct turn-based mechanics for the brawler, speedster, tank, counter-puncher, dirty fighter and final champion.
@@ -231,9 +232,9 @@ Recent inventory/reward fixes are committed, but the corresponding unchecked reg
 **Milestone: Make progression choices readable and reliable.**
 
 1. Expand the Codex with item, reward and tournament explanations.
-2. Review scouting previews so they explain tactical threats and counterplay.
-3. Continue building Respect meta-progression and run-to-run unlocks without undermining the roguelike reset.
-4. At the next milestone, batch-test scroll navigation, all archetypes, progression and one complete eight-fight run.
+2. Continue building Respect meta-progression and run-to-run unlocks without undermining the roguelike reset.
+3. Review defeat/run summaries and reset behavior for meaningful long-term progression.
+4. At the next milestone, batch-test scroll navigation, scouting, all archetypes, progression and one complete eight-fight run.
 
 Do not begin visual/audio polish yet.
 
