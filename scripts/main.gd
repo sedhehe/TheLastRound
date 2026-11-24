@@ -551,6 +551,24 @@ func _item_timing(id: String) -> String:
 			return "Combat-use — activate during your turn."
 
 
+func _move_reward_details(move: Dictionary) -> String:
+	var details: Array[String] = []
+	var cost := int(move.get("cost", 0))
+	var accuracy := int(move.get("accuracy", 100.0))
+	var damage: Array = move.get("damage", [0, 0])
+
+	details.append("%d stamina" % cost)
+	details.append("%d%% accuracy" % accuracy)
+
+	if damage.size() >= 2 and (float(damage[0]) > 0.0 or float(damage[1]) > 0.0):
+		details.append("%d–%d base damage" % [int(damage[0]), int(damage[1])])
+	else:
+		details.append(str(move.get("kind", "utility")).capitalize() + " move")
+
+	details.append(str(move.get("description", "")))
+	return " | ".join(details)
+
+
 func _show_item_summary(include_active_effects: bool) -> void:
 	_label("CORNER BAG", 15, Color(0.9, 0.36, 0.22))
 
@@ -1155,22 +1173,33 @@ func _show_rewards() -> void:
 	for option in options:
 		if option.type == "move":
 			var move: Dictionary = option.data
+			var move_id := str(move.get("id", ""))
+			var is_upgrade := owned_moves.has(move_id)
+			var reward_prefix := "UPGRADE" if is_upgrade else "NEW MOVE"
+			var reward_details := _move_reward_details(move)
+
+			if is_upgrade:
+				reward_details += " | Upgrade: +1 player damage."
+
 			_button(
-				"MOVE: %s — %s" % [
+				"%s: %s — %s" % [
+					reward_prefix,
 					str(move.get("name", "Move")),
-					str(move.get("description", ""))
+					reward_details
 				],
-				_choose_move.bind(str(move.get("id", "")))
+				_choose_move.bind(move_id)
 			)
 
 		elif option.type == "item":
 			var item_data: Dictionary = option.data
+			var item_id := str(item_data.get("id", ""))
 			_button(
-				"ITEM: %s — %s" % [
+				"ITEM: %s — %s | %s" % [
 					str(item_data.get("name", "Item")),
-					str(item_data.get("description", ""))
+					str(item_data.get("description", "")),
+					_item_timing(item_id)
 				],
-				_choose_item.bind(str(item_data.get("id", "")))
+				_choose_item.bind(item_id)
 			)
 
 		else:
