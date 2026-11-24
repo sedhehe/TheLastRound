@@ -33,7 +33,7 @@
 
 ## 2. Current overall status
 
-**Current milestone:** Phase 2 — progression and reward experience  
+**Current milestone:** Phase 3 — distinct enemy archetypes and tournament progression  
 **Architecture correction:** Complete  
 **Phase 1 core combat:** Implemented and user-confirmed in Godot  
 **Phase 2 progression:** Partially implemented; remaining UI and regression work  
@@ -102,7 +102,7 @@ Legend:
 - [ ] Improve stat reward descriptions and trade-offs where needed.
 - [ ] Finish regression coverage for move-slot overflow, duplicate upgrades, item capacity and every item effect.
 
-**Status:** In progress. Core progression mechanics exist; reward clarity and item/effect presentation are the next development targets.
+**Status:** In progress. Reward clarity and item/effect summaries are implemented; manual regression remains open.
 
 ### Phase 3 — Tournament and roguelike loop
 
@@ -112,7 +112,8 @@ Legend:
 - [x] Hub/bracket preview identifies the next opponent.
 - [x] Reward-to-next-fight transition requires reward resolution.
 - [ ] Verify all eight fights as one uninterrupted run after the recent progression changes.
-- [ ] Finish and validate distinct mechanical behavior for every archetype.
+- [x] Implement distinct turn-based mechanics for the brawler, speedster, tank, counter-puncher, dirty fighter and final champion.
+- [ ] Validate each archetype's special mechanic and tell in Godot.
 - [ ] Complete defeat/full-run reset and run-summary edge-case coverage.
 - [ ] Expand Respect meta-progression and unlock paths.
 - [ ] Ensure scouting previews communicate useful tactical information, not only opponent names.
@@ -139,9 +140,12 @@ The roster is a deliberate current implementation. Rematches scale with fight in
 - [x] Combat log/action feedback foundation.
 - [x] Hub/bracket and locker-room reward flow foundation.
 - [x] Save and continue foundation; user-confirmed Phase 1 save/continue check.
+- [x] Make menu, hub, combat and Codex content vertically scrollable with responsive panel sizing.
+- [x] Add visible Codex back navigation and reset scroll position between screens.
 - [ ] Main menu and pause-menu completeness.
 - [ ] Full tournament bracket presentation.
-- [ ] Codex completeness.
+- [x] Add enemy archetype explanations to the Codex.
+- [ ] Complete Codex entries for items, rewards and tournament rules.
 - [ ] Settings/accessibility completeness.
 - [ ] Interactive tutorial.
 - [ ] Clear item/effect and reward information in the UI.
@@ -223,11 +227,10 @@ Recent inventory/reward fixes are committed, but the corresponding unchecked reg
 
 **Milestone: Make progression choices readable and reliable.**
 
-1. Inspect each enemy template and current telegraph/turn-resolution logic.
-2. Give the slugger, speedster, tank, counter-puncher, dirty fighter and final champion distinct tactical behavior without changing the turn-based structure.
-3. Ensure the tells communicate the behavior clearly enough for the player to respond strategically.
-4. Update `QA_CHECKLIST.md` alongside implementation.
-5. After archetype behavior is in place, run one grouped regression pass covering progression and a complete eight-fight run.
+1. Expand the Codex with item, reward and tournament explanations.
+2. Review scouting previews so they explain tactical threats and counterplay.
+3. Continue building Respect meta-progression and run-to-run unlocks without undermining the roguelike reset.
+4. At the next milestone, batch-test scroll navigation, all archetypes, progression and one complete eight-fight run.
 
 Do not begin visual/audio polish yet.
 
@@ -260,5 +263,5 @@ Open the project in Godot 4.7 and run with F5. Stop the running game before pull
 
 **Tracker status:** Active  
 **Current phase:** Phase 2 — Progression  
-**Next milestone:** Distinct enemy archetype mechanics and tournament progression depth  
+**Next milestone:** Expand tournament strategy and finish Phase 2/3 regression at a grouped checkpoint  
 **Visual/audio polish:** Deferred
