@@ -58,7 +58,7 @@ Regression checks added after the turn-based combat pass:
 - [x] Remove the reward-screen bypass so the tournament cannot advance without resolving the fight reward.
 - [x] Use one explicit eight-fight roster for both opponent selection and hub preview.
 - [x] Add a proper item/effect summary to the hub and combat UI.
-- [ ] Add distinct reward descriptions and clearer upgrade choices.
+- [x] Add distinct reward descriptions and clearer upgrade choices.
 - [x] Implement a tournament opponent progression pass so each fight has a deliberate archetype and difficulty identity.
 - [x] Add item descriptions and usage timing to the hub inventory summary.
 - [x] Add combat inventory details and a live summary of temporary effects.
