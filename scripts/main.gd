@@ -50,6 +50,7 @@ var revive_used := false
 var heart_active := false
 
 var game_state := "menu"
+var run_ended := false
 var respect := 0
 var lifetime_respect := 0
 var run_seed := 0
@@ -431,6 +432,7 @@ func _show_main_menu() -> void:
 
 
 func _new_run() -> void:
+	run_ended = false
 	run_seed = int(Time.get_unix_time_from_system())
 	rng.seed = run_seed
 
@@ -1607,6 +1609,10 @@ func _log(message: String) -> void:
 
 
 func _end_run(won: bool, reason: String) -> void:
+	if run_ended:
+		return
+
+	run_ended = true
 	_disable_realtime_combat()
 
 	game_state = "gameover"
@@ -1691,6 +1697,7 @@ func _continue_run() -> void:
 		_new_run()
 		return
 
+	run_ended = false
 	fight_index = int(data.get("fight_index", 0))
 	player = data.get("player", {})
 
