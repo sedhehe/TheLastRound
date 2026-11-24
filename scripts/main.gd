@@ -1735,19 +1735,33 @@ func _save_run() -> void:
 	file.flush()
 	file.close()
 
-	# Godot's rename operation does not replace an existing destination on
-	# every platform, so remove the previous checkpoint before promoting temp.
-	if FileAccess.file_exists(SAVE_PATH):
-		DirAccess.remove_absolute(ProjectSettings.globalize_path(SAVE_PATH))
+	# Preserve the previous checkpoint until the new temporary file has
+	# successfully taken its place. This avoids losing a valid save on failure.
+	var save_absolute := ProjectSettings.globalize_path(SAVE_PATH)
+	var temp_absolute := ProjectSettings.globalize_path(temp_path)
+	var backup_path := "user://underdog_save.bak"
+	var backup_absolute := ProjectSettings.globalize_path(backup_path)
+	var had_previous_save := FileAccess.file_exists(SAVE_PATH)
 
-	var rename_error := DirAccess.rename_absolute(
-		ProjectSettings.globalize_path(temp_path),
-		ProjectSettings.globalize_path(SAVE_PATH)
-	)
+	if FileAccess.file_exists(backup_path):
+		DirAccess.remove_absolute(backup_absolute)
+
+	if had_previous_save:
+		var backup_error := DirAccess.rename_absolute(save_absolute, backup_absolute)
+		if backup_error != OK:
+			push_error("Could not back up previous run save. Error: %d" % backup_error)
+			DirAccess.remove_absolute(temp_absolute)
+			return
+
+	var rename_error := DirAccess.rename_absolute(temp_absolute, save_absolute)
 	if rename_error != OK:
 		push_error("Could not replace run save. Error: %d" % rename_error)
-		DirAccess.remove_absolute(ProjectSettings.globalize_path(temp_path))
+		DirAccess.remove_absolute(temp_absolute)
+		if had_previous_save:
+			DirAccess.rename_absolute(backup_absolute, save_absolute)
 	else:
+		if FileAccess.file_exists(backup_path):
+			DirAccess.remove_absolute(backup_absolute)
 		menu_notice = "RUN SAVED — your corner is waiting."
 
 
