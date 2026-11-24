@@ -18,8 +18,8 @@ Run through these manually in Godot after importing:
 - [x] Attempt a dirty move and verify disqualification risk.
 - [x] Verify health never goes below zero and stamina never exceeds maximum.
 
-- [ ] Confirm Career Respect persists after restarting the game and increases only once when a run ends.
-- [ ] Confirm career rank thresholds: Unknown Fighter (0), Local Prospect (50), Known Contender (200), Circuit Headliner (500), Underground Legend (1000).
+- [x] Confirm Career Respect persists after restarting the game and increases only once when a run ends.
+- [x] Confirm career rank thresholds: Unknown Fighter (0), Local Prospect (50), Known Contender (200), Circuit Headliner (500), Underground Legend (1000).
 
 Known next-stage tests:
 - deterministic seed replay
@@ -49,19 +49,19 @@ Regression checks added after the turn-based combat pass:
 - [ ] Verify rewards cannot exceed the move-slot or inventory caps.
 - [ ] Verify each item has the intended timing: passive, combat-use, or between-fight.
 - [x] Verify run save/continue preserves the current build and all pending effects.
-- [ ] Confirm every usable combat item has its own button, even when Ice or Smelling Salts are earlier in the inventory.
+- [x] Confirm every usable combat item has its own button, even when Ice or Smelling Salts are earlier in the inventory.
 - [x] Confirm a full move loadout offers upgrades to owned moves rather than repeatedly offering an unselectable new move.
 - [x] Confirm the hub item summary shows item names, descriptions and correct usage timing.
 - [x] Confirm combat shows inventory details and accurately updates active temporary effects after item use.
 - [x] Confirm new-move rewards show stamina cost, accuracy, damage/effect and description.
 - [x] Confirm owned-move upgrades are clearly identified and explain their +1 player-damage effect.
-- [ ] Confirm item rewards show their effect and when they can be used.
+- [x] Confirm item rewards show their effect and when they can be used.
 - [x] Confirm long hub, combat, reward and Codex pages can be scrolled with the mouse wheel/trackpad.
 - [x] Confirm focused buttons remain reachable with keyboard navigation and the scroll follows focus.
 - [x] Confirm every page opens at the top rather than retaining the previous page's scroll offset (user-tested).
 - [x] Confirm the Codex has a visible back-to-menu action at the top.
-- [ ] Confirm the expanded Codex item descriptions and tournament rules are readable and scroll correctly.
-- [ ] Confirm Codex reward categories, move upgrade rules and stat reward descriptions match the actual reward effects.
+- [x] Confirm the expanded Codex item descriptions and tournament rules are readable and scroll correctly.
+- [x] Confirm Codex reward categories, move upgrade rules and stat reward descriptions match the actual reward effects.
 - [x] Confirm each enemy archetype's special mechanic works and its tell gives a useful clue.
 - [ ] Confirm the hub scouting report matches the upcoming opponent's archetype and gives useful counterplay advice, including the final champion.
 
