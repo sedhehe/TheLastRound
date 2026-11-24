@@ -34,8 +34,11 @@ Regression checks added after the turn-based combat pass:
 - [x] Confirm the bracket shows the upcoming opponent, including after Continue.
 - [x] Confirm Corner Ice cannot be used during a fight and remains available between fights.
 - [ ] Confirm Smelling Salts cannot be manually consumed and automatically revives the player once on a lethal hit.
-- [ ] Confirm the combat and hub UI clearly show Smelling Salts as READY before the revive and SPENT afterward.
+- [ ] Confirm the combat HUD and hub show a prominent LAST STAND READY status before the revive and SPENT afterward.
+- [ ] Confirm the revive message remains visible in recent corner talk after the lethal hit.
 - [ ] Confirm Smelling Salts are removed after the revive and cannot trigger a second time.
+- [ ] Confirm Career Respect perks unlock cumulatively at 50/200/500/1000 and apply only once on a fresh run.
+- [ ] Confirm Continue does not stack Career Respect perks a second time.
 
 ## Phase 2 — tournament progression and item reliability
 - [x] Complete a reward selection and verify the next fight index increments exactly once.
