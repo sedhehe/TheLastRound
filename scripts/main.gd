@@ -585,8 +585,12 @@ func _show_combat() -> void:
 			float(player.get("stamina", 0.0)) < cost
 		)
 
-	# Ice is a between-fight recovery item, not a mid-fight action.
-	if not inventory.is_empty() and str(inventory[0]) != "ice":
+	# Ice is used between fights; Smelling Salts trigger automatically
+	# when a knockout would otherwise end the run.
+	if (
+		not inventory.is_empty()
+		and str(inventory[0]) not in ["ice", "salts"]
+	):
 		_button(
 			"USE ITEM: " + str(inventory[0]).replace("_", " "),
 			_use_item
@@ -1295,8 +1299,14 @@ func _use_item() -> void:
 	if inventory.is_empty():
 		return
 
-	# Ice packs are reserved for the hub between fights.
-	if game_state == "combat" and str(inventory[0]) == "ice":
+	# This action is only available during a fight.
+	if game_state != "combat":
+		return
+
+	var item_id := str(inventory[0])
+	# Ice is a between-fight recovery item. Smelling Salts are passive:
+	# they must stay in the bag until a knockout triggers their revive.
+	if item_id in ["ice", "salts"]:
 		return
 
 	var id: String = str(inventory.pop_front())
