@@ -39,17 +39,17 @@ Regression checks added after the turn-based combat pass:
 - [ ] Verify each item has the intended timing: passive, combat-use, or between-fight.
 - [x] Verify run save/continue preserves the current build and all pending effects.
 - [ ] Confirm every usable combat item has its own button, even when Ice or Smelling Salts are earlier in the inventory.
-- [ ] Confirm a full move loadout offers upgrades to owned moves rather than repeatedly offering an unselectable new move.
-- [ ] Confirm the hub item summary shows item names, descriptions and correct usage timing.
-- [ ] Confirm combat shows inventory details and accurately updates active temporary effects after item use.
-- [ ] Confirm new-move rewards show stamina cost, accuracy, damage/effect and description.
-- [ ] Confirm owned-move upgrades are clearly identified and explain their +1 player-damage effect.
+- [x] Confirm a full move loadout offers upgrades to owned moves rather than repeatedly offering an unselectable new move.
+- [x] Confirm the hub item summary shows item names, descriptions and correct usage timing.
+- [x] Confirm combat shows inventory details and accurately updates active temporary effects after item use.
+- [x] Confirm new-move rewards show stamina cost, accuracy, damage/effect and description.
+- [x] Confirm owned-move upgrades are clearly identified and explain their +1 player-damage effect.
 - [ ] Confirm item rewards show their effect and when they can be used.
-- [ ] Confirm long hub, combat, reward and Codex pages can be scrolled with the mouse wheel/trackpad.
-- [ ] Confirm focused buttons remain reachable with keyboard navigation and the scroll follows focus.
+- [x] Confirm long hub, combat, reward and Codex pages can be scrolled with the mouse wheel/trackpad.
+- [x] Confirm focused buttons remain reachable with keyboard navigation and the scroll follows focus.
 - [ ] Confirm every page opens at the top rather than retaining the previous page's scroll offset.
-- [ ] Confirm the Codex has a visible back-to-menu action at the top.
-- [ ] Confirm each enemy archetype's special mechanic works and its tell gives a useful clue.
+- [x] Confirm the Codex has a visible back-to-menu action at the top.
+- [x] Confirm each enemy archetype's special mechanic works and its tell gives a useful clue.
 - [ ] Confirm the hub scouting report matches the upcoming opponent's archetype and gives useful counterplay advice, including the final champion.
 
 ## Phase 2 development — implemented
