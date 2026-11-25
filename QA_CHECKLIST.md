@@ -194,3 +194,9 @@ Implementation committed; none of these checks are marked passed until verified 
 - [ ] No runtime errors, invalid node references or GDScript parse errors are produced.
 
 **Verification note:** Implementation is committed but not executed in Godot in this environment. All above remain unchecked.
+
+
+## Non-visual gameplay reliability — 2026-11-25
+
+- [ ] Use Energy Drink during combat: confirm +35 stamina is applied immediately (capped at maximum), the opponent responds, then the 10-stamina crash is charged exactly once and the pending flag clears.
+- [ ] Confirm Energy Drink's crash is not charged if the combat has already ended during the opponent response.
