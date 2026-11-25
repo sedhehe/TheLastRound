@@ -71,6 +71,9 @@ var root_ui: Control
 var panel: PanelContainer
 var content: VBoxContainer
 var ui_scroll: ScrollContainer
+var ui_shade: ColorRect
+var combat_hud: Control
+var combat_drawer_open := false
 var player_last_move_id := ""
 
 var arena_light: OmniLight3D
@@ -280,10 +283,10 @@ func _build_ui() -> void:
 	root_ui.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(root_ui)
 
-	var shade := ColorRect.new()
-	shade.color = Color(0.015, 0.012, 0.018, 0.55)
-	shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	root_ui.add_child(shade)
+	ui_shade = ColorRect.new()
+	ui_shade.color = Color(0.015, 0.012, 0.018, 0.55)
+	ui_shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	root_ui.add_child(ui_shade)
 
 	panel = PanelContainer.new()
 	panel.add_theme_stylebox_override("panel", _panel_style())
@@ -308,6 +311,9 @@ func _build_ui() -> void:
 
 func _layout_ui() -> void:
 	if not is_instance_valid(panel) or not is_instance_valid(root_ui):
+		return
+	if game_state == "combat":
+		panel.hide()
 		return
 
 	var viewport_size := root_ui.size
@@ -335,7 +341,13 @@ func _panel_style() -> StyleBoxFlat:
 	return style
 
 
+	# Combat is rendered as an arena HUD, while non-combat screens use the menu panel.
 func _clear_ui() -> void:
+	if is_instance_valid(combat_hud):
+		combat_hud.queue_free()
+		combat_hud = null
+	panel.show()
+	ui_shade.color = Color(0.015, 0.012, 0.018, 0.55)
 	for child in content.get_children():
 		child.queue_free()
 
@@ -735,95 +747,182 @@ func _show_item_summary(include_active_effects: bool) -> void:
 # TURN-BASED COMBAT SCREEN
 # ---------------------------------------------------------
 
+func _hud_panel(parent: Control, rect: Rect2, tint: Color = Color(0.025, 0.035, 0.055, 0.88)) -> PanelContainer:
+	var card := PanelContainer.new()
+	card.position = rect.position
+	card.size = rect.size
+	var style := StyleBoxFlat.new()
+	style.bg_color = tint
+	style.border_color = Color(0.22, 0.42, 0.62, 0.95)
+	style.set_border_width_all(1)
+	style.set_corner_radius_all(5)
+	style.content_margin_left = 12
+	style.content_margin_right = 12
+	style.content_margin_top = 8
+	style.content_margin_bottom = 8
+	card.add_theme_stylebox_override("panel", style)
+	parent.add_child(card)
+	return card
+
+
+func _hud_label(parent: Control, value: String, size: int = 14, color: Color = Color(0.88, 0.92, 0.98)) -> Label:
+	var label := Label.new()
+	label.text = value
+	label.add_theme_font_size_override("font_size", size)
+	label.add_theme_color_override("font_color", color)
+	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	parent.add_child(label)
+	return label
+
+
+func _hud_bar(parent: Control, value: float, maximum: float, fill: Color) -> ProgressBar:
+	var bar := ProgressBar.new()
+	bar.custom_minimum_size = Vector2(180, 13)
+	bar.min_value = 0.0
+	bar.max_value = maxf(1.0, maximum)
+	bar.value = clampf(value, 0.0, bar.max_value)
+	bar.show_percentage = false
+	var bg := StyleBoxFlat.new()
+	bg.bg_color = Color(0.08, 0.10, 0.14)
+	bg.set_corner_radius_all(3)
+	var fg := StyleBoxFlat.new()
+	fg.bg_color = fill
+	fg.set_corner_radius_all(3)
+	bar.add_theme_stylebox_override("background", bg)
+	bar.add_theme_stylebox_override("fill", fg)
+	parent.add_child(bar)
+	return bar
+
+
+func _hud_button(parent: Control, caption: String, callback: Callable, disabled: bool = false, compact: bool = false) -> Button:
+	var button := Button.new()
+	button.text = caption
+	button.disabled = disabled
+	button.custom_minimum_size = Vector2(104 if compact else 138, 42)
+	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	button.add_theme_font_size_override("font_size", 13 if compact else 14)
+	var normal := StyleBoxFlat.new()
+	normal.bg_color = Color(0.10, 0.17, 0.25)
+	normal.border_color = Color(0.20, 0.43, 0.62)
+	normal.set_border_width_all(1)
+	normal.set_corner_radius_all(4)
+	button.add_theme_stylebox_override("normal", normal)
+	var hover := normal.duplicate() as StyleBoxFlat
+	hover.bg_color = Color(0.16, 0.27, 0.37)
+	button.add_theme_stylebox_override("hover", hover)
+	button.pressed.connect(callback)
+	parent.add_child(button)
+	return button
+
+
+func _toggle_combat_drawer() -> void:
+	combat_drawer_open = not combat_drawer_open
+	_show_combat()
+
+
 func _show_combat() -> void:
-	var combat_title := "COACHING SPAR — COACH" if training_active else "FIGHT %d — %s" % [fight_index + 1, str(enemy.get("name", "OPPONENT"))]
-	var combat_subtitle := "EXCHANGE %d / %d" % [training_turn + 1, TRAINING_EXCHANGES] if training_active else "ROUND %d  |  TURN %d / 6" % [round_no, turn_no]
-	_heading(combat_title, combat_subtitle)
+	game_state = "combat"
+	if is_instance_valid(combat_hud):
+		combat_hud.queue_free()
+	combat_hud = Control.new()
+	combat_hud.name = "CombatHUD"
+	combat_hud.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	combat_hud.mouse_filter = Control.MOUSE_FILTER_PASS
+	root_ui.add_child(combat_hud)
+	panel.hide()
+	ui_shade.color = Color(0.005, 0.012, 0.025, 0.12)
+	_layout_ui()
 
-	_label(
-		"YOU     HP %d/%d     STA %d/%d" % [
-			int(player.get("health", 0)),
-			int(player.get("max_health", 100)),
-			int(player.get("stamina", 0)),
-			int(player.get("max_stamina", 100))
-		],
-		16,
-		Color(0.55, 0.82, 0.95)
-	)
-	if not training_active:
-		_show_salts_status()
-	_label(
-		"OPPONENT     HP %d/%d     STA %d/%d" % [
-			int(enemy.get("health", 0)),
-			int(enemy.get("max_health", 100)),
-			int(enemy.get("stamina", 0)),
-			int(enemy.get("max_stamina", 100))
-		],
-		15,
-		Color(0.95, 0.62, 0.48)
-	)
+	var viewport := root_ui.size
+	var width := viewport.x
+	var height := viewport.y
+	var left_card := _hud_panel(combat_hud, Rect2(22, 18, 360, 104), Color(0.025, 0.035, 0.055, 0.91))
+	var left_col := VBoxContainer.new()
+	left_col.add_theme_constant_override("separation", 3)
+	left_card.add_child(left_col)
+	_hud_label(left_col, "YOUR CORNER   /   %s" % ("COACH SPAR" if training_active else "FIGHTER"), 12, Color(0.40, 0.75, 0.95))
+	_hud_label(left_col, "HP  %d / %d" % [int(player.get("health", 0)), int(player.get("max_health", 100))], 15)
+	_hud_bar(left_col, float(player.get("health", 0)), float(player.get("max_health", 100)), Color(0.78, 0.16, 0.18))
+	_hud_label(left_col, "STA  %d / %d" % [int(player.get("stamina", 0)), int(player.get("max_stamina", 100))], 13, Color(0.54, 0.76, 1.0))
+	_hud_bar(left_col, float(player.get("stamina", 0)), float(player.get("max_stamina", 100)), Color(0.18, 0.48, 0.86))
 
-	if not training_active:
-		_show_item_summary(true)
-	else:
-		_label("COACH'S CORNER: " + training_feedback, 14, Color(0.72, 0.86, 0.78))
+	var right_card := _hud_panel(combat_hud, Rect2(width - 382, 18, 360, 104), Color(0.055, 0.03, 0.03, 0.91))
+	var right_col := VBoxContainer.new()
+	right_col.add_theme_constant_override("separation", 3)
+	right_card.add_child(right_col)
+	_hud_label(right_col, str(enemy.get("name", "OPPONENT")).to_upper(), 12, Color(1.0, 0.62, 0.48))
+	_hud_label(right_col, "HP  %d / %d" % [int(enemy.get("health", 0)), int(enemy.get("max_health", 100))], 15)
+	_hud_bar(right_col, float(enemy.get("health", 0)), float(enemy.get("max_health", 100)), Color(0.82, 0.80, 0.77))
+	_hud_label(right_col, "STA  %d / %d" % [int(enemy.get("stamina", 0)), int(enemy.get("max_stamina", 100))], 13, Color(0.70, 0.75, 0.82))
+	_hud_bar(right_col, float(enemy.get("stamina", 0)), float(enemy.get("max_stamina", 100)), Color(0.42, 0.55, 0.70))
 
+	var round_text := "EXCHANGE %d / %d" % [training_turn + 1, TRAINING_EXCHANGES] if training_active else "ROUND %d    /    TURN %d" % [round_no, turn_no]
+	var round_card := _hud_panel(combat_hud, Rect2(width * 0.5 - 105, 18, 210, 48), Color(0.055, 0.075, 0.10, 0.94))
+	var round_label := _hud_label(round_card, round_text, 15, Color(0.90, 0.78, 0.48))
+	round_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+
+	var commentary := _hud_panel(combat_hud, Rect2(width - 280, height * 0.42, 258, 112), Color(0.025, 0.035, 0.05, 0.82))
+	var comment_col := VBoxContainer.new()
+	commentary.add_child(comment_col)
+	_hud_label(comment_col, "CORNER TALK", 11, Color(0.40, 0.75, 0.95))
 	var tell := str(enemy_next_action.get("tell", enemy.get("tell", "Studies your guard.")))
-	var action_name := str(enemy_next_action.get("name", "Unknown attack"))
-	_label("THEY'RE TELEGRAPHING: " + tell, 15, Color(1.0, 0.76, 0.35))
-	_label("Expected action: " + action_name, 13, Color(0.82, 0.72, 0.62))
+	_hud_label(comment_col, tell, 14, Color(0.95, 0.82, 0.60))
+	if training_active and not training_feedback.is_empty():
+		_hud_label(comment_col, training_feedback, 12, Color(0.62, 0.88, 0.72))
+	elif heart_active:
+		_hud_label(comment_col, "HEART — STILL STANDING", 12, Color(1.0, 0.35, 0.28))
 
-	var line := HSeparator.new()
-	content.add_child(line)
-	_label("CHOOSE YOUR MOVE", 18, Color(0.9, 0.36, 0.22))
-
-	for id in owned_moves:
-		var move := _get_move(str(id))
-		if move.is_empty():
-			continue
-
-		var cost := float(move.get("cost", 0.0))
-		var move_name := str(move.get("name", id))
-		var description := str(move.get("description", ""))
-		var label_text := "%s  [%d STA] — %s" % [
-			move_name,
-			int(cost),
-			description
-		]
-		_button(
-			label_text,
-			_player_move.bind(str(id)),
-			float(player.get("stamina", 0.0)) < cost
-		)
-
-	# Show every combat-usable item. Passive and between-fight items
-	# remain in the bag without blocking items stored behind them.
+	var bottom_y := height - 148
+	var items_card := _hud_panel(combat_hud, Rect2(22, bottom_y, 220, 126), Color(0.025, 0.035, 0.055, 0.93))
+	var items_col := VBoxContainer.new()
+	items_col.add_theme_constant_override("separation", 4)
+	items_card.add_child(items_col)
+	_hud_label(items_col, "CORNER BAG", 12, Color(0.40, 0.75, 0.95))
 	var usable_item_count := 0
 	for item_variant in inventory:
 		var item_id := str(item_variant)
 		if item_id in ["ice", "salts"]:
 			continue
-
 		usable_item_count += 1
-		_button(
-			"USE ITEM: " + _get_item_name(item_id),
-			_use_item.bind(item_id)
-		)
+		_hud_button(items_col, _get_item_name(item_id), _use_item.bind(item_id), false, true)
+	if usable_item_count == 0:
+		_hud_label(items_col, "No active items", 12, Color(0.60, 0.65, 0.72))
 
-	if usable_item_count == 0 and not inventory.is_empty():
-		_label("CORNER ITEMS: Ice is saved for the hub; Smelling Salts trigger on a knockout.", 12)
+	var moves_card := _hud_panel(combat_hud, Rect2(258, bottom_y, width - 516, 126), Color(0.025, 0.035, 0.055, 0.94))
+	var moves_col := VBoxContainer.new()
+	moves_col.add_theme_constant_override("separation", 5)
+	moves_card.add_child(moves_col)
+	_hud_label(moves_col, "YOUR TURN  /  CHOOSE AN ACTION", 12, Color(0.40, 0.75, 0.95))
+	var moves_row := HBoxContainer.new()
+	moves_row.add_theme_constant_override("separation", 6)
+	moves_col.add_child(moves_row)
+	for id in owned_moves:
+		var move := _get_move(str(id))
+		if move.is_empty():
+			continue
+		var cost := float(move.get("cost", 0.0))
+		var caption := "%s\n%d STA" % [str(move.get("name", id)), int(cost)]
+		_hud_button(moves_row, caption, _player_move.bind(str(id)), float(player.get("stamina", 0.0)) < cost, true)
 
-	_label("RECENT CORNER TALK", 13, Color(0.68, 0.58, 0.52))
-	var first_log := maxi(0, log_lines.size() - 3)
-	for i in range(first_log, log_lines.size()):
-		_label("• " + log_lines[i], 12, Color(0.72, 0.68, 0.64))
+	var drawer_button := _hud_button(combat_hud, "FIGHTER  /  BAG  /  STATS  ▼" if not combat_drawer_open else "CLOSE DRAWER  ▲", _toggle_combat_drawer, false, true)
+	drawer_button.position = Vector2(width * 0.5 - 120, height - 194)
+	drawer_button.size = Vector2(240, 38)
 
-	if training_active:
-		_button("END TRAINING", _finish_training)
-	else:
-		_button("FORFEIT RUN", _forfeit_run)
+	var forfeit := _hud_button(combat_hud, "FORFEIT", _forfeit_run, false, true)
+	forfeit.position = Vector2(width - 126, height - 54)
+	forfeit.size = Vector2(104, 36)
 
-
+	if combat_drawer_open:
+		var drawer := _hud_panel(combat_hud, Rect2(width * 0.5 - 300, height - 390, 600, 180), Color(0.015, 0.025, 0.04, 0.98))
+		var drawer_col := VBoxContainer.new()
+		drawer_col.add_theme_constant_override("separation", 5)
+		drawer.add_child(drawer_col)
+		_hud_label(drawer_col, "FIGHTER DETAILS", 13, Color(0.40, 0.75, 0.95))
+		_hud_label(drawer_col, "SPEED %d   /   DEFENCE %d   /   DAMAGE %d" % [int(player.get("speed", 0)), int(player.get("defence", 0)), int(player.get("damage", 0))], 13)
+		_hud_label(drawer_col, "MOVES: " + ", ".join(owned_moves), 12)
+		_hud_label(drawer_col, "BAG: " + (", ".join(inventory) if not inventory.is_empty() else "Empty") + "   /   3", 12)
+		_hud_label(drawer_col, "SALTS: " + ("SPENT" if revive_used else "READY" if inventory.has("salts") else "NOT IN BAG"), 12)
+		_hud_label(drawer_col, "ACTIVE EFFECTS: " + ("Loaded Tape" if loaded_bonus > 0 else "None"), 12)
 
 func _forfeit_run() -> void:
 	_disable_realtime_combat()
@@ -1050,6 +1149,8 @@ func _prepare_enemy_telegraph() -> void:
 			{"name": "Combination", "tell": "Coach rolls his shoulders and steps in with a controlled two-punch combination.", "damage": 1.05, "accuracy": 100.0, "cost": 0.0}
 		]
 		enemy_next_action = drills[mini(training_turn, drills.size() - 1)].duplicate(true)
+		if arena_visuals and arena_visuals.has_method("show_enemy_telegraph"):
+			arena_visuals.show_enemy_telegraph(str(enemy_next_action.get("name", "")))
 		return
 
 	var trick := str(enemy.get("trick", "")).to_lower()
@@ -1103,6 +1204,8 @@ func _prepare_enemy_telegraph() -> void:
 	# Keep the existing fighter-specific tell as a fallback for custom data.
 	if str(enemy_next_action.get("tell", "")).is_empty():
 		enemy_next_action["tell"] = str(enemy.get("tell", "Studies your guard."))
+	if arena_visuals and arena_visuals.has_method("show_enemy_telegraph"):
+		arena_visuals.show_enemy_telegraph(str(enemy_next_action.get("name", "")))
 
 
 func _enemy_turn() -> void:
@@ -1145,7 +1248,7 @@ func _enemy_turn() -> void:
 	)
 
 	if arena_visuals and arena_visuals.has_method("enemy_attack"):
-		arena_visuals.enemy_attack()
+		arena_visuals.enemy_attack(str(action.get("name", "")))
 
 	var dodged := player_slipping or (
 		rng.randf() * 100.0 < _speed_chance(player.speed)
