@@ -178,6 +178,8 @@ Implementation committed; none of these checks are marked passed until verified 
 - [ ] Combat HUD shows both fighters' health and stamina without obscuring the arena view.
 - [ ] Health and stamina values/bars match the underlying fighter dictionaries after every player and enemy action.
 - [ ] Damage numbers appear over the correct fighter; stamina loss and stamina recovery use distinguishable feedback.
+- [ ] Move and item hover tooltips show accurate costs, damage/effects, accuracy and timing.
+- [ ] Fighter drawer lists all currently active buffs/debuffs and pending item effects.
 - [ ] Move buttons are disabled when stamina is insufficient and invoke the correct existing move action.
 - [ ] Every combat-usable item remains individually accessible; Ice and passive Smelling Salts remain unavailable as manual combat actions.
 - [ ] Fighter drawer opens/closes without leaving the arena and displays current stats, moves, bag contents and salts state.
