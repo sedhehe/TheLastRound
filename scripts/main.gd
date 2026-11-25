@@ -892,8 +892,7 @@ func _show_combat() -> void:
 	var comment_col := VBoxContainer.new()
 	commentary.add_child(comment_col)
 	_hud_label(comment_col, "CORNER TALK", 11, Color(0.40, 0.75, 0.95))
-	var tell := str(enemy_next_action.get("tell", enemy.get("tell", "Studies your guard.")))
-	_hud_label(comment_col, tell, 14, Color(0.95, 0.82, 0.60))
+	_hud_label(comment_col, "READ THE FIGHTER. WATCH THE SHOULDERS.", 13, Color(0.95, 0.82, 0.60))
 	if training_active and not training_feedback.is_empty():
 		_hud_label(comment_col, training_feedback, 12, Color(0.62, 0.88, 0.72))
 	elif heart_active:
@@ -920,8 +919,10 @@ func _show_combat() -> void:
 	moves_col.add_theme_constant_override("separation", 5)
 	moves_card.add_child(moves_col)
 	_hud_label(moves_col, "YOUR TURN  /  CHOOSE AN ACTION", 12, Color(0.40, 0.75, 0.95))
-	var moves_row := HBoxContainer.new()
-	moves_row.add_theme_constant_override("separation", 6)
+	var moves_row := GridContainer.new()
+	moves_row.columns = 3
+	moves_row.add_theme_constant_override("h_separation", 6)
+	moves_row.add_theme_constant_override("v_separation", 4)
 	moves_col.add_child(moves_row)
 	for id in owned_moves:
 		var move := _get_move(str(id))
