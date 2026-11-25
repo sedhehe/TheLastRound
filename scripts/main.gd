@@ -987,6 +987,7 @@ func _player_move(id: String) -> void:
 		return
 
 	var stamina_before_action := float(player.get("stamina", 0.0))
+	var enemy_stamina_before_action := float(enemy.get("stamina", 0.0))
 	player_last_move_id = id
 	if training_active:
 		training_feedback = _training_feedback_for_move(id)
@@ -1075,6 +1076,9 @@ func _player_move(id: String) -> void:
 	if enemy.health <= 0.0:
 		_win_fight()
 		return
+	var enemy_stamina_delta := float(enemy.stamina) - enemy_stamina_before_action
+	if absf(enemy_stamina_delta) >= 1.0:
+		_show_floating_number(absf(enemy_stamina_delta), true, true, enemy_stamina_delta > 0.0)
 
 	_enemy_turn()
 	if energy_penalty_pending and game_state == "combat":
