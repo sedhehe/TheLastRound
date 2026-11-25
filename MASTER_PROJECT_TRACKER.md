@@ -6,7 +6,7 @@
 **Tracker updated:** 25 November 2026  
 **Repository:** https://github.com/sedhehe/UNDERDOG  
 **Active branch:** `main`  
-**Current priority:** Begin the UI redesign using the user's upcoming concepts; keep core runtime QA open and defer graphics/audio polish.
+**Current priority:** UI redesign, followed by graphics, animations, then grouped testing and balancing — in that order.
 
 ---
 
@@ -34,7 +34,7 @@
 
 ## 2. Current overall status
 
-**Current milestone:** Phase 4 — interactive coach training implemented; transition into UI redesign  
+**Current milestone:** Phase 4 — The Last Round branding updated; UI redesign next  
 **Architecture correction:** Complete  
 **Phase 1 core combat:** Implemented and user-confirmed in Godot  
 **Phase 2 progression:** Partially implemented; remaining UI and regression work  
@@ -153,7 +153,7 @@ Legend:
 
 The roster is a deliberate current implementation. Rematches scale with fight index. If the user wants a different tournament structure, revise the roster as a design change.
 
-### Phase 4 — Functional UI and persistence
+### Phase 4 — UI redesign and persistence
 
 - [x] Basic combat HUD and move selection UI.
 - [x] Enemy telegraph is surfaced in combat UI.
@@ -163,61 +163,67 @@ The roster is a deliberate current implementation. Rematches scale with fight in
 - [x] Make menu, hub, combat and Codex content vertically scrollable with responsive panel sizing.
 - [x] Add visible Codex back navigation and reset scroll position between screens.
 - [x] Show lifetime Respect and career rank on the main menu and run summary.
-- [ ] Main menu and pause-menu completeness.
+- [ ] Redesign the main menu and establish the visual design system.
+- [ ] Redesign the hub/bracket and locker-room flow.
+- [ ] Redesign the combat HUD, move selection and combat feedback.
+- [ ] Redesign reward selection, run summary, Codex, settings and coach spar.
+- [ ] Complete main menu and pause/navigation flow.
 - [x] Add a full eight-fight tournament bracket to the hub, showing cleared, next and locked bouts.
 - [x] Add enemy archetype explanations to the Codex.
 - [x] Add Codex entries for all corner items and tournament rules.
 - [x] Complete Codex entries for reward categories, move upgrades and current stat reward effects/trade-offs.
 - [ ] Settings/accessibility completeness.
+- [ ] Keep gameplay rules and state separate from presentation wherever practical.
 - [x] Replace the text-only Fighter Training tutorial with a playable five-exchange coach spar using the turn-based combat flow.
 - [x] Add scripted coach telegraphs and contextual feedback after player actions.
 - [x] Keep practice runs isolated from tournament progression, Respect, rewards and save data.
 - [ ] Validate the coach spar and its exit/restart/new-run transitions in Godot.
 - [ ] Clear item/effect and reward information in the UI.
 
-**Status:** Partial. Existing functional UI should be extended rather than replaced wholesale.
+**Status:** UI redesign is the next active phase. Existing gameplay systems and functional screens remain the foundation; redesign presentation without discarding working logic.
 
-### Phase 5 — Core testing and balancing
+### Phase 5 — Graphics
+
+**Begins after the UI redesign is implemented and its direction is approved.**
+
+- [ ] First-person camera framing and player positioning.
+- [ ] Arena environment, ring, ropes, crowd and underground venue details.
+- [ ] Fighter and opponent model quality.
+- [ ] Materials, textures and environmental props.
+- [ ] Lighting direction, including the intended blue-toned arena ambience.
+- [ ] CRT, grain, dithering and other image treatment where appropriate.
+
+### Phase 6 — Animations
+
+**Begins after the graphics pass establishes the final character and environment assets.**
+
+- [ ] Player first-person punch animations.
+- [ ] Opponent attack, guard, hit-reaction and recovery animations.
+- [ ] Block, slip, clinch and knockdown animations.
+- [ ] Round transitions, entrances and victory/defeat presentation.
+- [ ] Camera movement, impact response and animation timing.
+- [ ] Ensure animation playback remains synchronized with turn-based combat resolution.
+
+### Phase 7 — Testing, balancing and release readiness
+
+**Grouped testing follows the UI, graphics and animation passes, as requested. Implementation status is not a claim of runtime verification.**
 
 - [x] Phase 1 manual QA checks recorded as passed based on user confirmation.
-- [ ] Batch regression test of all recent Phase 2 item/reward changes.
-- [ ] Test a complete eight-fight run after current progression changes.
-- [ ] Test every move and item.
+- [ ] Batch regression test of all Phase 2 item/reward changes.
+- [ ] Test a complete eight-fight run.
+- [ ] Test every move and item, including Smelling Salts when obtained.
 - [ ] Test KO, knockdown and decision outcomes, including judge tie-breaks.
-- [ ] Test save/load and run reset edge cases, including overwriting an existing checkpoint and malformed save recovery.
-- [ ] Balance enemy scaling and rewards.
+- [ ] Test save/load, overwrite, corruption recovery and run reset.
+- [ ] Validate every enemy archetype's special mechanic and telegraph.
+- [ ] Test the six-exchange coach spar and all exit/restart transitions.
+- [ ] Balance enemy scaling, player progression and rewards.
 - [ ] Test multiple viable builds.
 - [ ] Add deterministic seed replay.
 - [ ] Run a 10,000-run balance simulation.
-- [ ] Test save-file corruption recovery.
-- [ ] Fix core gameplay bugs found during batch QA.
+- [ ] Run performance, compatibility and release-build checks.
+- [ ] Fix gameplay, UI, graphics and animation bugs found during the grouped test pass.
 
-**Status:** In progress. Avoid stopping development for a manual test after every small commit; batch tests at meaningful milestones.
-
-### Phase 6 — Visual presentation
-
-**Deferred until core gameplay and progression are complete.**
-
-- [ ] Fix first-person camera framing.
-- [ ] Improve opponent models.
-- [ ] Add punch, block and hit-reaction animations.
-- [ ] Improve arena lighting.
-- [ ] Add crowd and environmental details.
-- [ ] Add camera shake and impact feedback.
-- [ ] Add CRT, grain and dithering effects.
-
-### Phase 7 — Audio and final polish
-
-**Deferred until core gameplay is complete.**
-
-- [ ] Punch and impact sounds.
-- [ ] Crowd ambience.
-- [ ] Bell and round transitions.
-- [ ] Heartbeat at low health.
-- [ ] Background soundtrack.
-- [ ] Final balancing and performance.
-- [ ] Build and release testing.
-
+**Status:** Planned after the UI, graphics and animation phases. Do not claim the game is tested until the grouped pass is actually completed.
 ---
 
 ## 4. Current implementation snapshot
@@ -250,18 +256,18 @@ Recent inventory/reward fixes are committed, but the corresponding unchecked reg
 
 ## 5. Immediate next milestone
 
-**Milestone: Finish the remaining core gameplay and functional UI before the grouped QA pass.**
+**Milestone: Begin the UI redesign for The Last Round.**
 
-The text-only tutorial has been replaced by a playable six-exchange coach spar. The current functional UI is sufficient to begin a dedicated UI redesign; the user's own concepts will guide the screen layouts and visual hierarchy. Save validation/recovery and the tournament bracket are implemented, but outstanding runtime checks remain open. Smelling Salts testing remains in the later grouped QA pass and is not a development blocker.
+The game is now branded The Last Round in its Godot project name, main menu, scene root, source comments/log prefix and project documentation. Existing save-file paths intentionally remain unchanged so current local run and career saves are not stranded. The coach tutorial is a six-exchange playable spar. The next work sequence is fixed: UI redesign → graphics → animations → grouped testing and balancing. Existing runtime checks remain open until that final testing phase; Smelling Salts testing is not a development blocker.
 
-1. Review run lifecycle edge cases: exactly-once Respect, defeat/retry, Continue, and stale checkpoint cleanup.
-2. Complete settings/accessibility and menu navigation, including a practical pause/back flow where appropriate for the menu-driven combat design.
-3. Begin the UI redesign from the user's concepts: main menu, hub/bracket, combat HUD, rewards, run summary, Codex, settings and coach spar. Keep gameplay logic/data separate from presentation wherever practical.
-4. Finish reward/item/loadout edge cases and ensure the redesigned UI communicates the real gameplay rules.
-5. Batch-test the complete eight-fight run, items (including Smelling Salts when obtained), save/load, coach spar and all archetypes.
-6. Move to arena/fighter graphics, animation, lighting and audio only after the UI direction is approved and core regression testing is complete.
+1. Gather and translate the user's UI concepts into a consistent design system and screen layouts.
+2. Implement the redesigned main menu, hub/bracket, combat HUD, rewards, run summary, Codex, settings and coach spar.
+3. Move to graphics: arena, ring, crowd, fighters, materials and lighting.
+4. Implement animations for the player, opponents, combat reactions and transitions; synchronize them with turn-based actions.
+5. Run the grouped test and balancing phase only after the UI, graphics and animations are complete.
+6. Fix issues found during that pass and prepare a release build.
 
-Do not begin visual/audio polish until the core systems and grouped QA are complete.
+Do not reorder the agreed production sequence: UI → graphics → animations → testing. Audio can be planned after the core presentation direction is established.
 
 ---
 
