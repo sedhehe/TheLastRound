@@ -2184,6 +2184,10 @@ func _finish_training() -> void:
 		return
 	training_active = false
 	_disable_realtime_combat()
+	_show_training_complete()
+
+
+func _show_training_complete() -> void:
 	game_state = "training_complete"
 	_heading("SPAR COMPLETE", "That's the rhythm. Read first, then choose.")
 	_label("You completed a full six-turn training round with the coach.", 17)
@@ -2224,7 +2228,8 @@ func _show_training_items() -> void:
 	_label("• Ice is used in the hub; Smelling Salts work automatically.")
 	_label("• The bag holds 3 items. A full bag cannot take another item reward until you make room.")
 	_label("• Training examples are explanations only; this lesson does not grant or consume real items.")
-	_button("BACK TO TRAINING SUMMARY", _finish_training)
+	_button("BACK TO TRAINING SUMMARY", _show_training_complete)
+	_button("SPAR AGAIN", _start_training)
 	_button("BACK TO MAIN MENU", _show_main_menu)
 
 
