@@ -1,4 +1,4 @@
-# UNDERDOG
+# The Last Round
 
 A playable Godot 4 prototype for a first-person-presented, turn-based underground boxing roguelike.
 
@@ -7,10 +7,10 @@ A playable Godot 4 prototype for a first-person-presented, turn-based undergroun
 - Windows, macOS or Linux
 
 ## Run
-1. Extract `UNDERDOG.zip`.
+1. Extract `The Last Round.zip`.
 2. Open Godot Project Manager.
 3. Click **Import**.
-4. Select the extracted `UNDERDOG/project.godot`.
+4. Select the extracted `The Last Round/project.godot`.
 5. Import and open the project.
 6. Press **F6** to run the current scene, or **F5** to run the project.
 
