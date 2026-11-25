@@ -845,9 +845,6 @@ func _player_move(id: String) -> void:
 	if not owned_moves.has(id):
 		return
 
-	player_last_move_id = id
-	if training_active:
-		training_feedback = _training_feedback_for_move(id)
 	var move := _get_move(id)
 	if move.is_empty():
 		return
@@ -857,6 +854,15 @@ func _player_move(id: String) -> void:
 		_log("You're too exhausted to use %s." % str(move.get("name", id)))
 		_show_combat()
 		return
+
+	if training_active and not _training_move_is_acceptable(id):
+		training_feedback = _training_retry_feedback(id)
+		_show_combat()
+		return
+
+	player_last_move_id = id
+	if training_active:
+		training_feedback = _training_feedback_for_move(id)
 
 	if arena_visuals and arena_visuals.has_method("player_action"):
 		arena_visuals.player_action(id)
@@ -2111,6 +2117,37 @@ func _start_training() -> void:
 	_show_combat()
 
 
+func _training_move_is_acceptable(id: String) -> bool:
+	var acceptable_by_exchange: Array = [
+		["block", "slip", "counter"],
+		["block", "slip", "clinch"],
+		["jab", "body_shot", "block", "slip"],
+		["block", "slip", "counter"],
+		["rest"],
+		["block", "slip", "clinch"]
+	]
+	var acceptable: Array = acceptable_by_exchange[mini(training_turn, acceptable_by_exchange.size() - 1)]
+	return acceptable.has(id)
+
+
+func _training_retry_feedback(id: String) -> String:
+	var incoming := str(enemy_next_action.get("name", ""))
+	var move := _get_move(id)
+	var move_name := str(move.get("name", id))
+	match incoming:
+		"Heavy Right":
+			return "Not that one. The loaded right is dangerous. Choose Block, Slip or Counter. This exchange will repeat."
+		"Body Shot":
+			return "Not that one. The level change signals a body attack. Choose Block, Slip or Clinch. This exchange will repeat."
+		"Quick Jab":
+			return "Try an active response here: Jab, Body Shot, Block or Slip. This exchange will repeat."
+		"Reset":
+			return "This is your safe breathing window. Choose Rest to recover stamina. This exchange will repeat."
+		"Combination":
+			return "The combination is coming. Choose Block, Slip or Clinch to handle the pressure. This exchange will repeat."
+	return "%s is not the lesson for this exchange. Choose a suggested response and try again." % move_name
+
+
 func _training_feedback_for_move(id: String) -> String:
 	var incoming := str(enemy_next_action.get("name", ""))
 	if incoming == "Heavy Right":
@@ -2157,8 +2194,37 @@ func _finish_training() -> void:
 	_label("• Clinch disrupts pressure, drains opponent stamina and gives you a little gas back.")
 	_label("• Spend stamina with a plan. A powerful move is useless when you're exhausted.")
 	_label("This was a practice bout. No run progress, Respect, items or save data were changed.", 13, Color(0.72, 0.82, 0.68))
+	_button("LEARN THE CORNER BAG", _show_training_items)
 	_button("SPAR AGAIN", _start_training)
 	_button("START A NEW RUN", _request_new_run.bind(selected_slot))
+	_button("BACK TO MAIN MENU", _show_main_menu)
+
+
+func _show_training_items() -> void:
+	_disable_realtime_combat()
+	game_state = "training_items"
+	_heading("THE CORNER BAG", "A fighter who knows their kit lasts longer.")
+	_label("You can carry up to 3 items. Items are earned as ITEM rewards after fights. Read the timing before choosing one.")
+	_label("HOW TO USE A COMBAT ITEM", 18, Color(0.9, 0.36, 0.22))
+	_label("During your turn, press its USE ITEM button beneath your move buttons. The item is consumed immediately, its effect is applied, and the opponent gets their response. Using an item still spends your turn.")
+	_label("COMBAT-USE ITEMS", 18, Color(0.9, 0.36, 0.22))
+	_label("Vaseline in the Eyes — use during combat to reduce opponent accuracy by 15 for 2 turns.")
+	_label("Rosin Dust — use during combat to drain 8 opponent stamina per turn for 2 turns.")
+	_label("Energy Drink — use during combat to restore 35 stamina immediately; the crash costs 10 stamina after the opponent responds.")
+	_label("Loaded Tape — use before attacking to add 18 damage to your next landed attack. It carries a 12% disqualification risk.")
+	_label("Cheap-shot Bribe — use before a dirty move. It protects your next dirty move from disqualification.")
+	_label("Crowd's Favourite — use during combat to gain up to +5 speed for the next fight, not this one.")
+	_label("BETWEEN-FIGHT ITEM", 18, Color(0.9, 0.36, 0.22))
+	_label("Corner Ice Pack — use it from the hub between fights to restore 22 health. It cannot be activated during combat.")
+	_label("PASSIVE ITEM", 18, Color(0.9, 0.36, 0.22))
+	_label("Smelling Salts — never press a button for these. If you own them when a hit would knock you out, they automatically trigger once per run and leave you at 30 health. They are then consumed.")
+	_label("QUICK RULES", 18, Color(0.9, 0.36, 0.22))
+	_label("• Check the CORNER BAG summary during combat and in the hub.")
+	_label("• Combat items appear as separate USE ITEM buttons, so you choose exactly which item to spend.")
+	_label("• Ice is used in the hub; Smelling Salts work automatically.")
+	_label("• The bag holds 3 items. A full bag cannot take another item reward until you make room.")
+	_label("• Training examples are explanations only; this lesson does not grant or consume real items.")
+	_button("BACK TO TRAINING SUMMARY", _finish_training)
 	_button("BACK TO MAIN MENU", _show_main_menu)
 
 
