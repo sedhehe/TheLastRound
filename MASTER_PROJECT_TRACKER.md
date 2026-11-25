@@ -352,3 +352,10 @@ Open the project in Godot 4.7 and run with F5. Stop the running game before pull
 3. Refine combat HUD responsiveness, bar transitions, tooltips, active effects and touch/keyboard navigation.
 4. Proceed to the planned graphics and fighter-animation passes only after the UI layouts are integrated.
 5. Keep all runtime checks open for the final grouped test phase.
+
+
+## 2026-11-25 — Non-visual gameplay reliability pass
+
+- Fixed the Energy Drink crash path: the item already restored 35 stamina and marked a pending 10-stamina crash, but only the move-action path consumed that pending penalty. Using Energy Drink directly skipped the crash. The shared combat-item response path now applies the 10-stamina cost after the opponent's response, clears the pending flag, and records the stamina loss.
+- This is a gameplay-logic correction only. No UI, arena, fighter-model or animation files were changed.
+- Runtime verification remains pending; do not mark the related QA check passed until tested in Godot.
