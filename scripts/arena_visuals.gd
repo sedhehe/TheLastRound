@@ -14,6 +14,8 @@ var glove_home_right := Vector3(0.28, -0.22, -0.58)
 var opponent_home_position := Vector3(0.0, 0.0, -2.55)
 var opponent_hit_timer := 0.0
 var opponent_attack_timer := 0.0
+var opponent_telegraph_pose := ""
+var opponent_telegraph_active := false
 var player_action_timer := 0.0
 var impact_timer := 0.0
 
@@ -749,8 +751,16 @@ func opponent_hit() -> void:
 	opponent_hit_timer = 0.18
 
 
-func enemy_attack() -> void:
-	opponent_attack_timer = 0.24
+func show_enemy_telegraph(action_name: String) -> void:
+	opponent_telegraph_pose = action_name.to_lower()
+	opponent_telegraph_active = true
+	opponent_attack_timer = 0.0
+
+
+func enemy_attack(action_name: String = "") -> void:
+	opponent_telegraph_active = false
+	opponent_telegraph_pose = action_name.to_lower()
+	opponent_attack_timer = 0.30
 
 
 func impact_shake() -> void:
@@ -765,33 +775,46 @@ func _update_opponent_animation(delta: float) -> void:
 	var target_rotation := Vector3.ZERO
 
 	if opponent_hit_timer > 0.0:
-		opponent_hit_timer = maxf(
-			0.0,
-			opponent_hit_timer - delta
-		)
-
-		target_position.x = 0.12
-		target_rotation.z = 0.08
+		opponent_hit_timer = maxf(0.0, opponent_hit_timer - delta)
+		target_position.x = 0.16
+		target_position.z = opponent_home_position.z - 0.08
+		target_rotation.z = 0.13
+		target_rotation.x = -0.08
 
 	elif opponent_attack_timer > 0.0:
-		opponent_attack_timer = maxf(
-			0.0,
-			opponent_attack_timer - delta
-		)
+		opponent_attack_timer = maxf(0.0, opponent_attack_timer - delta)
+		target_position.z = opponent_home_position.z + 0.30
+		target_rotation.x = 0.12
+		target_rotation.z = -0.04
 
-		target_position.z = opponent_home_position.z + 0.15
-		target_rotation.x = -0.06
+	elif opponent_telegraph_active:
+		# Hold a readable anticipation pose for the player's entire decision.
+		match true:
+			_ when opponent_telegraph_pose.contains("heavy") or opponent_telegraph_pose.contains("right") or opponent_telegraph_pose.contains("champion"):
+				target_position.x = -0.12
+				target_rotation.y = -0.20
+				target_rotation.z = -0.08
+			_ when opponent_telegraph_pose.contains("body") or opponent_telegraph_pose.contains("elbow"):
+				target_position.y = -0.10
+				target_position.z = 0.08
+				target_rotation.x = 0.20
+			_ when opponent_telegraph_pose.contains("jab") or opponent_telegraph_pose.contains("flurry") or opponent_telegraph_pose.contains("combination"):
+				target_position.z = 0.10
+				target_rotation.x = 0.07
+				target_rotation.y = 0.10
+			_ when opponent_telegraph_pose.contains("counter"):
+				target_position.z = -0.10
+				target_rotation.y = 0.18
+				target_rotation.z = 0.06
+			_ when opponent_telegraph_pose.contains("reset") or opponent_telegraph_pose.contains("desperate"):
+				target_position.y = -0.05
+				target_rotation.z = 0.05
+			_:
+				target_position.z = 0.04
+				target_rotation.y = 0.08
 
-	opponent_body.position = opponent_body.position.lerp(
-		target_position,
-		delta * 12.0
-	)
-
-	opponent_body.rotation = opponent_body.rotation.lerp(
-		target_rotation,
-		delta * 12.0
-	)
-
+	opponent_body.position = opponent_body.position.lerp(target_position, 1.0 - exp(-delta * 9.0))
+	opponent_body.rotation = opponent_body.rotation.lerp(target_rotation, 1.0 - exp(-delta * 9.0))
 
 func _update_camera_shake(delta: float) -> void:
 	if not is_instance_valid(camera):
