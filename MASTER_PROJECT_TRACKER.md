@@ -371,3 +371,16 @@ Open the project in Godot 4.7 and run with F5. Stop the running game before pull
 - Enemy intent remains communicated through fighter animation/body language; the phase banner deliberately does not reveal the hidden move name.
 - No changes were made to fighter geometry, arena lighting, crowd, or pose animation in this pass. Those are reserved for the visual-reference implementation pass.
 - Runtime verification is pending; source edits are committed but have not been run in Godot 4.7.
+
+
+
+## 2026-11-25 — Combat HUD reference-layout rebuild committed
+
+- Replaced the previous panel-heavy combat HUD in `scripts/main.gd` with a reference-led, absolute-position composition based on the supplied 1600×900 combat screen.
+- Removed the large opaque player/opponent status cards. The arena remains visible beneath a restrained translucent top status band; health and stamina bars, fighter stats and names sit directly on the HUD.
+- Added the centered round/turn plate, compact phase strip, small right-side ringside commentary, three individual corner-bag slots at bottom-left, and six equal move cards at bottom-right.
+- Preserved the existing combat callbacks and state: move selection, Q/W/E item use, Tab fighter drawer, Esc pause/resume, F1 review overlay, tooltips, selected-move state, and animated resource bars.
+- Kept the existing pause, drawer and combat-review overlays rather than changing combat flow.
+- Removed an unsupported Button wrapping-property assignment during source review.
+- **Commits:** `fcdbd2e` (HUD rebuild), `8e58641` (Button property compatibility cleanup).
+- **Verification boundary:** GitHub confirms both commits on `main`. Godot 4.7.2 has not been run here, so parsing, actual rendering, responsive scaling and interaction remain unverified. QA stays open until the grouped runtime pass.
