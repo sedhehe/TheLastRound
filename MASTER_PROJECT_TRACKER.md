@@ -330,8 +330,10 @@ Open the project in Godot 4.7 and run with F5. Stop the running game before pull
 - Replaced the stacked text-only combat screen with a persistent full-viewport arena HUD.
 - Added player and opponent health/stamina panels with live resource bars, a round/turn badge, a compact corner-talk panel, bottom move and item controls, a collapsible fighter/bag/stats drawer, and a forfeit action.
 - Kept the underlying turn-based combat and reward logic authoritative. The combat HUD reads the existing dictionaries and move/inventory state; it does not introduce a parallel combat simulation.
-- Added floating health-damage and stamina-change numbers, including positive recovery feedback.
+- Added floating health-damage and stamina-change numbers anchored to the projected screen positions of the opponent and first-person player camera, including positive recovery feedback.
 - Added a combat pause overlay toggled with Escape or the HUD button. It keeps the arena visible and blocks move/item input until resumed.
+- Added hover tooltips for moves and items, plus a live active-effect summary in the fighter drawer.
+- Unified non-combat menu buttons/panels with the same cold blue industrial palette as the arena HUD.
 - Added opponent anticipation poses keyed to the selected telegraph (heavy/right, body/elbow, jab/flurry/combination, counter and reset/desperate swing). The forearms and gloves now move into different guard/load positions, with a separate attack follow-through and hit reaction.
 - Wired the coach's scripted tells through the same anticipation-pose system.
 - The non-combat menu panel remains the current presentation for menus, hub, rewards, Codex and settings; these are still to be redesigned into the visual system.
