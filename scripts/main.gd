@@ -102,7 +102,7 @@ func _input(event: InputEvent) -> void:
 	if game_state != "combat":
 		return
 
-	var key := event.keycode
+	var key: int = event.keycode
 
 	# F1 opens the combat review index. From a scenario card it returns to
 	# the index; from the index it returns to the live fight.
@@ -1028,7 +1028,7 @@ func _show_combat() -> void:
 	bag_col.add_child(bag_grid)
 	for slot in range(3):
 		var item_id := str(inventory[slot]) if slot < inventory.size() else ""
-		var item_key := ["Q", "W", "E"][slot]
+		var item_key: String = ["Q", "W", "E"][slot]
 		var item_caption := "EMPTY\n%s" % item_key if item_id.is_empty() else "%s\n%s" % [item_key, _get_item_name(item_id).to_upper()]
 		var item_usable := not item_id.is_empty() and item_id not in ["ice", "salts"]
 		if item_usable:
