@@ -200,3 +200,15 @@ Implementation committed; none of these checks are marked passed until verified 
 
 - [ ] Use Energy Drink during combat: confirm +35 stamina is applied immediately (capped at maximum), the opponent responds, then the 10-stamina crash is charged exactly once and the pending flag clears.
 - [ ] Confirm Energy Drink's crash is not charged if the combat has already ended during the opponent response.
+
+
+## Reference-driven combat HUD and controls — 2026-11-25
+
+- [ ] At 1600×900, compare combat HUD hierarchy against `01 Combat — Player turn.png`: top player/opponent meters, centered round/turn, phase banner, right commentary, bottom-left three-slot bag, bottom-right six move cards, bottom-center drawer.
+- [ ] Repeat at 1280×720 and confirm no overlap/clipping; repeat at a narrower viewport and confirm layout remains usable.
+- [ ] Keyboard: 1–6 activate the corresponding owned move slot; empty slots do nothing.
+- [ ] Keyboard: Q/W/E activate the corresponding combat-usable item slot; Ice and Smelling Salts remain unavailable.
+- [ ] Tab opens/closes fighter drawer; Esc pauses/resumes; F1 opens review index, selects a review card, returns to index, then returns to live fight.
+- [ ] Confirm review overlay blocks all underlying combat inputs and does not alter health, stamina, turn, or save state.
+- [ ] Confirm low-stamina move buttons visibly disable and expose an explicit stamina requirement in their tooltip.
+- [ ] Confirm all three bag slots remain visible for empty, hub-only, passive and combat-use item states.
