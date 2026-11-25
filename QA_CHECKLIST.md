@@ -110,7 +110,7 @@ Regression checks added after the turn-based combat pass:
 - [x] Verify checkpoint overwrite and malformed-save recovery in Godot.
 - [x] Verify the previous text tutorial navigation and start-run transitions in Godot (superseded by the coach spar).
 - [ ] Confirm hub Save Run displays immediate success and failure feedback without requiring a menu transition.
-- [ ] Confirm an unsupported save version is rejected and preserved as underdog_save.corrupt.json.
+- [ ] Confirm an unsupported save version is rejected and preserved in that slot's `the_last_round_slot_N.corrupt.json` file.
 - [ ] Confirm a malformed save is quarantined and Continue is disabled afterward.
 - [ ] Confirm Fighter Training starts a six-exchange spar against the coach (one full training round).
 - [ ] Confirm each scripted coach tell and expected action appears in the correct order.
@@ -138,10 +138,26 @@ Runtime checks remain open above; implementation is not a claim of Godot runtime
 - [ ] Confirm the Godot Project Manager displays **The Last Round**.
 - [ ] Confirm the main menu title displays **THE LAST ROUND**.
 - [ ] Confirm no player-facing screen, log message or documentation still presents the former game title.
-- [ ] Confirm existing local run and career saves remain readable after the branding change.
+- [ ] Confirm legacy `underdog_*` save files are removed on first launch and the new three-slot save system starts cleanly.
 
 Production order:
 1. UI redesign
 2. Graphics
 3. Animations
 4. Grouped testing and balancing
+
+
+## Three-slot save system — implementation checks
+
+- [ ] Main menu displays exactly three clearly numbered run slots.
+- [ ] Empty slots offer a new run and disable Continue.
+- [ ] Occupied slots show their checkpoint status and offer Continue.
+- [ ] Starting a new run over an occupied slot requires explicit confirmation.
+- [ ] Saving Slot 1 does not create or overwrite Slot 2 or Slot 3 files.
+- [ ] Continue Slot 1 restores only Slot 1's fight, fighter stats, moves, inventory and effects.
+- [ ] Continue Slot 2 and Slot 3 restore their own independent state.
+- [ ] Replacing one occupied slot leaves the other two slots unchanged.
+- [ ] Completing or losing a run clears only the active slot.
+- [ ] A corrupt slot is quarantined without affecting valid saves in other slots.
+- [ ] Career Respect remains global and shared across all slots.
+- [ ] Old `underdog_save.json`, temp, backup, corrupt and `underdog_meta.json` files are removed on startup.
