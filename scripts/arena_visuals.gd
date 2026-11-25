@@ -5,6 +5,10 @@ var camera: Camera3D
 var arena_light: OmniLight3D
 var opponent_body: Node3D
 var opponent_material: StandardMaterial3D
+var opponent_left_forearm: MeshInstance3D
+var opponent_right_forearm: MeshInstance3D
+var opponent_left_glove: MeshInstance3D
+var opponent_right_glove: MeshInstance3D
 
 var left_glove: MeshInstance3D
 var right_glove: MeshInstance3D
@@ -533,7 +537,7 @@ func _build_opponent() -> void:
 	)
 
 	# Forearms
-	_add_limb(
+	opponent_left_forearm = _add_limb(
 		opponent_body,
 		Vector3(-0.62, 1.35, -0.08),
 		Vector3(-0.40, 1.12, -0.32),
@@ -541,7 +545,7 @@ func _build_opponent() -> void:
 		skin_material
 	)
 
-	_add_limb(
+	opponent_right_forearm = _add_limb(
 		opponent_body,
 		Vector3(0.62, 1.35, -0.08),
 		Vector3(0.40, 1.12, -0.32),
@@ -550,7 +554,7 @@ func _build_opponent() -> void:
 	)
 
 	# Gloves
-	_add_sphere(
+	opponent_left_glove = _add_sphere(
 		opponent_body,
 		"LeftGlove",
 		0.19,
@@ -558,7 +562,7 @@ func _build_opponent() -> void:
 		glove_material
 	)
 
-	_add_sphere(
+	opponent_right_glove = _add_sphere(
 		opponent_body,
 		"RightGlove",
 		0.19,
@@ -773,6 +777,8 @@ func _update_opponent_animation(delta: float) -> void:
 
 	var target_position := opponent_home_position
 	var target_rotation := Vector3.ZERO
+	var left_arm_pose := Vector3.ZERO
+	var right_arm_pose := Vector3.ZERO
 
 	if opponent_hit_timer > 0.0:
 		opponent_hit_timer = maxf(0.0, opponent_hit_timer - delta)
@@ -780,40 +786,62 @@ func _update_opponent_animation(delta: float) -> void:
 		target_position.z = opponent_home_position.z - 0.08
 		target_rotation.z = 0.13
 		target_rotation.x = -0.08
+		left_arm_pose.z = 0.18
+		right_arm_pose.z = -0.18
 
 	elif opponent_attack_timer > 0.0:
 		opponent_attack_timer = maxf(0.0, opponent_attack_timer - delta)
 		target_position.z = opponent_home_position.z + 0.30
 		target_rotation.x = 0.12
 		target_rotation.z = -0.04
+		right_arm_pose.x = -0.42
+		right_arm_pose.z = -0.22
 
 	elif opponent_telegraph_active:
-		# Hold a readable anticipation pose for the player's entire decision.
 		if opponent_telegraph_pose.contains("heavy") or opponent_telegraph_pose.contains("right") or opponent_telegraph_pose.contains("champion"):
 			target_position.x = -0.12
 			target_rotation.y = -0.20
 			target_rotation.z = -0.08
+			right_arm_pose.z = -0.58
+			left_arm_pose.z = 0.12
 		elif opponent_telegraph_pose.contains("body") or opponent_telegraph_pose.contains("elbow"):
 			target_position.y = -0.10
 			target_position.z = 0.08
 			target_rotation.x = 0.20
+			right_arm_pose.z = 0.28
+			left_arm_pose.z = -0.24
 		elif opponent_telegraph_pose.contains("jab") or opponent_telegraph_pose.contains("flurry") or opponent_telegraph_pose.contains("combination"):
 			target_position.z = 0.10
 			target_rotation.x = 0.07
 			target_rotation.y = 0.10
+			right_arm_pose.x = -0.32
+			left_arm_pose.x = -0.16
 		elif opponent_telegraph_pose.contains("counter"):
 			target_position.z = -0.10
 			target_rotation.y = 0.18
 			target_rotation.z = 0.06
+			right_arm_pose.z = 0.34
+			left_arm_pose.z = -0.20
 		elif opponent_telegraph_pose.contains("reset") or opponent_telegraph_pose.contains("desperate"):
 			target_position.y = -0.05
 			target_rotation.z = 0.05
+			right_arm_pose.z = 0.12
+			left_arm_pose.z = 0.12
 		else:
 			target_position.z = 0.04
 			target_rotation.y = 0.08
 
-	opponent_body.position = opponent_body.position.lerp(target_position, 1.0 - exp(-delta * 9.0))
-	opponent_body.rotation = opponent_body.rotation.lerp(target_rotation, 1.0 - exp(-delta * 9.0))
+	var blend := 1.0 - exp(-delta * 10.0)
+	opponent_body.position = opponent_body.position.lerp(target_position, blend)
+	opponent_body.rotation = opponent_body.rotation.lerp(target_rotation, blend)
+	if is_instance_valid(opponent_left_forearm):
+		opponent_left_forearm.rotation = opponent_left_forearm.rotation.lerp(left_arm_pose, blend)
+	if is_instance_valid(opponent_right_forearm):
+		opponent_right_forearm.rotation = opponent_right_forearm.rotation.lerp(right_arm_pose, blend)
+	if is_instance_valid(opponent_left_glove):
+		opponent_left_glove.rotation = opponent_left_glove.rotation.lerp(left_arm_pose, blend)
+	if is_instance_valid(opponent_right_glove):
+		opponent_right_glove.rotation = opponent_right_glove.rotation.lerp(right_arm_pose, blend)
 
 func _update_camera_shake(delta: float) -> void:
 	if not is_instance_valid(camera):
