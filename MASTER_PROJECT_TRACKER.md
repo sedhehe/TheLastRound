@@ -303,8 +303,8 @@ git pull origin main
 Open the project in Godot 4.7 and run with F5. Stop the running game before pulling; the editor can usually remain open and reload the changed files. Use Project → Reload Current Project if the editor does not pick up changes.
 
 **Tracker status:** Active  
-**Current phase:** Phase 4 — UI redesign  
-**Next milestone:** Gather the user's UI concepts and begin the screen-by-screen redesign  
+**Current phase:** Phase 4 — UI redesign (combat HUD foundation committed)  
+**Next milestone:** Persistent non-combat layouts, reward/hub panels and full UI asset review  
 **Production order:** UI → graphics → animations → testing
 
 
@@ -322,3 +322,30 @@ Open the project in Godot 4.7 and run with F5. Stop the running game before pull
 - [ ] Confirm a completed/failed run clears only its own slot.
 - [ ] Confirm malformed data in one slot is quarantined without affecting the other slots.
 - [ ] Confirm the renamed career meta-save persists across all three slots and game restarts.
+
+
+## 2026-11-25 — UI implementation started
+
+**Committed directly to `main`:**
+- Replaced the stacked text-only combat screen with a persistent full-viewport arena HUD.
+- Added player and opponent health/stamina panels with live resource bars, a round/turn badge, a compact corner-talk panel, bottom move and item controls, a collapsible fighter/bag/stats drawer, and a forfeit action.
+- Kept the underlying turn-based combat and reward logic authoritative. The combat HUD reads the existing dictionaries and move/inventory state; it does not introduce a parallel combat simulation.
+- Added floating health-damage and stamina-change numbers, including positive recovery feedback.
+- Added opponent anticipation poses keyed to the selected telegraph (heavy/right, body/elbow, jab/flurry/combination, counter and reset/desperate swing), with a separate attack follow-through and hit reaction.
+- Wired the coach's scripted tells through the same anticipation-pose system.
+- The non-combat menu panel remains the current presentation for menus, hub, rewards, Codex and settings; these are still to be redesigned into the visual system.
+
+**Files changed:**
+- `scripts/main.gd`
+- `scripts/arena_visuals.gd`
+
+**Important verification boundary:** These are source-level implementation commits only. Godot has not been launched in this environment; GDScript parsing, viewport behavior, button interaction, animation timing and resource-bar transitions remain unverified. Do not mark QA as passed until grouped runtime testing.
+
+**Asset review limitation:** The 64 PNG assets in `UI/` are present in the repository, but the available GitHub file reader returns no usable image bytes for binary PNG files and the browser could not render the raw image. The filenames and inventory have been reviewed; the actual visual compositions have not. Do not claim pixel-level visual matching until the images can be viewed.
+
+**Next implementation steps:**
+1. Inspect/retrieve the PNG references in a viewable form without asking the user to re-upload the entire folder.
+2. Continue the UI pass for title/menu, slot selection, hub/corner, reward choice, run end, tutorial, Codex and settings, preserving the existing mechanics and avoiding unnecessary full-screen transitions.
+3. Refine combat HUD responsiveness, bar transitions, tooltips, active effects and touch/keyboard navigation.
+4. Proceed to the planned graphics and fighter-animation passes only after the UI layouts are integrated.
+5. Keep all runtime checks open for the final grouped test phase.
