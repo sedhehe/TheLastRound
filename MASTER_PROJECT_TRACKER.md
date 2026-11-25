@@ -297,6 +297,6 @@ git pull origin main
 Open the project in Godot 4.7 and run with F5. Stop the running game before pulling; the editor can usually remain open and reload the changed files. Use Project → Reload Current Project if the editor does not pick up changes.
 
 **Tracker status:** Active  
-**Current phase:** Phase 4 — Interactive training and functional UI  
-**Next milestone:** Gather the user's UI concepts and begin the screen-by-screen UI redesign; retain open runtime checks for the grouped QA pass  
-**Visual/audio polish:** Deferred
+**Current phase:** Phase 4 — UI redesign  
+**Next milestone:** Gather the user's UI concepts and begin the screen-by-screen redesign  
+**Production order:** UI → graphics → animations → testing
