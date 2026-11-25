@@ -74,6 +74,10 @@ var ui_scroll: ScrollContainer
 var ui_shade: ColorRect
 var combat_hud: Control
 var combat_drawer_open := false
+var hud_player_hp := -1.0
+var hud_player_stamina := -1.0
+var hud_enemy_hp := -1.0
+var hud_enemy_stamina := -1.0
 var player_last_move_id := ""
 
 var arena_light: OmniLight3D
@@ -800,6 +804,11 @@ func _hud_bar(parent: Control, value: float, maximum: float, fill: Color) -> Pro
 	return bar
 
 
+func _animate_hud_bar(bar: ProgressBar, previous: float, target: float) -> void:
+	bar.value = target if previous < 0.0 else clampf(previous, 0.0, bar.max_value)
+	var tween := create_tween()
+	tween.tween_property(bar, "value", clampf(target, 0.0, bar.max_value), 0.32).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+
 func _hud_button(parent: Control, caption: String, callback: Callable, disabled: bool = false, compact: bool = false) -> Button:
 	var button := Button.new()
 	button.text = caption
@@ -848,9 +857,15 @@ func _show_combat() -> void:
 	left_card.add_child(left_col)
 	_hud_label(left_col, "YOUR CORNER   /   %s" % ("COACH SPAR" if training_active else "FIGHTER"), 12, Color(0.40, 0.75, 0.95))
 	_hud_label(left_col, "HP  %d / %d" % [int(player.get("health", 0)), int(player.get("max_health", 100))], 15)
-	_hud_bar(left_col, float(player.get("health", 0)), float(player.get("max_health", 100)), Color(0.78, 0.16, 0.18))
+	var player_hp_target := float(player.get("health", 0))
+	var player_hp_bar := _hud_bar(left_col, player_hp_target if hud_player_hp < 0.0 else hud_player_hp, float(player.get("max_health", 100)), Color(0.78, 0.16, 0.18))
+	_animate_hud_bar(player_hp_bar, hud_player_hp, player_hp_target)
+	hud_player_hp = player_hp_target
 	_hud_label(left_col, "STA  %d / %d" % [int(player.get("stamina", 0)), int(player.get("max_stamina", 100))], 13, Color(0.54, 0.76, 1.0))
-	_hud_bar(left_col, float(player.get("stamina", 0)), float(player.get("max_stamina", 100)), Color(0.18, 0.48, 0.86))
+	var player_sta_target := float(player.get("stamina", 0))
+	var player_sta_bar := _hud_bar(left_col, player_sta_target if hud_player_stamina < 0.0 else hud_player_stamina, float(player.get("max_stamina", 100)), Color(0.18, 0.48, 0.86))
+	_animate_hud_bar(player_sta_bar, hud_player_stamina, player_sta_target)
+	hud_player_stamina = player_sta_target
 
 	var right_card := _hud_panel(combat_hud, Rect2(width - 382, 18, 360, 104), Color(0.055, 0.03, 0.03, 0.91))
 	var right_col := VBoxContainer.new()
@@ -858,9 +873,15 @@ func _show_combat() -> void:
 	right_card.add_child(right_col)
 	_hud_label(right_col, str(enemy.get("name", "OPPONENT")).to_upper(), 12, Color(1.0, 0.62, 0.48))
 	_hud_label(right_col, "HP  %d / %d" % [int(enemy.get("health", 0)), int(enemy.get("max_health", 100))], 15)
-	_hud_bar(right_col, float(enemy.get("health", 0)), float(enemy.get("max_health", 100)), Color(0.82, 0.80, 0.77))
+	var enemy_hp_target := float(enemy.get("health", 0))
+	var enemy_hp_bar := _hud_bar(right_col, enemy_hp_target if hud_enemy_hp < 0.0 else hud_enemy_hp, float(enemy.get("max_health", 100)), Color(0.82, 0.80, 0.77))
+	_animate_hud_bar(enemy_hp_bar, hud_enemy_hp, enemy_hp_target)
+	hud_enemy_hp = enemy_hp_target
 	_hud_label(right_col, "STA  %d / %d" % [int(enemy.get("stamina", 0)), int(enemy.get("max_stamina", 100))], 13, Color(0.70, 0.75, 0.82))
-	_hud_bar(right_col, float(enemy.get("stamina", 0)), float(enemy.get("max_stamina", 100)), Color(0.42, 0.55, 0.70))
+	var enemy_sta_target := float(enemy.get("stamina", 0))
+	var enemy_sta_bar := _hud_bar(right_col, enemy_sta_target if hud_enemy_stamina < 0.0 else hud_enemy_stamina, float(enemy.get("max_stamina", 100)), Color(0.42, 0.55, 0.70))
+	_animate_hud_bar(enemy_sta_bar, hud_enemy_stamina, enemy_sta_target)
+	hud_enemy_stamina = enemy_sta_target
 
 	var round_text := "EXCHANGE %d / %d" % [training_turn + 1, TRAINING_EXCHANGES] if training_active else "ROUND %d    /    TURN %d" % [round_no, turn_no]
 	var round_card := _hud_panel(combat_hud, Rect2(width * 0.5 - 105, 18, 210, 48), Color(0.055, 0.075, 0.10, 0.94))
