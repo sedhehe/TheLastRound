@@ -1316,6 +1316,7 @@ func _enemy_turn() -> void:
 		)
 		_log("Opponent is gassed and struggles to recover.")
 		player.stamina = minf(player.max_stamina, player.stamina + 4.0)
+		_show_floating_number(4.0, true, false, true)
 		return
 
 	var action := enemy_next_action
@@ -1352,10 +1353,10 @@ func _enemy_turn() -> void:
 
 	if dodged:
 		_log("DODGED! " + str(action.get("name", "Their attack")) + " cuts through empty air.")
-		player.stamina = minf(
-			player.max_stamina,
-			player.stamina + float(passive.get("wind", 0.0))
-		)
+		var wind_recovery := minf(float(passive.get("wind", 0.0)), player.max_stamina - player.stamina)
+		player.stamina = minf(player.max_stamina, player.stamina + wind_recovery)
+		if wind_recovery > 0.0:
+			_show_floating_number(wind_recovery, true, false, true)
 		return
 
 	if rng.randf() * 100.0 > enemy_accuracy:
