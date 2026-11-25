@@ -4,7 +4,7 @@
 **Engine:** Godot 4.7  
 **Genre:** First-person-presented, turn-based boxing roguelike  
 **Tracker updated:** 25 November 2026  
-**Repository:** https://github.com/sedhehe/UNDERDOG  
+**Repository:** https://github.com/sedhehe/TheLastRound  
 **Active branch:** `main`  
 **Current priority:** UI redesign, followed by graphics, animations, then grouped testing and balancing — in that order.
 
@@ -49,7 +49,7 @@
 - The user confirmed Phase 1 was working and asked development to continue.
 - Menu, hub, combat and Codex content now use a responsive vertical scroll container; the panel adapts to the viewport, follows keyboard focus and resets scroll on screen changes.
 - Fighter Training now launches a six-exchange playable spar against a coach, matching one complete six-turn round. Scripted tells teach reading a heavy right, body shot, quick jab and recovery window; contextual corner feedback explains the player's choices. The practice loadout exposes core attack, defence, counter and utility moves. Training is isolated from run progression, Respect and save data.
-- Run checkpoints now write to a temporary file before promoting it to the save path. Hub save actions show immediate success/failure feedback. Continue validates the schema version, save structure and fighter stats; rejected saves are quarantined as `underdog_save.corrupt.json` when possible, with a clear recovery message instead of silently starting a new run.
+- Run checkpoints write through a temporary file before promotion. The save system now has three independent run slots, each with its own checkpoint, temporary file, backup and corruption quarantine. Each slot can be continued independently or explicitly replaced after confirmation. Career Respect remains global across all three slots.
 - The Codex has a top-level back action and a guide to enemy archetype mechanics.
 - Enemy mechanics now differ: the brawler's Heavy Right hits harder; the speedster's landed attacks drain stamina; the tank's guard reduces incoming damage while it has stamina; the counter-puncher punishes committed attack moves; the dirty fighter drains stamina on a hit; and the final champion surges on turns 3 and 6.
 - Enemy telegraphs, stamina/action handling, Heart, rounds and decisions are part of the current turn-based combat foundation.
@@ -258,7 +258,7 @@ Recent inventory/reward fixes are committed, but the corresponding unchecked reg
 
 **Milestone: Begin the UI redesign for The Last Round.**
 
-The game is now branded The Last Round in its Godot project name, main menu, scene root, source comments/log prefix and project documentation. Existing save-file paths intentionally remain unchanged so current local run and career saves are not stranded. The coach tutorial is a six-exchange playable spar. The next work sequence is fixed: UI redesign → graphics → animations → grouped testing and balancing. Existing runtime checks remain open until that final testing phase; Smelling Salts testing is not a development blocker.
+The game is now branded The Last Round in its Godot project name, main menu, scene root, source comments/log prefix and project documentation. Legacy `underdog_*` run and career save files are intentionally deleted on the next game launch, as requested. New files use The Last Round naming; the three run slots are independent and Career Respect is shared across the game. The coach tutorial is a six-exchange playable spar. The next work sequence is fixed: UI redesign → graphics → animations → grouped testing and balancing. Existing runtime checks remain open until that final testing phase; Smelling Salts testing is not a development blocker.
 
 1. Gather and translate the user's UI concepts into a consistent design system and screen layouts.
 2. Implement the redesigned main menu, hub/bracket, combat HUD, rewards, run summary, Codex, settings and coach spar.
@@ -300,3 +300,19 @@ Open the project in Godot 4.7 and run with F5. Stop the running game before pull
 **Current phase:** Phase 4 — UI redesign  
 **Next milestone:** Gather the user's UI concepts and begin the screen-by-screen redesign  
 **Production order:** UI → graphics → animations → testing
+
+
+### Three-slot save system — implemented, runtime QA pending
+
+- [x] Replace the single run checkpoint with three independent slot files.
+- [x] Give each slot its own temporary and backup files so writes cannot overwrite another slot.
+- [x] Show all three slots on the main menu with EMPTY / checkpoint / damaged status.
+- [x] Allow Continue to load only the selected slot.
+- [x] Require explicit confirmation before starting a new run over an occupied slot.
+- [x] Keep Career Respect global and shared across all three runs.
+- [x] Remove the old `underdog_*` run and career save files on startup, as explicitly requested.
+- [ ] In Godot, create and save three runs, then confirm each slot resumes its own fighter/build/fight progress.
+- [ ] Confirm replacing one occupied slot leaves the other two unchanged.
+- [ ] Confirm a completed/failed run clears only its own slot.
+- [ ] Confirm malformed data in one slot is quarantined without affecting the other slots.
+- [ ] Confirm the renamed career meta-save persists across all three slots and game restarts.
