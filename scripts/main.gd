@@ -2171,8 +2171,8 @@ func _training_feedback_for_move(id: String) -> String:
 	if incoming == "Reset":
 		return "Coach: That's your breathing window. Rest now if your gas tank needs it."
 	if incoming == "Combination":
-		if id in ["block", "slip"]:
-			return "Coach: Good defence. A combination needs a committed guard or a clean evade."
+		if id in ["block", "slip", "clinch"]:
+			return "Coach: Good defence. Block, Slip or Clinch can interrupt a combination and stop you getting overwhelmed."
 		return "Coach: Don't admire your work after landing a punch. Be ready for the follow-up."
 	if id == "counter":
 		return "Coach: Counters need a read. Match the tell before you spend the stamina."
