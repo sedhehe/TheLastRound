@@ -1939,6 +1939,15 @@ func _use_item(id: String) -> void:
 		_enemy_turn()
 		player_blocking = false
 		player_slipping = false
+
+		# Energy Drink's crash is charged after the opponent's response. Keep
+		# this in the shared item path so using the drink always pays its cost.
+		if energy_penalty_pending and game_state == "combat":
+			player.stamina = maxf(0.0, player.stamina - 10.0)
+			energy_penalty_pending = false
+			_show_floating_number(10.0, true, false, false)
+			_log("The energy drink crash costs 10 stamina.")
+
 		if game_state == "combat":
 			_check_round()
 		if game_state == "combat":
