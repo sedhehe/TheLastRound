@@ -96,7 +96,7 @@ var player_start_position := Vector3(0.0, 0.0, 2.1)
 var enemy_start_position := Vector3.ZERO
 
 
-func _unhandled_input(event: InputEvent) -> void:
+func _input(event: InputEvent) -> void:
 	if not (event is InputEventKey and event.pressed and not event.echo):
 		return
 	if game_state != "combat":
@@ -892,7 +892,8 @@ func _hud_button(parent: Control, caption: String, callback: Callable, disabled:
 	var hover := normal.duplicate() as StyleBoxFlat
 	hover.bg_color = Color(0.16, 0.27, 0.37)
 	button.add_theme_stylebox_override("hover", hover)
-	button.pressed.connect(callback)
+	if callback.is_valid():
+		button.pressed.connect(callback)
 	parent.add_child(button)
 	return button
 
@@ -1130,9 +1131,7 @@ func _show_combat() -> void:
 func _combat_item_slots() -> Array[String]:
 	var result: Array[String] = []
 	for item_variant in inventory:
-		var item_id := str(item_variant)
-		if item_id not in ["ice", "salts"]:
-			result.append(item_id)
+		result.append(str(item_variant))
 	return result
 
 
