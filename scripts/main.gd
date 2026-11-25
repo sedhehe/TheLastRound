@@ -74,6 +74,7 @@ var ui_scroll: ScrollContainer
 var ui_shade: ColorRect
 var combat_hud: Control
 var combat_drawer_open := false
+var combat_paused := false
 var hud_player_hp := -1.0
 var hud_player_stamina := -1.0
 var hud_enemy_hp := -1.0
@@ -92,6 +93,12 @@ var crt_enabled := true
 var player_start_position := Vector3(0.0, 0.0, 2.1)
 var enemy_start_position := Vector3.ZERO
 
+
+func _unhandled_input(event: InputEvent) -> void:
+	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_ESCAPE and game_state == "combat":
+		combat_paused = not combat_paused
+		_show_combat()
+		get_viewport().set_input_as_handled()
 
 func _ready() -> void:
 	rng.randomize()
@@ -560,6 +567,7 @@ func _start_fight() -> void:
 		return
 
 	game_state = "combat"
+	combat_paused = false
 
 	round_no = 1
 	turn_no = 1
@@ -830,6 +838,14 @@ func _hud_button(parent: Control, caption: String, callback: Callable, disabled:
 	return button
 
 
+func _toggle_combat_pause() -> void:
+	combat_paused = true
+	_show_combat()
+
+func _resume_combat() -> void:
+	combat_paused = false
+	_show_combat()
+
 func _toggle_combat_drawer() -> void:
 	combat_drawer_open = not combat_drawer_open
 	_show_combat()
@@ -936,6 +952,10 @@ func _show_combat() -> void:
 	drawer_button.position = Vector2(width * 0.5 - 120, height - 210)
 	drawer_button.size = Vector2(240, 38)
 
+	var pause_button := _hud_button(combat_hud, "PAUSE", _resume_combat if combat_paused else _toggle_combat_pause, false, true)
+	pause_button.position = Vector2(width - 242, height - 54)
+	pause_button.size = Vector2(104, 36)
+
 	var forfeit := _hud_button(combat_hud, "FORFEIT", _forfeit_run, false, true)
 	forfeit.position = Vector2(width - 126, height - 54)
 	forfeit.size = Vector2(104, 36)
@@ -952,6 +972,16 @@ func _show_combat() -> void:
 		_hud_label(drawer_col, "SALTS: " + ("SPENT" if revive_used else "READY" if inventory.has("salts") else "NOT IN BAG"), 12)
 		_hud_label(drawer_col, "ACTIVE EFFECTS: " + ("Loaded Tape" if loaded_bonus > 0 else "None"), 12)
 
+	if combat_paused:
+		var pause_overlay := _hud_panel(combat_hud, Rect2(width * 0.5 - 170, height * 0.5 - 110, 340, 220), Color(0.012, 0.022, 0.038, 0.98))
+		var pause_col := VBoxContainer.new()
+		pause_col.add_theme_constant_override("separation", 12)
+		pause_overlay.add_child(pause_col)
+		_hud_label(pause_col, "FIGHT PAUSED", 22, Color(0.90, 0.78, 0.48))
+		_hud_label(pause_col, "The arena is waiting.", 13)
+		_hud_button(pause_col, "RESUME FIGHT", _resume_combat)
+		_hud_button(pause_col, "FORFEIT RUN", _forfeit_run)
+
 func _forfeit_run() -> void:
 	_disable_realtime_combat()
 	_end_run(false, "You walked away from the fight.")
@@ -966,7 +996,7 @@ func _speed_chance(speed: float) -> float:
 
 
 func _player_move(id: String) -> void:
-	if game_state != "combat":
+	if game_state != "combat" or combat_paused:
 		return
 
 	if not owned_moves.has(id):
@@ -1837,8 +1867,8 @@ func _use_heal_between() -> void:
 # ---------------------------------------------------------
 
 func _use_item(id: String) -> void:
-	# Combat items can only be activated during a fight.
-	if game_state != "combat":
+	# Combat items can only be activated during an unpaused fight.
+	if game_state != "combat" or combat_paused:
 		return
 
 	# Passive Smelling Salts and between-fight Ice are never manually used.
