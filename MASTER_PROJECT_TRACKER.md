@@ -384,3 +384,12 @@ Open the project in Godot 4.7 and run with F5. Stop the running game before pull
 - Removed an unsupported Button wrapping-property assignment during source review.
 - **Commits:** `fcdbd2e` (HUD rebuild), `8e58641` (Button property compatibility cleanup).
 - **Verification boundary:** GitHub confirms both commits on `main`. Godot 4.7.2 has not been run here, so parsing, actual rendering, responsive scaling and interaction remain unverified. QA stays open until the grouped runtime pass.
+
+
+## 2026-11-25 — Full UI design-system implementation & Godot visual verification
+
+- Set `1600×900` virtual canvas (`canvas_items` stretch, `1280×720` default window) in `project.godot` to match the `UI/` design specification.
+- Added `scripts/ui_theme.gd` (palette tokens, condensed/body `SystemFont` typography, custom vector `UIIcon` rendering for all moves and items, `UISegmentBar`, and card/button/header builders) and `scripts/ui_boxer_preview.gd` (`SubViewport` 3D fighter preview).
+- Implemented full-screen reference layouts in `scripts/ui_screens.gd` for the Title screen (3 corner slots, 8-segment progress, Career Record), overwrite confirmation, Hub / Your Corner (8-bout bracket, Next Opponent preview, Fighter loadout grid, Corner Bag + Ice Pack + Career progress), Reward selection & confirmation, Run Summary (victory/defeat), Coach Spar, Corner Bag item lesson, Telegraph Practice (6 anticipation poses), tabbed Settings (Controls, Audio, Display, Accessibility with persistence), and tabbed Codex.
+- Upgraded the live Combat HUD in `scripts/main.gd` and `scripts/ui_combat.gd` with trailing damage ghost bars, semantic phase banners, active effect pills, low-health crimson vignette, exchange toast banner, rich floating hover tooltips, 3-column Fighter Drawer, Round Transition modal, and Pause overlay.
+- Verified GDScript compilation, functional smoke tests (coach spar retry/completion + fight/reward/hub flow), and rendered 13 screens in Godot 4.7.2 (`Godot_v4.7.2-stable_win64_console.exe`) with zero script or scene errors; full manual/grouped gameplay QA remains open until the dedicated testing phase.

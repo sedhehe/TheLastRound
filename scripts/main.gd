@@ -3,12 +3,17 @@ extends Node3D
 # The Last Round: self-contained playable vertical slice / tournament prototype.
 
 const ARENA_VISUALS = preload("res://scripts/arena_visuals.gd")
+const TLRTheme = preload("res://scripts/ui_theme.gd")
+const TLRScreens = preload("res://scripts/ui_screens.gd")
+const TLRCombatUI = preload("res://scripts/ui_combat.gd")
+const TLRAudio = preload("res://scripts/audio_engine.gd")
 const MOVE_FILE = "res://data/moves.json"
 const ENEMY_FILE = "res://data/enemies.json"
 const ITEM_FILE = "res://data/items.json"
 const SAVE_SLOT_COUNT := 3
 const SAVE_VERSION := 3
 const META_PATH = "user://the_last_round_career.json"
+const SETTINGS_PATH = "user://the_last_round_settings.json"
 
 var selected_slot := 0
 
@@ -72,22 +77,66 @@ var panel: PanelContainer
 var content: VBoxContainer
 var ui_scroll: ScrollContainer
 var ui_shade: ColorRect
+var screen_canvas: Control
+var brightness_overlay: ColorRect
+var crt_overlay: ColorRect
 var combat_hud: Control
 var combat_drawer_open := false
 var combat_review_open := false
 var review_scenario := ""
 var combat_paused := false
+var round_transition_open := false
+var combat_banner_title := ""
+var combat_banner_sub := ""
+var animate_combat_banner := false
+var animate_round_transition := false
+var animate_drawer_open := false
+var animate_pause_open := false
+var animate_phase_banner := false
+var animate_screen_enter := false
 var hud_player_hp := -1.0
 var hud_player_stamina := -1.0
 var hud_enemy_hp := -1.0
 var hud_enemy_stamina := -1.0
 var player_last_move_id := ""
 
+var reward_options: Array = []
+var selected_reward_index := -1
+var selected_hub_item_slot := 0
+var settings_tab := "controls"
+var settings_saved_notice := false
+var codex_tab := "core"
+var item_lesson_demo_used := false
+var item_lesson_show_all := false
+var practice_pose := "heavy"
+var training_retry_flag := false
+
+var settings: Dictionary = {
+	"master_volume": 80,
+	"music_volume": 60,
+	"sfx_volume": 80,
+	"commentary_volume": 80,
+	"window_mode": "Windowed",
+	"aspect_mode": "Auto (Fill)",
+	"resolution": "1600 × 900",
+	"vsync": true,
+	"brightness": 50,
+	"crt_enabled": true,
+	"reduced_motion": false,
+	"screen_shake": false,
+	"flash_effects": true,
+	"text_size": "Standard",
+	"subtitles": true,
+	"contrast": "Standard"
+}
+
 var arena_light: OmniLight3D
 var opponent_mesh: Node3D
 var opponent_mat: StandardMaterial3D
 var camera: Camera3D
 var arena_visuals: Node3D
+var audio_engine: Node
+var flash_overlay: ColorRect
 
 var screen_shake := false
 var crt_enabled := true
@@ -99,14 +148,102 @@ var enemy_start_position := Vector3.ZERO
 func _input(event: InputEvent) -> void:
 	if not (event is InputEventKey and event.pressed and not event.echo):
 		return
+
+	var key: int = event.keycode
+	if game_state == "menu":
+		if key in [KEY_1, KEY_2, KEY_3]:
+			_select_slot(key - KEY_1)
+			get_viewport().set_input_as_handled()
+			return
+		if key in [KEY_LEFT, KEY_UP]:
+			_select_slot((selected_slot + SAVE_SLOT_COUNT - 1) % SAVE_SLOT_COUNT)
+			get_viewport().set_input_as_handled()
+			return
+		if key in [KEY_RIGHT, KEY_DOWN]:
+			_select_slot((selected_slot + 1) % SAVE_SLOT_COUNT)
+			get_viewport().set_input_as_handled()
+			return
+		if key in [KEY_ENTER, KEY_KP_ENTER, KEY_SPACE]:
+			var info := _slot_info(selected_slot)
+			if bool(info.get("has_save", false)):
+				_continue_run(selected_slot)
+			else:
+				_request_new_run(selected_slot)
+			get_viewport().set_input_as_handled()
+			return
+		return
+
+	if game_state == "reward":
+		if key in [KEY_1, KEY_2, KEY_3]:
+			_select_reward_option(key - KEY_1)
+			get_viewport().set_input_as_handled()
+			return
+		if key in [KEY_ENTER, KEY_KP_ENTER, KEY_SPACE] and selected_reward_index >= 0:
+			_confirm_selected_reward()
+			get_viewport().set_input_as_handled()
+			return
+		return
+
+	if game_state == "hub":
+		if key in [KEY_ENTER, KEY_KP_ENTER, KEY_SPACE]:
+			_start_fight()
+			get_viewport().set_input_as_handled()
+			return
+		if key == KEY_Q and inventory.size() >= 1:
+			_select_hub_item_slot(0)
+			if str(inventory[0]) == "ice":
+				_use_hub_item_slot(0)
+			get_viewport().set_input_as_handled()
+			return
+		if key == KEY_W and inventory.size() >= 2:
+			_select_hub_item_slot(1)
+			if str(inventory[1]) == "ice":
+				_use_hub_item_slot(1)
+			get_viewport().set_input_as_handled()
+			return
+		if key == KEY_E and inventory.size() >= 3:
+			_select_hub_item_slot(2)
+			if str(inventory[2]) == "ice":
+				_use_hub_item_slot(2)
+			get_viewport().set_input_as_handled()
+			return
+		if key == KEY_C:
+			_show_codex()
+			get_viewport().set_input_as_handled()
+			return
+		if key == KEY_ESCAPE:
+			_show_main_menu()
+			get_viewport().set_input_as_handled()
+			return
+		return
+
+	if game_state in ["settings", "codex", "telegraph_practice", "overwrite"]:
+		if key == KEY_ESCAPE:
+			_show_main_menu()
+			get_viewport().set_input_as_handled()
+		return
+
+	if game_state == "training_items":
+		if key == KEY_Q:
+			_toggle_item_lesson_demo()
+			get_viewport().set_input_as_handled()
+		elif key == KEY_ESCAPE:
+			_show_training_complete()
+			get_viewport().set_input_as_handled()
+		return
+
 	if game_state != "combat":
 		return
 
-	var key: int = event.keycode
+	if round_transition_open:
+		if key in [KEY_ENTER, KEY_KP_ENTER, KEY_SPACE, KEY_ESCAPE]:
+			_dismiss_round_transition()
+			get_viewport().set_input_as_handled()
+		return
 
-	# F1 opens the combat review index. From a scenario card it returns to
-	# the index; from the index it returns to the live fight.
-	if key == KEY_F1:
+	# F1 opens the combat review index (in standard combat). From a scenario
+	# card it returns to the index; from the index it returns to the live fight.
+	if key == KEY_F1 and not training_active:
 		if not combat_review_open:
 			combat_review_open = true
 			review_scenario = ""
@@ -164,13 +301,23 @@ func _ready() -> void:
 
 	_remove_legacy_save_files()
 	_load_meta()
+	_load_settings()
 	moves = _read_json(MOVE_FILE)
 	enemy_templates = _read_json(ENEMY_FILE)
 	item_templates = _read_json(ITEM_FILE)
 
 	_build_world()
+	_build_audio()
 	_build_ui()
+	_apply_settings()
 	_show_main_menu()
+
+
+func _build_audio() -> void:
+	audio_engine = TLRAudio.new()
+	audio_engine.name = "AudioEngine"
+	add_child(audio_engine)
+	audio_engine.apply_volumes(settings)
 
 
 func _read_json(path: String) -> Array:
@@ -353,12 +500,61 @@ func _build_ui() -> void:
 	root_ui.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(root_ui)
 
+	# Buckshot Roulette 3D-world ordered Bayer 4x4 dither + PSX grit filter (sits behind UI text)
+	var dither_layer := ColorRect.new()
+	dither_layer.name = "WorldDitherPass"
+	dither_layer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	dither_layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var dither_shader := Shader.new()
+	dither_shader.code = """
+shader_type canvas_item;
+uniform sampler2D SCREEN_TEX : hint_screen_texture, filter_nearest;
+
+float bayer4x4(vec2 p) {
+	int x = int(mod(p.x, 4.0));
+	int y = int(mod(p.y, 4.0));
+	int idx = x + y * 4;
+	float m[16] = float[](
+		 0.0,  8.0,  2.0, 10.0,
+		12.0,  4.0, 14.0,  6.0,
+		 3.0, 11.0,  1.0,  9.0,
+		15.0,  7.0, 13.0,  5.0
+	);
+	return (m[idx] / 16.0) - 0.5;
+}
+
+void fragment() {
+	vec2 px = floor(FRAGCOORD.xy / 2.0);
+	vec2 uv_q = (px * 2.0 + 1.0) * SCREEN_PIXEL_SIZE;
+	vec3 col = texture(SCREEN_TEX, uv_q).rgb;
+	float d = bayer4x4(px) * 0.055;
+	col = floor((col + d) * 28.0) / 28.0;
+	// Subtle gritty dark corner crush
+	float vig = smoothstep(0.96, 0.28, distance(SCREEN_UV, vec2(0.5)));
+	col *= mix(0.68, 1.0, vig);
+	COLOR = vec4(clamp(col, 0.0, 1.0), 1.0);
+}
+"""
+	var dither_mat := ShaderMaterial.new()
+	dither_mat.shader = dither_shader
+	dither_layer.material = dither_mat
+	root_ui.add_child(dither_layer)
+
 	ui_shade = ColorRect.new()
-	ui_shade.color = Color(0.015, 0.012, 0.018, 0.55)
+	ui_shade.color = TLRTheme.BG_DARK
 	ui_shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	ui_shade.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root_ui.add_child(ui_shade)
 
+	screen_canvas = Control.new()
+	screen_canvas.name = "ScreenCanvas"
+	screen_canvas.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
+	screen_canvas.size = Vector2(1600.0, 900.0)
+	screen_canvas.mouse_filter = Control.MOUSE_FILTER_PASS
+	root_ui.add_child(screen_canvas)
+
 	panel = PanelContainer.new()
+	panel.visible = false
 	panel.add_theme_stylebox_override("panel", _panel_style())
 	root_ui.add_child(panel)
 
@@ -375,33 +571,80 @@ func _build_ui() -> void:
 	content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	ui_scroll.add_child(content)
 
+	brightness_overlay = ColorRect.new()
+	brightness_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	brightness_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	brightness_overlay.z_index = 200
+	brightness_overlay.color = Color(0, 0, 0, 0)
+	root_ui.add_child(brightness_overlay)
+
+	flash_overlay = ColorRect.new()
+	flash_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	flash_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	flash_overlay.z_index = 199
+	flash_overlay.color = Color(1.0, 1.0, 1.0, 0.0)
+	root_ui.add_child(flash_overlay)
+
+	crt_overlay = ColorRect.new()
+	crt_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	crt_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	crt_overlay.z_index = 201
+	var crt_shader := Shader.new()
+	crt_shader.code = """
+shader_type canvas_item;
+void fragment() {
+	float scan = sin(UV.y * 900.0 * 3.14159) * 0.5 + 0.5;
+	float vig = smoothstep(0.95, 0.35, distance(UV, vec2(0.5)));
+	float alpha = mix(0.06, 0.015, scan) + (1.0 - vig) * 0.10;
+	COLOR = vec4(0.01, 0.02, 0.04, clamp(alpha, 0.0, 0.22));
+}
+"""
+	var crt_mat := ShaderMaterial.new()
+	crt_mat.shader = crt_shader
+	crt_overlay.material = crt_mat
+	root_ui.add_child(crt_overlay)
+
 	root_ui.resized.connect(_on_root_ui_resized)
 	_layout_ui()
 
 
 func _on_root_ui_resized() -> void:
+	_layout_ui()
+	_update_scene_framing()
 	if game_state == "combat":
 		_show_combat()
-	else:
-		_layout_ui()
+
 
 func _layout_ui() -> void:
 	if not is_instance_valid(panel) or not is_instance_valid(root_ui):
 		return
-	if game_state == "combat":
-		panel.hide()
-		return
+	panel.hide()
+	if is_instance_valid(screen_canvas) and root_ui.size.x > 0.0 and root_ui.size.y > 0.0:
+		var s := minf(root_ui.size.x / 1600.0, root_ui.size.y / 900.0)
+		screen_canvas.size = Vector2(1600.0, 900.0)
+		screen_canvas.scale = Vector2(s, s)
+		screen_canvas.position = (root_ui.size - Vector2(1600.0, 900.0) * s) * 0.5
 
-	var viewport_size := root_ui.size
-	var margin := 20.0
-	var available_width := maxf(240.0, viewport_size.x - margin * 2.0)
-	var available_height := maxf(180.0, viewport_size.y - margin * 2.0)
 
-	panel.position = Vector2(margin, margin)
-	panel.size = Vector2(
-		minf(500.0, available_width),
-		minf(660.0, available_height)
-	)
+func _update_scene_framing() -> void:
+	var show_gloves := (game_state == "combat")
+	if is_instance_valid(arena_visuals) and arena_visuals.has_method("set_gloves_visible"):
+		arena_visuals.set_gloves_visible(show_gloves)
+	if is_instance_valid(player_controller) and is_instance_valid(player_controller.camera):
+		var aspect := 16.0 / 9.0
+		if is_instance_valid(root_ui) and root_ui.size.y > 0.0:
+			aspect = maxf(1.0, root_ui.size.x / root_ui.size.y)
+		# Keep full ring & gloves framed on narrow (4:3) and ultrawide (21:9) screens
+		if aspect < 16.0 / 9.0:
+			player_controller.camera.keep_aspect = Camera3D.KEEP_WIDTH
+			player_controller.camera.fov = clampf(74.0 * ((16.0 / 9.0) / aspect) * 0.78, 70.0, 88.0)
+		else:
+			player_controller.camera.keep_aspect = Camera3D.KEEP_HEIGHT
+			player_controller.camera.fov = 74.0
+		if game_state == "menu":
+			player_controller.camera.h_offset = -1.35 * (aspect / (16.0 / 9.0))
+		else:
+			player_controller.camera.h_offset = 0.0
 
 
 func _panel_style() -> StyleBoxFlat:
@@ -417,18 +660,33 @@ func _panel_style() -> StyleBoxFlat:
 	return style
 
 
-	# Combat is rendered as an arena HUD, while non-combat screens use the menu panel.
 func _clear_ui() -> void:
 	if is_instance_valid(combat_hud):
 		combat_hud.queue_free()
 		combat_hud = null
-	panel.show()
-	ui_shade.color = Color(0.015, 0.012, 0.018, 0.55)
+	if is_instance_valid(screen_canvas):
+		for child in screen_canvas.get_children():
+			child.queue_free()
+		screen_canvas.show()
+		if animate_screen_enter and not bool(settings.get("reduced_motion", false)):
+			animate_screen_enter = false
+			screen_canvas.modulate.a = 0.0
+			var target_y := screen_canvas.position.y
+			screen_canvas.position.y = target_y + 14.0
+			var tw := create_tween()
+			tw.set_parallel(true)
+			tw.tween_property(screen_canvas, "modulate:a", 1.0, 0.22).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+			tw.tween_property(screen_canvas, "position:y", target_y, 0.22).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+		else:
+			animate_screen_enter = false
+			screen_canvas.modulate.a = 1.0
+	panel.hide()
+	ui_shade.color = Color(0.0, 0.0, 0.0, 0.0) if game_state == "menu" else TLRTheme.BG_DARK
 	for child in content.get_children():
 		child.queue_free()
-
 	if is_instance_valid(ui_scroll):
 		ui_scroll.scroll_vertical = 0
+	_update_scene_framing()
 
 
 func _label(
@@ -508,37 +766,31 @@ func _show_main_menu() -> void:
 	training_active = false
 	game_state = "menu"
 	_disable_realtime_combat()
+	if is_instance_valid(opponent_mat):
+		opponent_mat.albedo_color = Color(0.34, 0.19, 0.16)
+	if is_instance_valid(audio_engine):
+		audio_engine.set_ambience("menu")
+	animate_screen_enter = true
+	_clear_ui()
+	TLRScreens.build_title_screen(self, screen_canvas)
 
-	_heading("THE LAST ROUND", "NO CONTRACT. NO CORNER. NO WAY OUT.")
-	_label("An underground boxing roguelike.", 17)
-	_label("Eight fights stand between you and the Crown.", 14)
-	_label("CAREER RESPECT: %d  |  RANK: %s" % [lifetime_respect, _respect_rank()], 14, Color(0.88, 0.68, 0.38))
-	_label("CAREER PERKS: " + _career_perk_summary(), 12, Color(0.72, 0.82, 0.68))
-	if not menu_notice.is_empty():
-		_label(menu_notice, 13, Color(1.0, 0.72, 0.42))
-		menu_notice = ""
 
-	_label("CHOOSE YOUR CORNER", 18, Color(0.40, 0.75, 0.95))
-	for slot in range(SAVE_SLOT_COUNT):
-		var slot_path := _slot_save_path(slot)
-		var has_save := FileAccess.file_exists(slot_path)
-		_label("SLOT %d  —  %s" % [slot + 1, _slot_status(slot)], 15, Color(0.82, 0.78, 0.72))
-		_button("CONTINUE SLOT %d" % [slot + 1], _continue_run.bind(slot), not has_save)
-		_button("NEW RUN IN SLOT %d" % [slot + 1], _request_new_run.bind(slot))
-	_button("FIGHTER TRAINING", _show_tutorial)
-	_button("CODEX", _show_codex)
-	_button("SETTINGS", _show_settings)
+func _select_slot(slot: int) -> void:
+	if slot < 0 or slot >= SAVE_SLOT_COUNT:
+		return
+	selected_slot = slot
+	if game_state == "menu":
+		_show_main_menu()
 
-	_label(
-		"A fight is a conversation. Make sure you get the last word.",
-		13,
-		Color(0.62, 0.54, 0.50)
-	)
+
+func _quit_game() -> void:
+	get_tree().quit()
 
 
 func _request_new_run(slot: int) -> void:
 	if slot < 0 or slot >= SAVE_SLOT_COUNT:
 		return
+	selected_slot = slot
 	if FileAccess.file_exists(_slot_save_path(slot)):
 		_show_slot_overwrite_confirmation(slot)
 	else:
@@ -546,10 +798,9 @@ func _request_new_run(slot: int) -> void:
 
 
 func _show_slot_overwrite_confirmation(slot: int) -> void:
-	_heading("REPLACE SLOT %d?" % [slot + 1], "THIS WILL DELETE THE RUN IN THIS SLOT.")
-	_label("The other two slots will remain untouched.", 14)
-	_button("CONFIRM NEW RUN", _new_run.bind(slot))
-	_button("CANCEL", _show_main_menu)
+	game_state = "overwrite"
+	_clear_ui()
+	TLRScreens.build_overwrite_confirm(self, screen_canvas, slot)
 
 
 func _new_run(slot: int = -1) -> void:
@@ -627,6 +878,15 @@ func _start_fight() -> void:
 
 	game_state = "combat"
 	combat_paused = false
+	combat_drawer_open = false
+	combat_review_open = false
+	round_transition_open = false
+	combat_banner_title = ""
+	combat_banner_sub = ""
+	hud_player_hp = -1.0
+	hud_player_stamina = -1.0
+	hud_enemy_hp = -1.0
+	hud_enemy_stamina = -1.0
 
 	round_no = 1
 	turn_no = 1
@@ -681,6 +941,9 @@ func _start_fight() -> void:
 	# Turn-based combat is authoritative. Keep the real-time actors disabled.
 	_disable_realtime_combat()
 	_prepare_enemy_telegraph()
+	if is_instance_valid(audio_engine):
+		audio_engine.set_ambience("combat")
+		audio_engine.play_sfx("bell_round", -4.0, 0.02)
 	_show_combat()
 
 
@@ -900,14 +1163,17 @@ func _hud_button(parent: Control, caption: String, callback: Callable, disabled:
 
 func _toggle_combat_pause() -> void:
 	combat_paused = true
+	animate_pause_open = true
 	_show_combat()
 
 func _resume_combat() -> void:
 	combat_paused = false
+	animate_pause_open = false
 	_show_combat()
 
 func _toggle_combat_drawer() -> void:
 	combat_drawer_open = not combat_drawer_open
+	animate_drawer_open = combat_drawer_open
 	_show_combat()
 
 
@@ -977,172 +1243,42 @@ func _hud_abs_button(parent: Control, caption: String, rect: Rect2, callback: Ca
 	return button
 
 
+func _dismiss_round_transition() -> void:
+	round_transition_open = false
+	animate_round_transition = false
+	animate_phase_banner = true
+	_show_combat()
+
+
+func _open_review_from_pause() -> void:
+	combat_paused = false
+	combat_review_open = true
+	review_scenario = ""
+	_show_combat()
+
+
 func _show_combat() -> void:
 	game_state = "combat"
 	if is_instance_valid(combat_hud):
 		combat_hud.queue_free()
-	combat_hud = Control.new()
-	combat_hud.name = "CombatHUD"
-	combat_hud.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	combat_hud.mouse_filter = Control.MOUSE_FILTER_PASS
-	root_ui.add_child(combat_hud)
+		combat_hud = null
+	if is_instance_valid(screen_canvas):
+		for child in screen_canvas.get_children():
+			child.queue_free()
+		screen_canvas.hide()
 	panel.hide()
-	ui_shade.color = Color(0.005, 0.012, 0.025, 0.0)
+	ui_shade.color = Color(0.0, 0.0, 0.0, 0.0)
 	_layout_ui()
+	_update_scene_framing()
 
-	# Reference composition: 1600x900 canvas, 40px safe inset, arena left open.
-	var viewport_size: Vector2 = root_ui.size
-	var sx: float = viewport_size.x / 1600.0
-	var sy: float = viewport_size.y / 900.0
-	var top_band := ColorRect.new()
-	top_band.position = Vector2(0.0, 0.0)
-	top_band.size = Vector2(viewport_size.x, 156.0 * sy)
-	top_band.color = Color(0.012, 0.022, 0.034, 0.82)
-	combat_hud.add_child(top_band)
-
-	# Player status — typography and bars, not a boxed card.
-	_hud_abs_label(combat_hud, "YOU  /  UNKNOWN FIGHTER", Rect2(40.0 * sx, 20.0 * sy, 500.0 * sx, 24.0 * sy), 14, Color(0.88, 0.91, 0.94))
-	_hud_abs_label(combat_hud, "%d / %d" % [int(player.health), int(player.max_health)], Rect2(40.0 * sx, 47.0 * sy, 78.0 * sx, 32.0 * sy), 23, Color(0.96, 0.93, 0.91))
-	var player_hp_bar := _hud_abs_bar(combat_hud, Rect2(126.0 * sx, 57.0 * sy, 449.0 * sx, 13.0 * sy), float(player.health), float(player.max_health), Color(0.88, 0.25, 0.29))
-	_animate_hud_bar(player_hp_bar, hud_player_hp, float(player.health))
-	hud_player_hp = float(player.health)
-	_hud_abs_label(combat_hud, "%d STA" % int(player.stamina), Rect2(40.0 * sx, 84.0 * sy, 78.0 * sx, 24.0 * sy), 13, Color(0.43, 0.72, 0.96))
-	var player_sta_bar := _hud_abs_bar(combat_hud, Rect2(126.0 * sx, 90.0 * sy, 414.0 * sx, 10.0 * sy), float(player.stamina), float(player.max_stamina), Color(0.20, 0.54, 0.88))
-	_animate_hud_bar(player_sta_bar, hud_player_stamina, float(player.stamina))
-	hud_player_stamina = float(player.stamina)
-	_hud_abs_label(combat_hud, "DMG %d     DEF %d     SPD %d%%" % [int(player.damage), int(player.defence), int(_speed_chance(player.speed))], Rect2(40.0 * sx, 113.0 * sy, 535.0 * sx, 20.0 * sy), 11, Color(0.62, 0.70, 0.77))
-
-	# Opponent status — mirrored on the right.
-	_hud_abs_label(combat_hud, str(enemy.get("name", "OPPONENT")).to_upper(), Rect2(1025.0 * sx, 20.0 * sy, 535.0 * sx, 24.0 * sy), 14, Color(0.94, 0.79, 0.75), HORIZONTAL_ALIGNMENT_RIGHT)
-	_hud_abs_label(combat_hud, "%d / %d" % [int(enemy.health), int(enemy.max_health)], Rect2(1482.0 * sx, 47.0 * sy, 78.0 * sx, 32.0 * sy), 23, Color(0.96, 0.93, 0.91), HORIZONTAL_ALIGNMENT_RIGHT)
-	var enemy_hp_bar := _hud_abs_bar(combat_hud, Rect2(1025.0 * sx, 57.0 * sy, 449.0 * sx, 13.0 * sy), float(enemy.health), float(enemy.max_health), Color(0.88, 0.25, 0.29))
-	_animate_hud_bar(enemy_hp_bar, hud_enemy_hp, float(enemy.health))
-	hud_enemy_hp = float(enemy.health)
-	_hud_abs_label(combat_hud, "%d STA" % int(enemy.stamina), Rect2(1482.0 * sx, 84.0 * sy, 78.0 * sx, 24.0 * sy), 13, Color(0.43, 0.72, 0.96), HORIZONTAL_ALIGNMENT_RIGHT)
-	var enemy_sta_bar := _hud_abs_bar(combat_hud, Rect2(1060.0 * sx, 90.0 * sy, 414.0 * sx, 10.0 * sy), float(enemy.stamina), float(enemy.max_stamina), Color(0.20, 0.54, 0.88))
-	_animate_hud_bar(enemy_sta_bar, hud_enemy_stamina, float(enemy.stamina))
-	hud_enemy_stamina = float(enemy.stamina)
-	_hud_abs_label(combat_hud, "DMG %d     DEF %d     SPD %d%%" % [int(enemy.damage), int(enemy.defence), int(_speed_chance(enemy.speed))], Rect2(1025.0 * sx, 113.0 * sy, 535.0 * sx, 20.0 * sy), 11, Color(0.70, 0.62, 0.62), HORIZONTAL_ALIGNMENT_RIGHT)
-
-	# Compact round/turn plate, floating above the arena.
-	var round_plate := ColorRect.new()
-	round_plate.position = Vector2(680.0 * sx, 26.0 * sy)
-	round_plate.size = Vector2(240.0 * sx, 100.0 * sy)
-	round_plate.color = Color(0.035, 0.060, 0.082, 0.94)
-	combat_hud.add_child(round_plate)
-	_hud_abs_label(combat_hud, "ROUND", Rect2(700.0 * sx, 34.0 * sy, 85.0 * sx, 18.0 * sy), 10, Color(0.58, 0.70, 0.78), HORIZONTAL_ALIGNMENT_CENTER)
-	_hud_abs_label(combat_hud, "TURN", Rect2(815.0 * sx, 34.0 * sy, 85.0 * sx, 18.0 * sy), 10, Color(0.58, 0.70, 0.78), HORIZONTAL_ALIGNMENT_CENTER)
-	_hud_abs_label(combat_hud, "SPAR" if training_active else "%02d" % round_no, Rect2(700.0 * sx, 55.0 * sy, 85.0 * sx, 48.0 * sy), 29, Color(0.94, 0.95, 0.96), HORIZONTAL_ALIGNMENT_CENTER)
-	_hud_abs_label(combat_hud, "%02d / 06" % (training_turn + 1) if training_active else "%02d / 06" % turn_no, Rect2(805.0 * sx, 59.0 * sy, 105.0 * sx, 40.0 * sy), 22, Color(0.94, 0.95, 0.96), HORIZONTAL_ALIGNMENT_CENTER)
-
-	# Phase strip under the top band.
-	var phase_strip := ColorRect.new()
-	phase_strip.position = Vector2(650.0 * sx, 178.0 * sy)
-	phase_strip.size = Vector2(300.0 * sx, 42.0 * sy)
-	phase_strip.color = Color(0.025, 0.085, 0.095, 0.88)
-	combat_hud.add_child(phase_strip)
-	var phase_text: String = "FIGHT PAUSED" if combat_paused else ("YOUR TURN  /  CHOOSE A MOVE" if not enemy_next_action.is_empty() else "READ THE FIGHTER")
-	_hud_abs_label(combat_hud, phase_text, Rect2(658.0 * sx, 181.0 * sy, 284.0 * sx, 36.0 * sy), 12, Color(0.49, 0.87, 0.80), HORIZONTAL_ALIGNMENT_CENTER)
-
-	# Small ringside commentary, positioned clear of the opponent.
-	var commentary := ColorRect.new()
-	commentary.position = Vector2(1328.0 * sx, 302.0 * sy)
-	commentary.size = Vector2(232.0 * sx, 172.0 * sy)
-	commentary.color = Color(0.012, 0.025, 0.040, 0.80)
-	combat_hud.add_child(commentary)
-	_hud_abs_label(combat_hud, "■  RINGSIDE / LIVE", Rect2(1340.0 * sx, 311.0 * sy, 210.0 * sx, 20.0 * sy), 10, Color(0.43, 0.82, 0.73))
-	var corner_line: String = "Keep it sharp. Make every point of stamina count."
-	if training_active and not training_feedback.is_empty():
-		corner_line = training_feedback
-	elif not log_lines.is_empty():
-		corner_line = log_lines[log_lines.size() - 1]
-	_hud_abs_label(combat_hud, "“%s”" % corner_line, Rect2(1340.0 * sx, 338.0 * sy, 208.0 * sx, 104.0 * sy), 13, Color(0.90, 0.92, 0.94))
-	_hud_abs_label(combat_hud, "THE VOICE OF THE PIT", Rect2(1340.0 * sx, 447.0 * sy, 210.0 * sx, 16.0 * sy), 9, Color(0.48, 0.59, 0.66))
-	if heart_active:
-		_hud_abs_label(combat_hud, "HEART — STILL STANDING", Rect2(1340.0 * sx, 464.0 * sy, 210.0 * sx, 16.0 * sy), 10, Color(0.98, 0.40, 0.35))
-
-	# Corner bag: three equal, compact item slots.
-	_hud_abs_label(combat_hud, "CORNER BAG", Rect2(40.0 * sx, 678.0 * sy, 230.0 * sx, 24.0 * sy), 13, Color(0.76, 0.85, 0.91))
-	_hud_abs_label(combat_hud, "%d / 3 SLOTS" % inventory.size(), Rect2(270.0 * sx, 678.0 * sy, 145.0 * sx, 24.0 * sy), 10, Color(0.55, 0.66, 0.74), HORIZONTAL_ALIGNMENT_RIGHT)
-	for slot in range(3):
-		var item_id: String = str(inventory[slot]) if slot < inventory.size() else ""
-		var item_key: String = ["Q", "W", "E"][slot]
-		var item_name: String = "EMPTY" if item_id.is_empty() else _get_item_name(item_id).to_upper()
-		var item_state: String = "EMPTY"
-		var item_usable: bool = not item_id.is_empty() and item_id not in ["ice", "salts"]
-		if item_id == "ice":
-			item_state = "HUB ONLY"
-		elif item_id == "salts":
-			item_state = "PASSIVE"
-		elif item_usable:
-			item_state = "READY"
-		var item_caption: String = "%s\n%s\n%s" % [item_key, item_name, item_state]
-		var item_button := _hud_abs_button(combat_hud, item_caption, Rect2((40.0 + slot * 128.0) * sx, 710.0 * sy, 120.0 * sx, 124.0 * sy), _use_item.bind(item_id) if item_usable else Callable(), not item_usable)
-		if not item_id.is_empty():
-			var item_data: Dictionary = _get_item_data(item_id)
-			item_button.tooltip_text = str(item_data.get("description", "")) + "\n" + _item_timing(item_id)
-
-	# Six equal move cards, aligned to the right-hand safe area.
-	_hud_abs_label(combat_hud, "CHOOSE YOUR MOVE", Rect2(800.0 * sx, 678.0 * sy, 260.0 * sx, 24.0 * sy), 13, Color(0.76, 0.85, 0.91))
-	_hud_abs_label(combat_hud, "ONE MOVE ENDS YOUR TURN", Rect2(1210.0 * sx, 678.0 * sy, 350.0 * sx, 24.0 * sy), 10, Color(0.58, 0.67, 0.74), HORIZONTAL_ALIGNMENT_RIGHT)
-	for slot in range(6):
-		var move_id: String = str(owned_moves[slot]) if slot < owned_moves.size() else ""
-		var slot_key: String = str(slot + 1)
-		var card_rect := Rect2((800.0 + slot * 128.0) * sx, 710.0 * sy, 120.0 * sx, 124.0 * sy)
-		if move_id.is_empty():
-			_hud_abs_button(combat_hud, "%s\nEMPTY" % slot_key, card_rect, Callable(), true)
-			continue
-		var move_data: Dictionary = _get_move(move_id)
-		if move_data.is_empty():
-			continue
-		var move_cost: float = float(move_data.get("cost", 0.0))
-		var enough_stamina: bool = float(player.stamina) >= move_cost
-		var move_name: String = str(move_data.get("name", move_id)).to_upper()
-		var damage_range: Array = move_data.get("damage", [0, 0])
-		var damage_text: String = "%d–%d DMG" % [int(damage_range[0]), int(damage_range[1])] if damage_range.size() >= 2 and int(damage_range[1]) > 0 else str(move_data.get("description", "UTILITY"))
-		var move_caption: String = "%s     %d STA\n\n%s\n%s" % [slot_key, int(move_cost), move_name, damage_text]
-		var move_button := _hud_abs_button(combat_hud, move_caption, card_rect, _player_move.bind(move_id), not enough_stamina, move_id == player_last_move_id)
-		move_button.tooltip_text = "%s\n%s  /  %d%% accuracy" % [str(move_data.get("description", "")), damage_text, int(move_data.get("accuracy", 100))]
-		if not enough_stamina:
-			move_button.tooltip_text += "\nUNAVAILABLE — need %d stamina." % int(move_cost - float(player.stamina))
-
-	# Persistent controls retain the existing drawer, pause and review behaviour.
-	var drawer_button := _hud_abs_button(combat_hud, "TAB  /  FIGHTER DETAILS", Rect2(614.0 * sx, 846.0 * sy, 372.0 * sx, 44.0 * sy), _toggle_combat_drawer, false)
-	drawer_button.add_theme_font_size_override("font_size", 11)
-	var pause_button := _hud_abs_button(combat_hud, "ESC  /  PAUSE", Rect2(1494.0 * sx, 850.0 * sy, 66.0 * sx, 40.0 * sy), _resume_combat if combat_paused else _toggle_combat_pause, false)
-	pause_button.add_theme_font_size_override("font_size", 9)
-
-	if combat_drawer_open:
-		var drawer := _hud_panel(combat_hud, Rect2(500.0 * sx, 250.0 * sy, 600.0 * sx, 360.0 * sy), Color(0.012, 0.024, 0.041, 0.98))
-		var drawer_col := VBoxContainer.new()
-		drawer_col.add_theme_constant_override("separation", 7)
-		drawer.add_child(drawer_col)
-		_hud_label(drawer_col, "FIGHTER DETAILS", 16, Color(0.43, 0.82, 0.89))
-		_hud_label(drawer_col, "SPEED %d   /   DEFENCE %d   /   DAMAGE %d" % [int(player.speed), int(player.defence), int(player.damage)], 13)
-		_hud_label(drawer_col, "MOVES: " + ", ".join(owned_moves), 12)
-		_hud_label(drawer_col, "BAG: " + (", ".join(inventory) if not inventory.is_empty() else "Empty") + "   /   3", 12)
-		_hud_label(drawer_col, "SALTS: " + ("SPENT" if revive_used else "READY" if inventory.has("salts") else "NOT IN BAG"), 12)
-		var effects: Array[String] = []
-		if loaded_bonus > 0: effects.append("Loaded Tape +%d next hit" % loaded_bonus)
-		if enemy_blinded > 0: effects.append("Opponent accuracy reduced (%d turn(s))" % enemy_blinded)
-		if enemy_drained > 0: effects.append("Opponent stamina drain (%d turn(s))" % enemy_drained)
-		if bribe_ready: effects.append("Dirty move protected")
-		if energy_penalty_pending: effects.append("Energy crash pending")
-		_hud_label(drawer_col, "ACTIVE EFFECTS: " + (", ".join(effects) if not effects.is_empty() else "None"), 12)
-		_hud_button(drawer_col, "CLOSE DRAWER  /  TAB", _toggle_combat_drawer, false, true)
-
-	if combat_paused:
-		var pause_overlay := _hud_panel(combat_hud, Rect2(620.0 * sx, 330.0 * sy, 360.0 * sx, 240.0 * sy), Color(0.012, 0.022, 0.038, 0.99))
-		var pause_col := VBoxContainer.new()
-		pause_col.add_theme_constant_override("separation", 12)
-		pause_overlay.add_child(pause_col)
-		_hud_label(pause_col, "FIGHT PAUSED", 22, Color(0.90, 0.78, 0.48))
-		_hud_label(pause_col, "The arena is waiting.", 13)
-		_hud_button(pause_col, "RESUME FIGHT", _resume_combat)
-		_hud_button(pause_col, "FORFEIT RUN", _forfeit_run)
-
-	if combat_review_open:
-		_show_combat_review_overlay(sx, sy)
+	combat_hud = TLRCombatUI.build_combat_hud(self, root_ui)
+	if training_active and animate_screen_enter and not bool(settings.get("reduced_motion", false)):
+		animate_screen_enter = false
+		combat_hud.modulate.a = 0.0
+		var tw := create_tween()
+		tw.tween_property(combat_hud, "modulate:a", 1.0, 0.22).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	else:
+		animate_screen_enter = false
 
 
 func _combat_item_slots() -> Array[String]:
@@ -1152,18 +1288,23 @@ func _combat_item_slots() -> Array[String]:
 	return result
 
 
-func _show_combat_review_overlay(sx: float, sy: float) -> void:
+func _show_combat_review_overlay(sx: float, sy: float, target_hud: Control = null) -> void:
+	var host: Control = target_hud if is_instance_valid(target_hud) else (combat_hud if is_instance_valid(combat_hud) else root_ui)
+	var s := minf(sx, sy)
 	var shade := ColorRect.new()
 	shade.color = Color(0.004, 0.009, 0.018, 0.94)
 	shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	shade.z_index = 95
 	shade.mouse_filter = Control.MOUSE_FILTER_STOP
-	combat_hud.add_child(shade)
-	var review_panel := _hud_panel(shade, Rect2(120.0 * sx, 80.0 * sy, 1360.0 * sx, 740.0 * sy), Color(0.018, 0.035, 0.058, 1.0))
+	host.add_child(shade)
+	var review_panel := TLRTheme.make_panel(shade, Rect2(120.0 * s, 64.0 * s, 1360.0 * s, 772.0 * s), TLRTheme.SURFACE_SOLID, TLRTheme.BORDER_SUBTLE, 2, 24, 20)
 	var review_col := VBoxContainer.new()
+	review_col.position = Vector2(24.0 * s, 20.0 * s)
+	review_col.size = Vector2(1312.0 * s, 732.0 * s)
 	review_col.add_theme_constant_override("separation", 10)
 	review_panel.add_child(review_col)
-	_hud_label(review_col, "COMBAT UI  /  STATE REVIEW", 24, Color(0.91, 0.95, 0.98))
-	_hud_label(review_col, "Each card opens a focused state reference. Press F1 to return to the index or the live fight.", 12, Color(0.62, 0.73, 0.82))
+	review_col.add_child(TLRTheme.make_label("COMBAT UI  /  STATE REVIEW", 24, TLRTheme.TEXT_PRIMARY, true))
+	review_col.add_child(TLRTheme.make_label("Each card opens a focused state reference. Press F1 to return to the index or the live fight.", 13, TLRTheme.TEXT_MUTED, false))
 
 	var cards: Array[Dictionary] = [
 		{"id":"player_turn","name":"01  PLAYER TURN","desc":"Default HUD and action selection."},
@@ -1198,21 +1339,40 @@ func _show_combat_review_overlay(sx: float, sy: float) -> void:
 		review_grid.add_theme_constant_override("v_separation", 8)
 		review_col.add_child(review_grid)
 		for card in cards:
-			var entry := _hud_button(review_grid, str(card.name) + "\n" + str(card.desc), _open_review_scenario.bind(str(card.id)), false, true)
-			entry.custom_minimum_size = Vector2(285.0 * sx, 72.0 * sy)
-			entry.add_theme_font_size_override("font_size", 11)
-		_hud_button(review_col, "RETURN TO FIGHT  /  F1", _close_combat_review, false, true)
+			var entry := Button.new()
+			entry.text = str(card.name) + "\n" + str(card.desc)
+			entry.custom_minimum_size = Vector2(310.0 * s, 72.0 * s)
+			entry.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			TLRTheme.style_button(entry, "default", 11)
+			entry.pressed.connect(_open_review_scenario.bind(str(card.id)))
+			review_grid.add_child(entry)
+		var close_btn := Button.new()
+		close_btn.text = "RETURN TO FIGHT  /  F1"
+		close_btn.custom_minimum_size = Vector2(0, 44 * s)
+		TLRTheme.style_button(close_btn, "teal", 13)
+		close_btn.pressed.connect(_close_combat_review)
+		review_col.add_child(close_btn)
 	else:
 		var selected: Dictionary = {}
 		for card in cards:
 			if str(card.id) == review_scenario:
 				selected = card
 				break
-		_hud_label(review_col, str(selected.get("name", "REVIEW SCENARIO")), 22, Color(0.45, 0.86, 0.83))
-		_hud_label(review_col, str(selected.get("desc", "")), 16, Color(0.89, 0.92, 0.96))
-		_hud_label(review_col, "Reference state: use the live fight controls to reproduce this state. The review index does not alter fighter health, stamina, turn count or run progress.", 13, Color(0.65, 0.75, 0.83))
-		_hud_button(review_col, "BACK TO REVIEW INDEX  /  F1", _back_to_review_index, false, true)
-		_hud_button(review_col, "RETURN TO FIGHT", _close_combat_review, false, true)
+		review_col.add_child(TLRTheme.make_label(str(selected.get("name", "REVIEW SCENARIO")), 22, TLRTheme.CYAN, true))
+		review_col.add_child(TLRTheme.make_label(str(selected.get("desc", "")), 16, TLRTheme.TEXT_PRIMARY, false))
+		review_col.add_child(TLRTheme.make_label("Reference state: use the live fight controls to reproduce this state. The review index does not alter fighter health, stamina, turn count or run progress.", 14, TLRTheme.TEXT_MUTED, false))
+		var back_btn := Button.new()
+		back_btn.text = "BACK TO REVIEW INDEX  /  F1"
+		back_btn.custom_minimum_size = Vector2(0, 44 * s)
+		TLRTheme.style_button(back_btn, "teal", 13)
+		back_btn.pressed.connect(_back_to_review_index)
+		review_col.add_child(back_btn)
+		var ret_btn := Button.new()
+		ret_btn.text = "RETURN TO FIGHT"
+		ret_btn.custom_minimum_size = Vector2(0, 44 * s)
+		TLRTheme.style_button(ret_btn, "default", 13)
+		ret_btn.pressed.connect(_close_combat_review)
+		review_col.add_child(ret_btn)
 
 
 func _open_review_scenario(id: String) -> void:
@@ -1232,8 +1392,21 @@ func _close_combat_review() -> void:
 
 
 func _forfeit_run() -> void:
+	if training_active:
+		_exit_training_to_menu()
+		return
 	_disable_realtime_combat()
 	_end_run(false, "You walked away from the fight.")
+
+
+func _exit_training_to_menu() -> void:
+	training_active = false
+	training_retry_flag = false
+	combat_paused = false
+	combat_drawer_open = false
+	combat_review_open = false
+	_disable_realtime_combat()
+	_show_main_menu()
 
 
 # ---------------------------------------------------------
@@ -1262,7 +1435,14 @@ func _player_move(id: String) -> void:
 		return
 
 	if training_active and not _training_move_is_acceptable(id):
+		training_retry_flag = true
 		training_feedback = _training_retry_feedback(id)
+		combat_banner_title = "TRY ANOTHER ANSWER"
+		combat_banner_sub = training_feedback
+		animate_combat_banner = true
+		animate_phase_banner = true
+		if is_instance_valid(audio_engine):
+			audio_engine.play_sfx("ui_retry", -6.0, 0.02)
 		_show_combat()
 		return
 
@@ -1270,37 +1450,64 @@ func _player_move(id: String) -> void:
 	var enemy_stamina_before_action := float(enemy.get("stamina", 0.0))
 	player_last_move_id = id
 	if training_active:
+		training_retry_flag = false
 		training_feedback = _training_feedback_for_move(id)
 
 	if arena_visuals and arena_visuals.has_method("player_action"):
 		arena_visuals.player_action(id)
+	if is_instance_valid(audio_engine):
+		match id:
+			"jab": audio_engine.play_sfx("punch_jab", -4.0)
+			"block": audio_engine.play_sfx("block_thud", -5.0)
+			"slip": audio_engine.play_sfx("whoosh_slip", -5.0)
+			"rest": audio_engine.play_sfx("rest_breath", -5.0)
+			"clinch": audio_engine.play_sfx("clinch_tie", -4.0)
+			"body_shot": audio_engine.play_sfx("punch_body", -4.0)
+			"feint": audio_engine.play_sfx("whoosh_slip", -8.0)
+			"counter": audio_engine.play_sfx("whoosh_slip", -4.0)
+			_: audio_engine.play_sfx("punch_heavy", -3.0)
+
+	if round_transition_open:
+		return
 
 	if id == "rest":
 		player.stamina = minf(
 			player.max_stamina,
 			player.stamina + 24.0
 		)
+		combat_banner_title = "TAKE A BREATH"
+		combat_banner_sub = "+24 stamina restored • You are exposed"
 		_log("You take a breath. +24 stamina. The opening is there.")
 
 	elif id == "block":
 		player.stamina = maxf(0.0, player.stamina - cost)
 		player_blocking = true
+		combat_banner_title = "GUARD HOLDS"
+		combat_banner_sub = "Damage reduced • %d stamina spent" % int(cost)
 		_log("You shell up behind your gloves.")
 
 	elif id == "slip":
 		player.stamina -= cost
 		player_slipping = true
+		if is_instance_valid(audio_engine):
+			audio_engine.play_sfx("foot_shuffle", -4.0)
+		combat_banner_title = "CLEAN SLIP"
+		combat_banner_sub = "Evading incoming blow • %d stamina spent" % int(cost)
 		_log("You prepare a sharp slip.")
 
 	elif id == "feint":
 		player.stamina -= cost
 		enemy_blinded = maxi(enemy_blinded, 1)
+		combat_banner_title = "FEINT LANDS"
+		combat_banner_sub = "Opponent accuracy lowered • %d stamina spent" % int(cost)
 		_log("Your feint makes the opponent hesitate.")
 
 	elif id == "clinch":
 		player.stamina -= cost
 		enemy.stamina = maxf(0.0, enemy.stamina - 10.0)
 		player.stamina = minf(player.max_stamina, player.stamina + 8.0)
+		combat_banner_title = "TIED UP"
+		combat_banner_sub = "Opponent -10 STA • You recover +8 STA"
 		_log("You smother the attack in a clinch.")
 
 	elif id == "counter":
@@ -1312,8 +1519,12 @@ func _player_move(id: String) -> void:
 
 		if guessed:
 			_deal_player_damage(move, 1.35)
+			combat_banner_title = "PERFECT COUNTER"
+			combat_banner_sub = "Counter window consumed • %d stamina spent" % int(cost)
 			_log("Perfect read! Counter lands hard.")
 		else:
+			combat_banner_title = "COUNTER WHIFFS"
+			combat_banner_sub = "Wrong read • %d stamina spent" % int(cost)
 			_log("Wrong read. The counter misses its window.")
 
 	elif id in ["headbutt", "low_blow"]:
@@ -1328,13 +1539,25 @@ func _player_move(id: String) -> void:
 			bribe_ready = false
 
 		_deal_player_damage(move, 1.0)
+		if is_instance_valid(audio_engine):
+			audio_engine.play_sfx("crowd_boo", -5.5)
+		combat_banner_title = "%s CONNECTS" % str(move.get("name", id)).to_upper()
+		combat_banner_sub = "%d stamina spent" % int(cost)
 
 		if id == "low_blow":
 			enemy.stamina = maxf(0.0, enemy.stamina - 18.0)
 
 	else:
 		player.stamina -= cost
+		var enemy_hp_before := float(enemy.health)
 		_deal_player_damage(move, 1.0)
+		var dmg_dealt := roundi(enemy_hp_before - float(enemy.health))
+		if dmg_dealt > 0:
+			combat_banner_title = "%s CONNECTS" % str(move.get("name", id)).to_upper()
+			combat_banner_sub = "%d damage dealt • %d stamina spent" % [dmg_dealt, int(cost)]
+		else:
+			combat_banner_title = "%s MISSES" % str(move.get("name", id)).to_upper()
+			combat_banner_sub = "%d stamina spent" % int(cost)
 
 		if id == "body_shot":
 			enemy.stamina = maxf(0.0, enemy.stamina - 12.0)
@@ -1371,11 +1594,15 @@ func _player_move(id: String) -> void:
 	player_slipping = false
 
 	if training_active and game_state == "combat":
+		player.health = maxf(25.0, float(player.health))
+		enemy.health = maxf(50.0, float(enemy.health))
 		training_turn += 1
 		if training_turn >= TRAINING_EXCHANGES:
 			_finish_training()
 			return
 		_prepare_enemy_telegraph()
+		animate_combat_banner = not combat_banner_title.is_empty()
+		animate_phase_banner = true
 		_show_combat()
 		return
 
@@ -1383,6 +1610,8 @@ func _player_move(id: String) -> void:
 		_check_round()
 		if game_state == "combat":
 			_prepare_enemy_telegraph()
+			animate_combat_banner = not combat_banner_title.is_empty()
+			animate_phase_banner = true
 			_show_combat()
 
 
@@ -1417,15 +1646,20 @@ func _show_floating_number(amount: float, is_stamina: bool, over_opponent: bool,
 	start_position.x = clampf(start_position.x, 24.0, root_ui.size.x - 120.0)
 	start_position.y = clampf(start_position.y, 90.0, root_ui.size.y - 190.0)
 	label.position = start_position
+	label.pivot_offset = Vector2(36.0, 14.0)
+	label.scale = Vector2(1.32, 1.32) if not bool(settings.get("reduced_motion", false)) else Vector2.ONE
 	var tween := create_tween()
 	tween.set_parallel(true)
-	tween.tween_property(label, "position", start_position + Vector2(0, -48), 0.72).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	tween.tween_property(label, "position", start_position + Vector2(0, -52), 0.72).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	tween.tween_property(label, "scale", Vector2.ONE, 0.22).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	tween.tween_property(label, "modulate:a", 0.0, 0.72).set_delay(0.18)
 	tween.chain().tween_callback(label.queue_free)
 
 func _deal_player_damage(move: Dictionary, multiplier: float) -> void:
 	if rng.randf() * 100.0 > float(move.get("accuracy", 100.0)):
 		_log("%s misses. The crowd groans." % str(move.get("name", "Your move")))
+		if is_instance_valid(audio_engine):
+			audio_engine.play_sfx("crowd_gasp", -6.5)
 		return
 
 	var damage_range: Array = move.get("damage", [5.0, 10.0])
@@ -1469,6 +1703,13 @@ func _deal_player_damage(move: Dictionary, multiplier: float) -> void:
 
 	if arena_visuals and arena_visuals.has_method("opponent_hit"):
 		arena_visuals.opponent_hit()
+	if is_instance_valid(audio_engine):
+		if critical:
+			audio_engine.play_sfx("crit_ko", -2.0)
+			audio_engine.play_sfx("crowd_cheer", -5.0)
+			_trigger_impact_flash(Color(1.0, 0.92, 0.80, 0.20))
+		else:
+			audio_engine.play_sfx("punch_heavy" if multiplier > 1.1 else "punch_jab", -3.0)
 
 	if critical:
 		_log("CRITICAL! %s lands for %d." % [
@@ -1605,6 +1846,8 @@ func _enemy_turn() -> void:
 
 	if arena_visuals and arena_visuals.has_method("enemy_attack"):
 		arena_visuals.enemy_attack(str(action.get("name", "")))
+	if is_instance_valid(audio_engine):
+		audio_engine.play_sfx("whoosh_slip", -6.0)
 
 	var dodged := player_slipping or (
 		rng.randf() * 100.0 < _speed_chance(player.speed)
@@ -1612,6 +1855,8 @@ func _enemy_turn() -> void:
 
 	if dodged:
 		_log("DODGED! " + str(action.get("name", "Their attack")) + " cuts through empty air.")
+		if is_instance_valid(audio_engine):
+			audio_engine.play_sfx("foot_shuffle", -5.0)
 		var wind_recovery := minf(float(passive.get("wind", 0.0)), player.max_stamina - player.stamina)
 		player.stamina = minf(player.max_stamina, player.stamina + wind_recovery)
 		if wind_recovery > 0.0:
@@ -1646,6 +1891,16 @@ func _enemy_turn() -> void:
 
 	player.health = maxf(0.0, player.health - damage)
 	_show_floating_number(damage, false, false)
+	if is_instance_valid(audio_engine):
+		audio_engine.play_sfx("block_thud" if player_blocking else "player_hit", -3.5)
+		if not player_blocking and damage >= 14.0:
+			audio_engine.play_sfx("crowd_gasp", -5.5)
+		if float(player.stamina) < 15.0:
+			audio_engine.play_sfx("heavy_breath", -6.0)
+	if not player_blocking:
+		_trigger_impact_flash(Color(0.85, 0.14, 0.14, 0.18))
+	if screen_shake and arena_visuals and arena_visuals.has_method("impact_shake"):
+		arena_visuals.impact_shake()
 
 	if str(enemy.get("trick", "")) == "dirty":
 		player.stamina = maxf(0.0, player.stamina - 5.0)
@@ -1695,12 +1950,20 @@ func _check_round() -> void:
 		)
 
 		_log("BELL! Corner break. You recover 14 stamina.")
+		if is_instance_valid(audio_engine):
+			audio_engine.play_sfx("bell_end", -4.0, 0.01)
 
 		if round_no > 3:
 			if player.health >= enemy.health:
 				_win_fight()
 			else:
 				_end_run(false, "The judges give it to your opponent.")
+		else:
+			round_transition_open = true
+			animate_round_transition = true
+			combat_banner_title = "END OF ROUND %02d" % (round_no - 1)
+			combat_banner_sub = "+14 stamina recovered in your corner"
+			animate_combat_banner = true
 
 	if player.health <= 0.0:
 		_end_run(false, "You were knocked out.")
@@ -1725,27 +1988,19 @@ func _win_fight() -> void:
 		_end_run(true, "You became the underground champion.")
 		return
 
+	if is_instance_valid(audio_engine):
+		audio_engine.set_ambience("menu")
+		audio_engine.play_sfx("win_fight", -2.5, 0.01)
+		audio_engine.play_sfx("crowd_cheer", -3.0)
+
 	_show_rewards()
 
 
 func _show_rewards() -> void:
 	game_state = "reward"
-
 	_disable_realtime_combat()
-
-	_heading(
-		"THE CORNER",
-		"Fight %d won. Choose ONE reward." % (fight_index + 1)
-	)
-
-	_label(
-		"Respect earned: %d     Current health: %d     Stamina: %d" % [
-			respect,
-			int(player.health),
-			int(player.stamina)
-		]
-	)
-	_show_salts_status()
+	animate_screen_enter = true
+	_clear_ui()
 
 	var options: Array = []
 
@@ -1800,47 +2055,30 @@ func _show_rewards() -> void:
 		})
 
 	options.shuffle()
+	reward_options = options
+	selected_reward_index = -1
+	TLRScreens.build_rewards(self, screen_canvas, reward_options)
 
-	for option in options:
-		if option.type == "move":
-			var move: Dictionary = option.data
-			var move_id := str(move.get("id", ""))
-			var is_upgrade := owned_moves.has(move_id)
-			var reward_prefix := "UPGRADE" if is_upgrade else "NEW MOVE"
-			var reward_details := _move_reward_details(move)
 
-			if is_upgrade:
-				reward_details += " | Upgrade: +1 player damage."
+func _select_reward_option(idx: int) -> void:
+	if idx < 0 or idx >= reward_options.size():
+		return
+	selected_reward_index = idx
+	_clear_ui()
+	TLRScreens.build_rewards(self, screen_canvas, reward_options)
 
-			_button(
-				"%s: %s — %s" % [
-					reward_prefix,
-					str(move.get("name", "Move")),
-					reward_details
-				],
-				_choose_move.bind(move_id)
-			)
 
-		elif option.type == "item":
-			var item_data: Dictionary = option.data
-			var item_id := str(item_data.get("id", ""))
-			_button(
-				"ITEM: %s — %s | %s" % [
-					str(item_data.get("name", "Item")),
-					str(item_data.get("description", "")),
-					_item_timing(item_id)
-				],
-				_choose_item.bind(item_id)
-			)
-
-		else:
-			var upgrade: Dictionary = option.data
-			_button(
-				str(upgrade.get("name", "Upgrade"))
-				+ " — "
-				+ str(upgrade.get("description", "")),
-				_choose_upgrade.bind(upgrade)
-			)
+func _confirm_selected_reward() -> void:
+	if selected_reward_index < 0 or selected_reward_index >= reward_options.size():
+		return
+	var opt: Dictionary = reward_options[selected_reward_index]
+	match str(opt.get("type", "")):
+		"move":
+			_choose_move(str(opt.data.get("id", "")))
+		"item":
+			_choose_item(str(opt.data.get("id", "")))
+		_:
+			_choose_upgrade(opt.data)
 
 
 
@@ -1894,19 +2132,26 @@ func _random_upgrade() -> Dictionary:
 
 
 func _choose_move(id: String) -> void:
+	var move := _get_move(id)
+	var m_name := str(move.get("name", id))
+	var detail := ""
+	var summary := ""
 	if owned_moves.has(id):
-		var move := _get_move(id)
 		player.damage += 1.0
-		_log("%s levels up. Your hands are learning." % str(move.get("name", id)))
+		_log("%s levels up. Your hands are learning." % m_name)
+		detail = "Loadout upgrade applied: +1 overall player damage for this run."
+		summary = "LOADOUT / %s UPGRADED (DAMAGE NOW %d)" % [m_name.to_upper(), int(player.damage)]
 	else:
 		if owned_moves.size() >= 4 + int(passive.get("slots", 0)):
 			_show_rewards()
 			return
 
 		owned_moves.append(id)
-		_log("New move unlocked: " + str(_get_move(id).get("name", id)))
+		_log("New move unlocked: " + m_name)
+		detail = _move_reward_details(move)
+		summary = "LOADOUT / %s ADDED TO YOUR MOVES" % m_name.to_upper()
 
-	_after_reward()
+	_after_reward(m_name, detail, summary)
 
 
 func _choose_item(id: String) -> void:
@@ -1914,8 +2159,10 @@ func _choose_item(id: String) -> void:
 		return
 
 	inventory.append(id)
-	_log("Added to your corner bag: " + _get_item_name(id) + ".")
-	_after_reward()
+	var i_name := _get_item_name(id)
+	_log("Added to your corner bag: " + i_name + ".")
+	var idata := _get_item_data(id)
+	_after_reward(i_name, str(idata.get("description", "")), "CORNER BAG / %d OF 3 SLOTS OCCUPIED" % inventory.size())
 
 
 func _choose_upgrade(upgrade: Dictionary) -> void:
@@ -1956,10 +2203,17 @@ func _choose_upgrade(upgrade: Dictionary) -> void:
 				player.health + float(upgrade.value)
 			)
 
-	_after_reward()
+	var move_names: Array[String] = []
+	for m_id in owned_moves:
+		move_names.append(str(_get_move(str(m_id)).get("name", m_id)).to_upper())
+	var item_names: Array[String] = []
+	for i_id in inventory:
+		item_names.append(str(_get_item_name(str(i_id))).to_upper())
+	var bag_str := ", ".join(item_names) if not item_names.is_empty() else "EMPTY"
+	_after_reward(str(upgrade.get("name", "Upgrade")), str(upgrade.get("description", "")), "YOUR BUILD / MOVES: %s  •  BAG: %s\nRESULTING STATS: HP %d/%d  •  STA %d/%d  •  DMG %d  •  DEF %d" % [", ".join(move_names), bag_str, int(player.health), int(player.max_health), int(player.stamina), int(player.max_stamina), int(player.damage), int(player.defence)])
 
 
-func _after_reward() -> void:
+func _after_reward(headline: String = "", detail: String = "", summary: String = "") -> void:
 	fight_index += 1
 
 	player.health = minf(
@@ -1973,7 +2227,13 @@ func _after_reward() -> void:
 	)
 
 	_save_run()
-	_show_bracket()
+	if headline.is_empty():
+		_show_bracket()
+	else:
+		game_state = "reward_confirmed"
+		animate_screen_enter = true
+		_clear_ui()
+		TLRScreens.build_reward_confirmed(self, screen_canvas, headline, detail, summary)
 
 
 func _opponent_template_index(index: int) -> int:
@@ -2022,104 +2282,44 @@ func _next_opponent_scouting_note() -> String:
 func _show_bracket() -> void:
 	game_state = "hub"
 	_disable_realtime_combat()
+	selected_hub_item_slot = clampi(selected_hub_item_slot, 0, maxi(0, inventory.size() - 1))
+	animate_screen_enter = true
+	_clear_ui()
+	TLRScreens.build_hub(self, screen_canvas)
 
-	_heading(
-		"THE CIRCUIT",
-		"Your name is getting around. Don't let it go to your head."
+
+func _select_hub_item_slot(slot: int) -> void:
+	if slot < 0 or slot >= inventory.size():
+		return
+	selected_hub_item_slot = slot
+	animate_screen_enter = false
+	_clear_ui()
+	TLRScreens.build_hub(self, screen_canvas)
+
+
+func _use_hub_item_slot(slot: int) -> void:
+	if slot < 0 or slot >= inventory.size():
+		return
+	if str(inventory[slot]) != "ice":
+		return
+	inventory.remove_at(slot)
+	var before_hp := float(player.health)
+	player.health = minf(
+		player.max_health,
+		player.health + 22.0
 	)
-	if not hub_notice.is_empty():
-		_label(hub_notice, 13, Color(0.72, 0.86, 0.78))
-		hub_notice = ""
-
-	_label("FIGHTS CLEARED: %d / 8     RESPECT: %d" % [
-		fight_index,
-		respect
-	])
-
-	# Show the entire tournament route so every run has a clear destination.
-	_label("TOURNAMENT BRACKET", 18, Color(0.40, 0.75, 0.95))
-	var stage_names := [
-		"OPENING BOUT",
-		"OPENING BOUT",
-		"OPENING BOUT",
-		"OPENING BOUT",
-		"SEMI-FINAL",
-		"SEMI-FINAL",
-		"TITLE ELIMINATOR",
-		"CHAMPIONSHIP"
-	]
-	for bracket_index in range(FIGHT_ROSTER.size()):
-		var roster_index := int(FIGHT_ROSTER[bracket_index])
-		var bracket_name := "Unknown Fighter"
-		if roster_index >= 0 and roster_index < enemy_templates.size():
-			bracket_name = str(enemy_templates[roster_index].get("name", bracket_name))
-
-		var bracket_status := "LOCKED"
-		var bracket_color := Color(0.52, 0.49, 0.47)
-		if bracket_index < fight_index:
-			bracket_status = "CLEARED"
-			bracket_color = Color(0.55, 0.78, 0.58)
-		elif bracket_index == fight_index:
-			bracket_status = "NEXT"
-			bracket_color = Color(1.0, 0.76, 0.35)
-
-		_label(
-			"%d. %s — %s  [%s]" % [
-				bracket_index + 1,
-				stage_names[bracket_index],
-				bracket_name,
-				bracket_status
-			],
-			13,
-			bracket_color
-		)
-
-	_label("NEXT OPPONENT: " + _next_opponent_name())
-
-	var preview_index := _opponent_template_index(fight_index)
-	if preview_index >= 0 and preview_index < enemy_templates.size():
-		var upcoming: Dictionary = enemy_templates[preview_index]
-		_label(
-			"STYLE: " + str(upcoming.get("archetype", "Unknown"))
-			+ " | " + str(upcoming.get("tell", "No tell recorded."))
-		)
-		_label("SCOUTING REPORT: " + _next_opponent_scouting_note(), 13, Color(0.82, 0.76, 0.68))
-
-	_label(
-		"BUILD: HP %d | STA %d | DMG %d | DEF %d | SPEED %d%%" % [
-			int(player.health),
-			int(player.stamina),
-			int(player.damage),
-			int(player.defence),
-			int(_speed_chance(player.speed))
-		]
-	)
-
-	_label("MOVES: " + ", ".join(owned_moves))
-
-	_show_item_summary(false)
-	_show_salts_status()
-	_label("CAREER EDGE: " + _career_perk_summary(), 12, Color(0.72, 0.82, 0.68))
-
-	_button("ENTER THE RING", _start_fight)
-	_button(
-		"USE CORNER ICE (+22 HP)",
-		_use_heal_between,
-		not inventory.has("ice")
-	)
-	_button("CODEX", _show_codex)
-	_button("SAVE RUN", _save_run)
-	_button("MAIN MENU", _show_main_menu)
+	var gained := int(roundf(float(player.health) - before_hp))
+	hub_notice = "RECOVERED +%d HP / %d CAP" % [gained, int(player.max_health)]
+	selected_hub_item_slot = clampi(selected_hub_item_slot, 0, maxi(0, inventory.size() - 1))
+	animate_screen_enter = false
+	_clear_ui()
+	TLRScreens.build_hub(self, screen_canvas)
 
 
 func _use_heal_between() -> void:
-	if inventory.has("ice"):
-		inventory.erase("ice")
-		player.health = minf(
-			player.max_health,
-			player.health + 22.0
-		)
-		_show_bracket()
+	var idx := inventory.find("ice")
+	if idx != -1:
+		_use_hub_item_slot(idx)
 
 
 # ---------------------------------------------------------
@@ -2128,7 +2328,7 @@ func _use_heal_between() -> void:
 
 func _use_item(id: String) -> void:
 	# Combat items can only be activated during an unpaused fight.
-	if game_state != "combat" or combat_paused:
+	if game_state != "combat" or combat_paused or round_transition_open:
 		return
 
 	# Passive Smelling Salts and between-fight Ice are never manually used.
@@ -2166,7 +2366,13 @@ func _use_item(id: String) -> void:
 		"crowd":
 			next_fight_speed_bonus = minf(5.0, 60.0 - float(player.get("speed", 0.0)))
 
-	_log("Used " + id.replace("_", " ") + ".")
+	var item_name := _get_item_name(id)
+	var item_data := _get_item_data(id)
+	combat_banner_title = "ITEM USED / %s" % item_name.to_upper()
+	combat_banner_sub = str(item_data.get("description", "Item activated."))
+	_log("Used " + item_name + ".")
+	if is_instance_valid(audio_engine):
+		audio_engine.play_sfx("item_use", -4.0)
 
 	if game_state == "combat":
 		_enemy_turn()
@@ -2182,9 +2388,20 @@ func _use_item(id: String) -> void:
 			_log("The energy drink crash costs 10 stamina.")
 
 		if game_state == "combat":
+			if training_active:
+				player.health = maxf(25.0, float(player.health))
+				training_retry_flag = false
+				training_feedback = "Coach: Good! Using an item applies now and costs your turn — watch what follows."
+				_prepare_enemy_telegraph()
+				animate_combat_banner = true
+				animate_phase_banner = true
+				_show_combat()
+				return
 			_check_round()
-		if game_state == "combat":
-			_prepare_enemy_telegraph()
+			if game_state == "combat":
+				_prepare_enemy_telegraph()
+			animate_combat_banner = true
+			animate_phase_banner = true
 			_show_combat()
 	else:
 		_show_combat()
@@ -2209,6 +2426,13 @@ func _end_run(won: bool, reason: String) -> void:
 	_disable_realtime_combat()
 
 	game_state = "gameover"
+	if is_instance_valid(audio_engine):
+		audio_engine.set_ambience("menu")
+		if won:
+			audio_engine.play_sfx("win_champion", -2.0, 0.01)
+			audio_engine.play_sfx("crowd_cheer", -2.5)
+		else:
+			audio_engine.play_sfx("lose_ko", -2.0, 0.01)
 
 	if won:
 		respect += 100
@@ -2217,39 +2441,13 @@ func _end_run(won: bool, reason: String) -> void:
 	# lifetime total and rank include this run's Respect award.
 	_save_meta()
 
-	_heading(
-		"THE CROWN" if won else "LIGHTS OUT",
-		reason
-	)
-
-	_label(
-		"Fights cleared: %d / 8" % (
-			fight_index + (1 if won else 0)
-		),
-		18
-	)
-
-	_label("Respect earned this run: %d" % respect, 17)
-	_label("Career Respect: %d — %s" % [lifetime_respect, _respect_rank()], 14, Color(0.88, 0.68, 0.38))
-	_label("Permanent career perks: " + _career_perk_summary(), 12, Color(0.72, 0.82, 0.68))
-	_label("Final build: " + ", ".join(owned_moves))
-
-	_label(
-		"Final stats: HP %d | STA %d | DMG %d | DEF %d | SPEED %d%%" % [
-			int(player.get("health", 0)),
-			int(player.get("stamina", 0)),
-			int(player.get("damage", 0)),
-			int(player.get("defence", 0)),
-			int(_speed_chance(float(player.get("speed", 0))))
-		]
-	)
-
 	var completed_slot_path := _slot_save_path(selected_slot)
 	if FileAccess.file_exists(completed_slot_path):
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(completed_slot_path))
 
-	_button("TRY AGAIN", _new_run.bind(selected_slot))
-	_button("MAIN MENU", _show_main_menu)
+	animate_screen_enter = true
+	_clear_ui()
+	TLRScreens.build_run_end(self, screen_canvas, won, reason)
 
 
 # ---------------------------------------------------------
@@ -2272,6 +2470,20 @@ func _slot_status(slot: int) -> String:
 		return "DAMAGED / INCOMPATIBLE"
 	var fight := clampi(int(parsed.get("fight_index", 0)), 0, FIGHT_COUNT - 1)
 	return "CHECKPOINT — FIGHT %d / %d" % [fight + 1, FIGHT_COUNT]
+
+
+func _slot_info(slot: int) -> Dictionary:
+	var path := _slot_save_path(slot)
+	if not FileAccess.file_exists(path):
+		return {"has_save": false, "fight_index": 0, "corrupt": false}
+	var file := FileAccess.open(path, FileAccess.READ)
+	if file == null:
+		return {"has_save": false, "fight_index": 0, "corrupt": true}
+	var parsed = JSON.parse_string(file.get_as_text())
+	if not parsed is Dictionary or int(parsed.get("version", -1)) != SAVE_VERSION:
+		return {"has_save": false, "fight_index": 0, "corrupt": true}
+	var fight := clampi(int(parsed.get("fight_index", 0)), 0, FIGHT_COUNT - 1)
+	return {"has_save": true, "fight_index": fight, "corrupt": false}
 
 
 func _save_run() -> void:
@@ -2536,15 +2748,23 @@ func _show_tutorial() -> void:
 func _start_training() -> void:
 	_disable_realtime_combat()
 	training_active = true
+	training_retry_flag = false
 	training_turn = 0
-	training_feedback = "Coach: Watch my right shoulder. When I load the right, block or slip. Don't just trade punches."
+	training_feedback = "Eyes on my rear shoulder. Read the pose, then answer using slots 1–6."
+	animate_screen_enter = true
+	combat_paused = false
+	combat_drawer_open = false
+	combat_review_open = false
+	round_transition_open = false
+	combat_banner_title = ""
+	combat_banner_sub = ""
 	game_state = "combat"
 	run_ended = false
 	fight_index = 0
 	round_no = 1
 	turn_no = 1
-	owned_moves = ["jab", "block", "rest", "slip", "feint", "clinch", "counter", "body_shot"]
-	inventory.clear()
+	owned_moves = ["jab", "block", "slip", "counter", "clinch", "rest"]
+	inventory = ["energy", "ice", "salts"]
 	passive = {"damage": 0.0, "health": 0.0, "stamina": 0.0, "defence": 0.0, "speed": 0.0, "slots": 0, "wind": 0}
 	player = {
 		"health": 100.0,
@@ -2560,8 +2780,8 @@ func _start_training() -> void:
 	enemy = {
 		"name": "COACH",
 		"archetype": "Training Partner",
-		"health": 9999.0,
-		"max_health": 9999.0,
+		"health": 200.0,
+		"max_health": 200.0,
 		"stamina": 100.0,
 		"max_stamina": 100.0,
 		"damage": 7.0,
@@ -2571,6 +2791,10 @@ func _start_training() -> void:
 		"trick": "training",
 		"accuracy": 100.0
 	}
+	hud_player_hp = -1.0
+	hud_player_stamina = -1.0
+	hud_enemy_hp = -1.0
+	hud_enemy_stamina = -1.0
 	player_blocking = false
 	player_slipping = false
 	enemy_blinded = 0
@@ -2587,10 +2811,13 @@ func _start_training() -> void:
 	if is_instance_valid(opponent_mat):
 		opponent_mat.albedo_color = Color(0.28, 0.38, 0.40)
 	_prepare_enemy_telegraph()
+	if is_instance_valid(audio_engine):
+		audio_engine.set_ambience("combat")
+		audio_engine.play_sfx("bell_round", -5.0, 0.02)
 	_show_combat()
 
 
-func _training_move_is_acceptable(id: String) -> bool:
+func _training_recommended_moves() -> Array:
 	var acceptable_by_exchange: Array = [
 		["block", "slip", "counter"],
 		["block", "slip", "clinch"],
@@ -2599,8 +2826,11 @@ func _training_move_is_acceptable(id: String) -> bool:
 		["rest"],
 		["block", "slip", "clinch"]
 	]
-	var acceptable: Array = acceptable_by_exchange[mini(training_turn, acceptable_by_exchange.size() - 1)]
-	return acceptable.has(id)
+	return acceptable_by_exchange[mini(training_turn, acceptable_by_exchange.size() - 1)]
+
+
+func _training_move_is_acceptable(id: String) -> bool:
+	return _training_recommended_moves().has(id)
 
 
 func _training_retry_feedback(id: String) -> String:
@@ -2662,153 +2892,195 @@ func _finish_training() -> void:
 
 func _show_training_complete() -> void:
 	game_state = "training_complete"
-	_heading("SPAR COMPLETE", "That's the rhythm. Read first, then choose.")
-	_label("You completed a full six-turn training round with the coach.", 17)
-	_label("WHAT TO TAKE INTO THE CIRCUIT", 18, Color(0.40, 0.75, 0.95))
-	_label("• Read the telegraph before selecting a move.")
-	_label("• Block reduces damage; Slip guarantees an evade against the next attack.")
-	_label("• Rest restores 24 stamina, but leaves you open to the coach's response.")
-	_label("• Clinch disrupts pressure, drains opponent stamina and gives you a little gas back.")
-	_label("• Spend stamina with a plan. A powerful move is useless when you're exhausted.")
-	_label("This was a practice bout. No run progress, Respect, items or save data were changed.", 13, Color(0.72, 0.82, 0.68))
-	_button("LEARN THE CORNER BAG", _show_training_items)
-	_button("SPAR AGAIN", _start_training)
-	_button("START A NEW RUN", _request_new_run.bind(selected_slot))
-	_button("BACK TO MAIN MENU", _show_main_menu)
+	animate_screen_enter = true
+	_clear_ui()
+	TLRScreens.build_training_complete(self, screen_canvas)
 
 
 func _show_training_items() -> void:
 	_disable_realtime_combat()
 	game_state = "training_items"
-	_heading("THE CORNER BAG", "A fighter who knows their kit lasts longer.")
-	_label("You can carry up to 3 items. Items are earned as ITEM rewards after fights. Read the timing before choosing one.")
-	_label("HOW TO USE A COMBAT ITEM", 18, Color(0.40, 0.75, 0.95))
-	_label("During your turn, press its USE ITEM button beneath your move buttons. The item is consumed immediately, its effect is applied, and the opponent gets their response. Using an item still spends your turn.")
-	_label("COMBAT-USE ITEMS", 18, Color(0.40, 0.75, 0.95))
-	_label("Vaseline in the Eyes — use during combat to reduce opponent accuracy by 15 for 2 turns.")
-	_label("Rosin Dust — use during combat to drain 8 opponent stamina per turn for 2 turns.")
-	_label("Energy Drink — use during combat to restore 35 stamina immediately; the crash costs 10 stamina after the opponent responds.")
-	_label("Loaded Tape — use before attacking to add 18 damage to your next landed attack. It carries a 12% disqualification risk.")
-	_label("Cheap-shot Bribe — use before a dirty move. It protects your next dirty move from disqualification.")
-	_label("Crowd's Favourite — use during combat to gain up to +5 speed for the next fight, not this one.")
-	_label("BETWEEN-FIGHT ITEM", 18, Color(0.40, 0.75, 0.95))
-	_label("Corner Ice Pack — use it from the hub between fights to restore 22 health. It cannot be activated during combat.")
-	_label("PASSIVE ITEM", 18, Color(0.40, 0.75, 0.95))
-	_label("Smelling Salts — never press a button for these. If you own them when a hit would knock you out, they automatically trigger once per run and leave you at 30 health. They are then consumed.")
-	_label("QUICK RULES", 18, Color(0.40, 0.75, 0.95))
-	_label("• Check the CORNER BAG summary during combat and in the hub.")
-	_label("• Combat items appear as separate USE ITEM buttons, so you choose exactly which item to spend.")
-	_label("• Ice is used in the hub; Smelling Salts work automatically.")
-	_label("• The bag holds 3 items. A full bag cannot take another item reward until you make room.")
-	_label("• Training examples are explanations only; this lesson does not grant or consume real items.")
-	_button("BACK TO TRAINING SUMMARY", _show_training_complete)
-	_button("SPAR AGAIN", _start_training)
-	_button("BACK TO MAIN MENU", _show_main_menu)
+	animate_screen_enter = true
+	_clear_ui()
+	TLRScreens.build_training_items(self, screen_canvas)
+
+
+func _toggle_item_lesson_demo() -> void:
+	item_lesson_demo_used = not item_lesson_demo_used
+	animate_screen_enter = false
+	_clear_ui()
+	TLRScreens.build_training_items(self, screen_canvas)
+
+
+func _toggle_item_lesson_scope() -> void:
+	item_lesson_show_all = not item_lesson_show_all
+	animate_screen_enter = false
+	_clear_ui()
+	TLRScreens.build_training_items(self, screen_canvas)
+
+
+func _show_telegraph_practice() -> void:
+	_disable_realtime_combat()
+	training_active = false
+	if game_state != "hub":
+		game_state = "telegraph_practice"
+	animate_screen_enter = true
+	_clear_ui()
+	TLRScreens.build_telegraph_practice(self, screen_canvas)
+
+
+func _select_practice_pose(pose: String) -> void:
+	practice_pose = pose
+	animate_screen_enter = false
+	_clear_ui()
+	TLRScreens.build_telegraph_practice(self, screen_canvas)
 
 
 func _show_codex() -> void:
 	_disable_realtime_combat()
+	if game_state != "hub":
+		game_state = "codex"
+	animate_screen_enter = true
+	_clear_ui()
+	TLRScreens.build_codex(self, screen_canvas)
 
-	_heading(
-		"FIGHTER'S CODEX",
-		"Knowledge is the only thing you keep after a loss."
-	)
 
-	_button("BACK TO MAIN MENU", _show_main_menu)
-
-	_label("HEALTH: At zero, you are knocked out.")
-	_label("STAMINA: Moves cost stamina. Rest to recover; exhaustion is dangerous.")
-	_label("SPEED: Percentage chance to completely evade an incoming hit. Capped at 60%.")
-	_label("DEFENCE: Reduces damage after a hit gets through.")
-	_label("HEART: Below 25% health, gain a comeback critical chance.")
-	_label("TELL: The opponent's body language hints at their next attack.")
-	_label("MOVE SLOTS: You begin with 3 moves. The move limit is 4.")
-	_label("ENEMY TYPES", 18, Color(0.40, 0.75, 0.95))
-	_label("BRAWLER: Heavy loaded punches. Respect the big right-hand tell.")
-	_label("SPEEDSTER: Fast flurries that wear down your stamina.")
-	_label("TANK: A tight guard absorbs extra damage while the tank has stamina.")
-	_label("COUNTER-PUNCHER: Punishes committed attack moves. Mix in defence and utility.")
-	_label("DIRTY FIGHTER: Successful hits also drain your stamina.")
-	_label("FINAL CHAMPION: Timed surges hit harder on turns 3 and 6 of each round.")
-
-	_label("REWARD TYPES & MOVE UPGRADES", 18, Color(0.40, 0.75, 0.95))
-	_label("After a win, choose ONE reward before entering the next fight. Move rewards are available in the opening stretch of the tournament.")
-	_label("NEW MOVE: Adds that move to your loadout and gives you another action option. You start with 3 moves and have room for 4 by default.")
-	_label("MOVE UPGRADE: If the offered move is already in your loadout, choosing it does not create a duplicate. It permanently adds +1 to your fighter's overall damage for the current run; it is not a move-specific level.")
-	_label("FULL LOADOUT: When all move slots are occupied, move rewards are limited to moves you already own, so the choice becomes a damage upgrade.")
-	_label("ITEM: Adds one item to your corner bag. The bag holds up to 3 items. Read its timing: some items are used in combat, Ice is for the hub, and Smelling Salts are an automatic one-time revive.")
-	_label("STAT UPGRADE: Improves your fighter for the rest of the current run. Some upgrades trade one stat for another; read the full description before choosing.")
-	_label("STAT REWARDS", 18, Color(0.40, 0.75, 0.95))
-	_label("ROADWORK: +12 maximum stamina and recover 12 now.")
-	_label("HEAVY HANDS: +3 damage, but -2 speed.")
-	_label("OLD LEATHER: +15 maximum health and heal 10 now.")
-	_label("TIGHT GUARD: +4 defence.")
-	_label("QUICK FEET: +5 speed, up to the 60% cap.")
-	_label("SECOND WIND: Recover +8 stamina after every successful dodge.")
-	_label("CORNER'S WISDOM: Heal 12 health immediately.")
-
-	_label("CORNER ITEMS", 18, Color(0.40, 0.75, 0.95))
-	_label("Smelling Salts are not part of the starting kit. They must be selected as an ITEM reward; once owned, they automatically trigger on one lethal hit and are then gone for the rest of that run.", 13)
-	for item in item_templates:
-		var item_name := str(item.get("name", "Unknown item"))
-		var item_description := str(item.get("description", ""))
-		var item_id := str(item.get("id", ""))
-		_label("%s — %s" % [item_name, item_description], 13)
-		_label(_item_timing(item_id), 12, Color(0.68, 0.64, 0.60))
-
-	_label("CAREER RESPECT PERKS", 18, Color(0.40, 0.75, 0.95))
-	_label("50 Respect — Grit: +5 max health on fresh runs.")
-	_label("200 Respect — Conditioning: +5 max stamina on fresh runs.")
-	_label("500 Respect — Power: +1 damage on fresh runs.")
-	_label("1000 Respect — Guard: +1 defence on fresh runs.")
-	_label("Perks are cumulative and never stack again when continuing a saved run.")
-
-	_label("TOURNAMENT RULES", 18, Color(0.40, 0.75, 0.95))
-	_label("Win a fight to choose one reward. Resolve that choice before the next bout.")
-	_label("A win restores 10 health and 20 stamina before the next fight.")
-	_label("A loss ends the run. Your current build and run Respect are lost; lifetime Respect is tracked separately.")
-	_label("The final decision after three rounds is based on remaining health if neither fighter is knocked out.")
-
-	for move in moves:
-		_label(
-			"%s (%d STA): %s" % [
-				str(move.get("name", "Move")),
-				int(move.get("cost", 0)),
-				str(move.get("description", ""))
-			],
-			13
-		)
-
-	_button("BACK", _show_main_menu)
+func _set_codex_tab(tab_id: String) -> void:
+	codex_tab = tab_id
+	animate_screen_enter = false
+	_clear_ui()
+	TLRScreens.build_codex(self, screen_canvas)
 
 
 func _show_settings() -> void:
 	_disable_realtime_combat()
+	game_state = "settings"
+	animate_screen_enter = true
+	_clear_ui()
+	TLRScreens.build_settings(self, screen_canvas)
 
-	_heading(
-		"SETTINGS",
-		"Keep the picture clear. Keep your head."
+
+func _set_settings_tab(tab_id: String) -> void:
+	settings_tab = tab_id
+	settings_saved_notice = false
+	animate_screen_enter = false
+	_clear_ui()
+	TLRScreens.build_settings(self, screen_canvas)
+
+
+func _set_setting_value(key: String, value) -> void:
+	settings[key] = value
+	settings_saved_notice = false
+	_apply_settings()
+	animate_screen_enter = false
+	_clear_ui()
+	TLRScreens.build_settings(self, screen_canvas)
+
+
+func _save_settings() -> void:
+	_apply_settings()
+	var file := FileAccess.open(SETTINGS_PATH, FileAccess.WRITE)
+	if file:
+		file.store_string(JSON.stringify(settings))
+	settings_saved_notice = true
+	animate_screen_enter = false
+	_clear_ui()
+	TLRScreens.build_settings(self, screen_canvas)
+
+
+func _load_settings() -> void:
+	if not FileAccess.file_exists(SETTINGS_PATH):
+		return
+	var file := FileAccess.open(SETTINGS_PATH, FileAccess.READ)
+	if file == null:
+		return
+	var parsed = JSON.parse_string(file.get_as_text())
+	if parsed is Dictionary:
+		for key in parsed.keys():
+			settings[key] = parsed[key]
+
+
+func _apply_settings() -> void:
+	screen_shake = bool(settings.get("screen_shake", false))
+	crt_enabled = bool(settings.get("crt_enabled", true))
+	TLRTheme.apply_accessibility(
+		str(settings.get("text_size", "Standard")) == "Large",
+		str(settings.get("contrast", "Standard")) == "High"
 	)
-
-	_button(
-		"SCREEN SHAKE: " + ("ON" if screen_shake else "OFF"),
-		_toggle_shake
-	)
-
-	_button(
-		"CRT FILTER: " + ("ON" if crt_enabled else "OFF"),
-		_toggle_crt
-	)
-
-	_label("Audio and remappable controls are planned for the expanded release.")
-	_button("BACK", _show_main_menu)
+	if is_instance_valid(arena_visuals) and arena_visuals.has_method("set_reduced_motion"):
+		arena_visuals.set_reduced_motion(bool(settings.get("reduced_motion", false)))
+	if is_instance_valid(audio_engine):
+		audio_engine.apply_volumes(settings)
+	if is_instance_valid(crt_overlay):
+		crt_overlay.visible = crt_enabled
+	if is_instance_valid(brightness_overlay):
+		var br := int(settings.get("brightness", 50))
+		if br < 50:
+			brightness_overlay.color = Color(0.0, 0.0, 0.0, clampf((50.0 - float(br)) / 80.0, 0.0, 0.45))
+		elif br > 50:
+			brightness_overlay.color = Color(1.0, 1.0, 1.0, clampf((float(br) - 50.0) / 160.0, 0.0, 0.18))
+		else:
+			brightness_overlay.color = Color(0, 0, 0, 0)
+	if DisplayServer.get_name() != "headless":
+		var win := get_window()
+		if is_instance_valid(win):
+			var am := str(settings.get("aspect_mode", "Auto (Fill)"))
+			match am:
+				"16:9", "Keep 16:9":
+					win.content_scale_size = Vector2i(1600, 900)
+					win.content_scale_aspect = Window.CONTENT_SCALE_ASPECT_KEEP
+				"16:10":
+					win.content_scale_size = Vector2i(1600, 1000)
+					win.content_scale_aspect = Window.CONTENT_SCALE_ASPECT_KEEP
+				"21:9":
+					win.content_scale_size = Vector2i(1920, 822)
+					win.content_scale_aspect = Window.CONTENT_SCALE_ASPECT_KEEP
+				"4:3":
+					win.content_scale_size = Vector2i(1440, 1080)
+					win.content_scale_aspect = Window.CONTENT_SCALE_ASPECT_KEEP
+				_:
+					win.content_scale_size = Vector2i(1600, 900)
+					win.content_scale_aspect = Window.CONTENT_SCALE_ASPECT_EXPAND
+		var vsync_on := bool(settings.get("vsync", true))
+		DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_ENABLED if vsync_on else DisplayServer.VSYNC_DISABLED)
+	if DisplayServer.get_name() != "headless" and not Engine.is_embedded_in_editor():
+		var mode := str(settings.get("window_mode", "Windowed"))
+		if mode == "Fullscreen":
+			DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_EXCLUSIVE_FULLSCREEN)
+		elif mode == "Borderless":
+			DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
+		else:
+			DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
+			var res_parts := str(settings.get("resolution", "1600 × 900")).split("×")
+			if res_parts.size() >= 2:
+				var rw := int(res_parts[0].strip_edges())
+				var rh := int(res_parts[1].strip_edges())
+				if rw >= 800 and rh >= 600:
+					DisplayServer.window_set_size(Vector2i(rw, rh))
+					var scr_size := DisplayServer.screen_get_usable_rect().size
+					var scr_pos := DisplayServer.screen_get_usable_rect().position
+					if scr_size.x >= rw and scr_size.y >= rh:
+						DisplayServer.window_set_position(scr_pos + (scr_size - Vector2i(rw, rh)) / 2)
+	call_deferred("_layout_ui")
+	call_deferred("_update_scene_framing")
 
 
 func _toggle_shake() -> void:
 	screen_shake = not screen_shake
+	settings["screen_shake"] = screen_shake
 	_show_settings()
 
 
 func _toggle_crt() -> void:
 	crt_enabled = not crt_enabled
+	settings["crt_enabled"] = crt_enabled
+	_apply_settings()
 	_show_settings()
+
+
+func _trigger_impact_flash(col: Color) -> void:
+	if not is_instance_valid(flash_overlay) or not bool(settings.get("flash_effects", true)) or bool(settings.get("reduced_motion", false)):
+		return
+	flash_overlay.color = col
+	var tw := create_tween()
+	tw.tween_property(flash_overlay, "color:a", 0.0, 0.14).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
