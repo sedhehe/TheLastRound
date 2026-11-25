@@ -926,7 +926,9 @@ func _show_combat() -> void:
 		if item_id in ["ice", "salts"]:
 			continue
 		usable_item_count += 1
-		_hud_button(items_col, _get_item_name(item_id), _use_item.bind(item_id), false, true)
+		var item_button := _hud_button(items_col, _get_item_name(item_id), _use_item.bind(item_id), false, true)
+		var item_data := _get_item_data(item_id)
+		item_button.tooltip_text = str(item_data.get("description", "")) + "\n" + _item_timing(item_id)
 	if usable_item_count == 0:
 		_hud_label(items_col, "No active items", 12, Color(0.60, 0.65, 0.72))
 
@@ -946,7 +948,10 @@ func _show_combat() -> void:
 			continue
 		var cost := float(move.get("cost", 0.0))
 		var caption := "%s\n%d STA" % [str(move.get("name", id)), int(cost)]
-		_hud_button(moves_row, caption, _player_move.bind(str(id)), float(player.get("stamina", 0.0)) < cost, true)
+		var move_button := _hud_button(moves_row, caption, _player_move.bind(str(id)), float(player.get("stamina", 0.0)) < cost, true)
+		var damage_range: Array = move.get("damage", [0, 0])
+		var damage_text := "%d–%d damage" % [int(damage_range[0]), int(damage_range[1])] if damage_range.size() >= 2 else "No direct damage"
+		move_button.tooltip_text = "%s\n%s  /  %d%% accuracy" % [str(move.get("description", "")), damage_text, int(move.get("accuracy", 100))]
 
 	var drawer_button := _hud_button(combat_hud, "FIGHTER  /  BAG  /  STATS  ▼" if not combat_drawer_open else "CLOSE DRAWER  ▲", _toggle_combat_drawer, false, true)
 	drawer_button.position = Vector2(width * 0.5 - 120, height - 210)
@@ -970,7 +975,18 @@ func _show_combat() -> void:
 		_hud_label(drawer_col, "MOVES: " + ", ".join(owned_moves), 12)
 		_hud_label(drawer_col, "BAG: " + (", ".join(inventory) if not inventory.is_empty() else "Empty") + "   /   3", 12)
 		_hud_label(drawer_col, "SALTS: " + ("SPENT" if revive_used else "READY" if inventory.has("salts") else "NOT IN BAG"), 12)
-		_hud_label(drawer_col, "ACTIVE EFFECTS: " + ("Loaded Tape" if loaded_bonus > 0 else "None"), 12)
+		var effects: Array[String] = []
+		if loaded_bonus > 0:
+			effects.append("Loaded Tape +%d next hit" % loaded_bonus)
+		if enemy_blinded > 0:
+			effects.append("Opponent accuracy reduced (%d turn(s))" % enemy_blinded)
+		if enemy_drained > 0:
+			effects.append("Opponent stamina drain (%d turn(s))" % enemy_drained)
+		if bribe_ready:
+			effects.append("Dirty move protected")
+		if energy_penalty_pending:
+			effects.append("Energy crash pending")
+		_hud_label(drawer_col, "ACTIVE EFFECTS: " + (", ".join(effects) if not effects.is_empty() else "None"), 12)
 
 	if combat_paused:
 		var pause_overlay := _hud_panel(combat_hud, Rect2(width * 0.5 - 170, height * 0.5 - 110, 340, 220), Color(0.012, 0.022, 0.038, 0.98))
