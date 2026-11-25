@@ -100,7 +100,7 @@ Regression checks added after the turn-based combat pass:
 ## Phase 4 development — implemented, runtime QA pending
 - [x] Replace the text-only Fighter Training lessons with a playable six-exchange coach spar reachable from the main menu.
 - [x] Reuse the turn-based move selection, stamina costs, telegraphs and enemy-response flow for practice.
-- [x] Script five coach exchanges and provide response feedback based on the player's selected move.
+- [x] Script six coach exchanges and provide response feedback based on the player's selected move.
 - [x] Keep practice isolated from tournament progression, Respect, inventory rewards and run saves.
 - [x] Write run checkpoints through a temporary file before promoting them to the save path.
 - [x] Show immediate save success/failure feedback from the hub checkpoint action.
@@ -132,3 +132,16 @@ Implementation checklist:
 - [x] Keep training state separate from the tournament and persistent run data.
 
 Runtime checks remain open above; implementation is not a claim of Godot runtime verification.
+
+
+## Branding and production sequence
+- [ ] Confirm the Godot Project Manager displays **The Last Round**.
+- [ ] Confirm the main menu title displays **THE LAST ROUND**.
+- [ ] Confirm no player-facing screen, log message or documentation still presents the former game title.
+- [ ] Confirm existing local run and career saves remain readable after the branding change.
+
+Production order:
+1. UI redesign
+2. Graphics
+3. Animations
+4. Grouped testing and balancing
