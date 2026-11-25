@@ -1,4 +1,4 @@
-# UNDERDOG — initial balance notes
+# The Last Round — initial balance notes
 
 ## Starting player
 | Stat | Value |
