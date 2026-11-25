@@ -7,12 +7,12 @@ A playable Godot 4 prototype for a first-person-presented, turn-based undergroun
 - Windows, macOS or Linux
 
 ## Run
-1. Extract `The Last Round.zip`.
+1. Download or extract the repository archive.
 2. Open Godot Project Manager.
 3. Click **Import**.
-4. Select the extracted `The Last Round/project.godot`.
+4. Select the folder's `project.godot` file.
 5. Import and open the project.
-6. Press **F6** to run the current scene, or **F5** to run the project.
+6. Press **F5** to run the project.
 
 The game opens at the main menu. Choose **NEW RUN**.
 
