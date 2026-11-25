@@ -181,6 +181,7 @@ Implementation committed; none of these checks are marked passed until verified 
 - [ ] Move buttons are disabled when stamina is insufficient and invoke the correct existing move action.
 - [ ] Every combat-usable item remains individually accessible; Ice and passive Smelling Salts remain unavailable as manual combat actions.
 - [ ] Fighter drawer opens/closes without leaving the arena and displays current stats, moves, bag contents and salts state.
+- [ ] Escape and the HUD pause control open the in-arena pause overlay; Resume restores input and Forfeit ends only the active run.
 - [ ] HUD fits the 1280×720 reference viewport and smaller supported window sizes without controls overlapping or becoming unreachable.
 - [ ] Keyboard focus/navigation and mouse/touch interaction work across the HUD and drawer.
 - [ ] Heavy/right, body/elbow, jab/flurry/combination, counter and reset/desperate tells produce distinct anticipation poses before the enemy response.
