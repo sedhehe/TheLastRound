@@ -955,7 +955,6 @@ func _hud_abs_button(parent: Control, caption: String, rect: Rect2, callback: Ca
 	button.add_theme_font_size_override("font_size", 12)
 	button.add_theme_color_override("font_color", Color(0.91, 0.93, 0.95))
 	button.add_theme_color_override("font_disabled_color", Color(0.43, 0.48, 0.53))
-	button.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	var normal := StyleBoxFlat.new()
 	normal.bg_color = Color(0.035, 0.055, 0.075, 0.91) if not selected else Color(0.035, 0.14, 0.16, 0.96)
 	normal.border_color = Color(0.20, 0.31, 0.39, 0.9) if not selected else Color(0.30, 0.76, 0.70, 1.0)
