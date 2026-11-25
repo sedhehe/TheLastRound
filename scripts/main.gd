@@ -929,7 +929,6 @@ func _show_combat() -> void:
 	var viewport := root_ui.size
 	var sx := viewport.x / 1600.0
 	var sy := viewport.y / 900.0
-	var width := viewport.x
 	var height := viewport.y
 
 	# Player status — top left.
@@ -1033,7 +1032,6 @@ func _show_combat() -> void:
 		var item_caption := "EMPTY\n%s" % item_key if item_id.is_empty() else "%s\n%s" % [item_key, _get_item_name(item_id).to_upper()]
 		var item_usable := not item_id.is_empty() and item_id not in ["ice", "salts"]
 		if item_usable:
-			var item_data := _get_item_data(item_id)
 			item_caption += "\nREADY"
 		else:
 			item_caption += "\n" + ("HUB ONLY" if item_id == "ice" else "PASSIVE" if item_id == "salts" else "EMPTY")
