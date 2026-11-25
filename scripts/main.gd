@@ -347,8 +347,8 @@ func _layout_ui() -> void:
 
 func _panel_style() -> StyleBoxFlat:
 	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0.035, 0.03, 0.035, 0.94)
-	style.border_color = Color(0.43, 0.16, 0.12)
+	style.bg_color = Color(0.018, 0.028, 0.045, 0.96)
+	style.border_color = Color(0.16, 0.34, 0.50)
 	style.set_border_width_all(2)
 	style.set_corner_radius_all(3)
 	style.content_margin_left = 22
@@ -403,19 +403,19 @@ func _button(
 	)
 
 	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0.20, 0.075, 0.065)
-	style.border_color = Color(0.52, 0.23, 0.17)
+	style.bg_color = Color(0.075, 0.12, 0.18)
+	style.border_color = Color(0.20, 0.42, 0.60)
 	style.set_border_width_all(1)
 	style.set_corner_radius_all(2)
 
 	button.add_theme_stylebox_override("normal", style)
 	button.add_theme_stylebox_override(
 		"hover",
-		_button_style(Color(0.32, 0.11, 0.08))
+		_button_style(Color(0.13, 0.23, 0.32))
 	)
 	button.add_theme_stylebox_override(
 		"disabled",
-		_button_style(Color(0.09, 0.08, 0.08))
+		_button_style(Color(0.055, 0.07, 0.09))
 	)
 
 	button.pressed.connect(callback)
@@ -426,7 +426,7 @@ func _button(
 func _button_style(color: Color) -> StyleBoxFlat:
 	var style := StyleBoxFlat.new()
 	style.bg_color = color
-	style.border_color = Color(0.52, 0.23, 0.17)
+	style.border_color = Color(0.20, 0.42, 0.60)
 	style.set_border_width_all(1)
 	style.set_corner_radius_all(2)
 	return style
@@ -434,8 +434,8 @@ func _button_style(color: Color) -> StyleBoxFlat:
 
 func _heading(fighter_name: String, sub: String) -> void:
 	_clear_ui()
-	_label(fighter_name, 30, Color(0.9, 0.36, 0.22))
-	_label(sub, 14, Color(0.65, 0.61, 0.58))
+	_label(fighter_name, 30, Color(0.40, 0.75, 0.95))
+	_label(sub, 14, Color(0.62, 0.70, 0.80))
 
 	var line := HSeparator.new()
 	content.add_child(line)
@@ -459,7 +459,7 @@ func _show_main_menu() -> void:
 		_label(menu_notice, 13, Color(1.0, 0.72, 0.42))
 		menu_notice = ""
 
-	_label("CHOOSE YOUR CORNER", 18, Color(0.9, 0.36, 0.22))
+	_label("CHOOSE YOUR CORNER", 18, Color(0.40, 0.75, 0.95))
 	for slot in range(SAVE_SLOT_COUNT):
 		var slot_path := _slot_save_path(slot)
 		var has_save := FileAccess.file_exists(slot_path)
@@ -704,7 +704,7 @@ func _show_salts_status() -> void:
 
 
 func _show_item_summary(include_active_effects: bool) -> void:
-	_label("CORNER BAG — %d / 3 SLOTS" % inventory.size(), 15, Color(0.9, 0.36, 0.22))
+	_label("CORNER BAG — %d / 3 SLOTS" % inventory.size(), 15, Color(0.40, 0.75, 0.95))
 
 	if inventory.is_empty():
 		_label("No items in your corner bag.", 12)
@@ -731,7 +731,7 @@ func _show_item_summary(include_active_effects: bool) -> void:
 			active_effects.append("+%d stamina on a successful dodge." % int(passive.get("wind", 0.0)))
 
 		if not active_effects.is_empty():
-			_label("PERSISTENT / NEXT-FIGHT EFFECTS", 15, Color(0.9, 0.36, 0.22))
+			_label("PERSISTENT / NEXT-FIGHT EFFECTS", 15, Color(0.40, 0.75, 0.95))
 			for effect in active_effects:
 				_label("• " + effect, 12, Color(0.82, 0.76, 0.68))
 		return
@@ -753,7 +753,7 @@ func _show_item_summary(include_active_effects: bool) -> void:
 	if float(passive.get("wind", 0.0)) > 0.0:
 		active_effects.append("+%d stamina on a successful dodge." % int(passive.get("wind", 0.0)))
 
-	_label("ACTIVE EFFECTS", 15, Color(0.9, 0.36, 0.22))
+	_label("ACTIVE EFFECTS", 15, Color(0.40, 0.75, 0.95))
 	if active_effects.is_empty():
 		_label("No temporary effects currently active.", 12)
 	else:
@@ -1778,7 +1778,7 @@ func _show_bracket() -> void:
 	])
 
 	# Show the entire tournament route so every run has a clear destination.
-	_label("TOURNAMENT BRACKET", 18, Color(0.9, 0.36, 0.22))
+	_label("TOURNAMENT BRACKET", 18, Color(0.40, 0.75, 0.95))
 	var stage_names := [
 		"OPENING BOUT",
 		"OPENING BOUT",
@@ -2396,7 +2396,7 @@ func _show_training_complete() -> void:
 	game_state = "training_complete"
 	_heading("SPAR COMPLETE", "That's the rhythm. Read first, then choose.")
 	_label("You completed a full six-turn training round with the coach.", 17)
-	_label("WHAT TO TAKE INTO THE CIRCUIT", 18, Color(0.9, 0.36, 0.22))
+	_label("WHAT TO TAKE INTO THE CIRCUIT", 18, Color(0.40, 0.75, 0.95))
 	_label("• Read the telegraph before selecting a move.")
 	_label("• Block reduces damage; Slip guarantees an evade against the next attack.")
 	_label("• Rest restores 24 stamina, but leaves you open to the coach's response.")
@@ -2414,20 +2414,20 @@ func _show_training_items() -> void:
 	game_state = "training_items"
 	_heading("THE CORNER BAG", "A fighter who knows their kit lasts longer.")
 	_label("You can carry up to 3 items. Items are earned as ITEM rewards after fights. Read the timing before choosing one.")
-	_label("HOW TO USE A COMBAT ITEM", 18, Color(0.9, 0.36, 0.22))
+	_label("HOW TO USE A COMBAT ITEM", 18, Color(0.40, 0.75, 0.95))
 	_label("During your turn, press its USE ITEM button beneath your move buttons. The item is consumed immediately, its effect is applied, and the opponent gets their response. Using an item still spends your turn.")
-	_label("COMBAT-USE ITEMS", 18, Color(0.9, 0.36, 0.22))
+	_label("COMBAT-USE ITEMS", 18, Color(0.40, 0.75, 0.95))
 	_label("Vaseline in the Eyes — use during combat to reduce opponent accuracy by 15 for 2 turns.")
 	_label("Rosin Dust — use during combat to drain 8 opponent stamina per turn for 2 turns.")
 	_label("Energy Drink — use during combat to restore 35 stamina immediately; the crash costs 10 stamina after the opponent responds.")
 	_label("Loaded Tape — use before attacking to add 18 damage to your next landed attack. It carries a 12% disqualification risk.")
 	_label("Cheap-shot Bribe — use before a dirty move. It protects your next dirty move from disqualification.")
 	_label("Crowd's Favourite — use during combat to gain up to +5 speed for the next fight, not this one.")
-	_label("BETWEEN-FIGHT ITEM", 18, Color(0.9, 0.36, 0.22))
+	_label("BETWEEN-FIGHT ITEM", 18, Color(0.40, 0.75, 0.95))
 	_label("Corner Ice Pack — use it from the hub between fights to restore 22 health. It cannot be activated during combat.")
-	_label("PASSIVE ITEM", 18, Color(0.9, 0.36, 0.22))
+	_label("PASSIVE ITEM", 18, Color(0.40, 0.75, 0.95))
 	_label("Smelling Salts — never press a button for these. If you own them when a hit would knock you out, they automatically trigger once per run and leave you at 30 health. They are then consumed.")
-	_label("QUICK RULES", 18, Color(0.9, 0.36, 0.22))
+	_label("QUICK RULES", 18, Color(0.40, 0.75, 0.95))
 	_label("• Check the CORNER BAG summary during combat and in the hub.")
 	_label("• Combat items appear as separate USE ITEM buttons, so you choose exactly which item to spend.")
 	_label("• Ice is used in the hub; Smelling Salts work automatically.")
@@ -2455,7 +2455,7 @@ func _show_codex() -> void:
 	_label("HEART: Below 25% health, gain a comeback critical chance.")
 	_label("TELL: The opponent's body language hints at their next attack.")
 	_label("MOVE SLOTS: You begin with 3 moves. The move limit is 4.")
-	_label("ENEMY TYPES", 18, Color(0.9, 0.36, 0.22))
+	_label("ENEMY TYPES", 18, Color(0.40, 0.75, 0.95))
 	_label("BRAWLER: Heavy loaded punches. Respect the big right-hand tell.")
 	_label("SPEEDSTER: Fast flurries that wear down your stamina.")
 	_label("TANK: A tight guard absorbs extra damage while the tank has stamina.")
@@ -2463,14 +2463,14 @@ func _show_codex() -> void:
 	_label("DIRTY FIGHTER: Successful hits also drain your stamina.")
 	_label("FINAL CHAMPION: Timed surges hit harder on turns 3 and 6 of each round.")
 
-	_label("REWARD TYPES & MOVE UPGRADES", 18, Color(0.9, 0.36, 0.22))
+	_label("REWARD TYPES & MOVE UPGRADES", 18, Color(0.40, 0.75, 0.95))
 	_label("After a win, choose ONE reward before entering the next fight. Move rewards are available in the opening stretch of the tournament.")
 	_label("NEW MOVE: Adds that move to your loadout and gives you another action option. You start with 3 moves and have room for 4 by default.")
 	_label("MOVE UPGRADE: If the offered move is already in your loadout, choosing it does not create a duplicate. It permanently adds +1 to your fighter's overall damage for the current run; it is not a move-specific level.")
 	_label("FULL LOADOUT: When all move slots are occupied, move rewards are limited to moves you already own, so the choice becomes a damage upgrade.")
 	_label("ITEM: Adds one item to your corner bag. The bag holds up to 3 items. Read its timing: some items are used in combat, Ice is for the hub, and Smelling Salts are an automatic one-time revive.")
 	_label("STAT UPGRADE: Improves your fighter for the rest of the current run. Some upgrades trade one stat for another; read the full description before choosing.")
-	_label("STAT REWARDS", 18, Color(0.9, 0.36, 0.22))
+	_label("STAT REWARDS", 18, Color(0.40, 0.75, 0.95))
 	_label("ROADWORK: +12 maximum stamina and recover 12 now.")
 	_label("HEAVY HANDS: +3 damage, but -2 speed.")
 	_label("OLD LEATHER: +15 maximum health and heal 10 now.")
@@ -2479,7 +2479,7 @@ func _show_codex() -> void:
 	_label("SECOND WIND: Recover +8 stamina after every successful dodge.")
 	_label("CORNER'S WISDOM: Heal 12 health immediately.")
 
-	_label("CORNER ITEMS", 18, Color(0.9, 0.36, 0.22))
+	_label("CORNER ITEMS", 18, Color(0.40, 0.75, 0.95))
 	_label("Smelling Salts are not part of the starting kit. They must be selected as an ITEM reward; once owned, they automatically trigger on one lethal hit and are then gone for the rest of that run.", 13)
 	for item in item_templates:
 		var item_name := str(item.get("name", "Unknown item"))
@@ -2488,14 +2488,14 @@ func _show_codex() -> void:
 		_label("%s — %s" % [item_name, item_description], 13)
 		_label(_item_timing(item_id), 12, Color(0.68, 0.64, 0.60))
 
-	_label("CAREER RESPECT PERKS", 18, Color(0.9, 0.36, 0.22))
+	_label("CAREER RESPECT PERKS", 18, Color(0.40, 0.75, 0.95))
 	_label("50 Respect — Grit: +5 max health on fresh runs.")
 	_label("200 Respect — Conditioning: +5 max stamina on fresh runs.")
 	_label("500 Respect — Power: +1 damage on fresh runs.")
 	_label("1000 Respect — Guard: +1 defence on fresh runs.")
 	_label("Perks are cumulative and never stack again when continuing a saved run.")
 
-	_label("TOURNAMENT RULES", 18, Color(0.9, 0.36, 0.22))
+	_label("TOURNAMENT RULES", 18, Color(0.40, 0.75, 0.95))
 	_label("Win a fight to choose one reward. Resolve that choice before the next bout.")
 	_label("A win restores 10 health and 20 stamina before the next fight.")
 	_label("A loss ends the run. Your current build and run Respect are lost; lifetime Respect is tracked separately.")
