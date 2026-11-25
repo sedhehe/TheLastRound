@@ -911,6 +911,73 @@ func _toggle_combat_drawer() -> void:
 	_show_combat()
 
 
+func _hud_abs_label(parent: Control, value: String, rect: Rect2, font_size: int, color: Color, align: HorizontalAlignment = HORIZONTAL_ALIGNMENT_LEFT) -> Label:
+	var label := Label.new()
+	label.text = value
+	label.position = rect.position
+	label.size = rect.size
+	label.add_theme_font_size_override("font_size", font_size)
+	label.add_theme_color_override("font_color", color)
+	label.horizontal_alignment = align
+	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	parent.add_child(label)
+	return label
+
+
+func _hud_abs_bar(parent: Control, rect: Rect2, value: float, maximum: float, fill: Color) -> ProgressBar:
+	var bar := ProgressBar.new()
+	bar.position = rect.position
+	bar.size = rect.size
+	bar.min_value = 0.0
+	bar.max_value = maxf(1.0, maximum)
+	bar.value = clampf(value, 0.0, bar.max_value)
+	bar.show_percentage = false
+	var background := StyleBoxFlat.new()
+	background.bg_color = Color(0.035, 0.045, 0.060, 0.95)
+	background.set_corner_radius_all(2)
+	var foreground := StyleBoxFlat.new()
+	foreground.bg_color = fill
+	foreground.set_corner_radius_all(2)
+	bar.add_theme_stylebox_override("background", background)
+	bar.add_theme_stylebox_override("fill", foreground)
+	parent.add_child(bar)
+	return bar
+
+
+func _hud_abs_button(parent: Control, caption: String, rect: Rect2, callback: Callable, disabled: bool, selected: bool = false) -> Button:
+	var button := Button.new()
+	button.text = caption
+	button.position = rect.position
+	button.size = rect.size
+	button.disabled = disabled
+	button.focus_mode = Control.FOCUS_ALL
+	button.add_theme_font_size_override("font_size", 12)
+	button.add_theme_color_override("font_color", Color(0.91, 0.93, 0.95))
+	button.add_theme_color_override("font_disabled_color", Color(0.43, 0.48, 0.53))
+	button.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	var normal := StyleBoxFlat.new()
+	normal.bg_color = Color(0.035, 0.055, 0.075, 0.91) if not selected else Color(0.035, 0.14, 0.16, 0.96)
+	normal.border_color = Color(0.20, 0.31, 0.39, 0.9) if not selected else Color(0.30, 0.76, 0.70, 1.0)
+	normal.set_border_width_all(1 if not selected else 2)
+	normal.set_corner_radius_all(2)
+	normal.content_margin_left = 5
+	normal.content_margin_right = 5
+	normal.content_margin_top = 4
+	normal.content_margin_bottom = 4
+	button.add_theme_stylebox_override("normal", normal)
+	var hover := normal.duplicate() as StyleBoxFlat
+	hover.bg_color = Color(0.10, 0.17, 0.21, 0.98)
+	button.add_theme_stylebox_override("hover", hover)
+	var unavailable := normal.duplicate() as StyleBoxFlat
+	unavailable.bg_color = Color(0.025, 0.035, 0.045, 0.82)
+	button.add_theme_stylebox_override("disabled", unavailable)
+	if callback.is_valid():
+		button.pressed.connect(callback)
+	parent.add_child(button)
+	return button
+
+
 func _show_combat() -> void:
 	game_state = "combat"
 	if is_instance_valid(combat_hud):
@@ -921,177 +988,130 @@ func _show_combat() -> void:
 	combat_hud.mouse_filter = Control.MOUSE_FILTER_PASS
 	root_ui.add_child(combat_hud)
 	panel.hide()
-	ui_shade.color = Color(0.005, 0.012, 0.025, 0.12)
+	ui_shade.color = Color(0.005, 0.012, 0.025, 0.0)
 	_layout_ui()
 
-	# The reference board is authored at 1600x900. Scale its safe-area
-	# composition proportionally so the same hierarchy survives 1280x720.
-	var viewport := root_ui.size
-	var sx := viewport.x / 1600.0
-	var sy := viewport.y / 900.0
-	var height := viewport.y
+	# Reference composition: 1600x900 canvas, 40px safe inset, arena left open.
+	var viewport_size: Vector2 = root_ui.size
+	var sx: float = viewport_size.x / 1600.0
+	var sy: float = viewport_size.y / 900.0
+	var top_band := ColorRect.new()
+	top_band.position = Vector2(0.0, 0.0)
+	top_band.size = Vector2(viewport_size.x, 156.0 * sy)
+	top_band.color = Color(0.012, 0.022, 0.034, 0.82)
+	combat_hud.add_child(top_band)
 
-	# Player status — top left.
-	var player_card := _hud_panel(combat_hud, Rect2(40.0 * sx, 26.0 * sy, 535.0 * sx, 120.0 * sy), Color(0.025, 0.045, 0.07, 0.94))
-	var player_col := VBoxContainer.new()
-	player_col.add_theme_constant_override("separation", 3)
-	player_card.add_child(player_col)
-	_hud_label(player_col, "YOU  /  UNKNOWN FIGHTER", 14, Color(0.88, 0.93, 0.98))
-	var player_hp_row := HBoxContainer.new()
-	player_col.add_child(player_hp_row)
-	_hud_label(player_hp_row, "%d / %d HP" % [int(player.health), int(player.max_health)], 22, Color(0.96, 0.94, 0.92))
-	var player_hp_bar := _hud_bar(player_col, hud_player_hp if hud_player_hp >= 0.0 else float(player.health), float(player.max_health), Color(0.91, 0.27, 0.29))
-	player_hp_bar.custom_minimum_size = Vector2(480.0 * sx, 13.0 * sy)
+	# Player status — typography and bars, not a boxed card.
+	_hud_abs_label(combat_hud, "YOU  /  UNKNOWN FIGHTER", Rect2(40.0 * sx, 20.0 * sy, 500.0 * sx, 24.0 * sy), 14, Color(0.88, 0.91, 0.94))
+	_hud_abs_label(combat_hud, "%d / %d" % [int(player.health), int(player.max_health)], Rect2(40.0 * sx, 47.0 * sy, 78.0 * sx, 32.0 * sy), 23, Color(0.96, 0.93, 0.91))
+	var player_hp_bar := _hud_abs_bar(combat_hud, Rect2(126.0 * sx, 57.0 * sy, 449.0 * sx, 13.0 * sy), float(player.health), float(player.max_health), Color(0.88, 0.25, 0.29))
 	_animate_hud_bar(player_hp_bar, hud_player_hp, float(player.health))
 	hud_player_hp = float(player.health)
-	_hud_label(player_col, "%d / %d STA" % [int(player.stamina), int(player.max_stamina)], 13, Color(0.40, 0.72, 0.98))
-	var player_sta_bar := _hud_bar(player_col, hud_player_stamina if hud_player_stamina >= 0.0 else float(player.stamina), float(player.max_stamina), Color(0.22, 0.58, 0.91))
-	player_sta_bar.custom_minimum_size = Vector2(480.0 * sx, 10.0 * sy)
+	_hud_abs_label(combat_hud, "%d STA" % int(player.stamina), Rect2(40.0 * sx, 84.0 * sy, 78.0 * sx, 24.0 * sy), 13, Color(0.43, 0.72, 0.96))
+	var player_sta_bar := _hud_abs_bar(combat_hud, Rect2(126.0 * sx, 90.0 * sy, 414.0 * sx, 10.0 * sy), float(player.stamina), float(player.max_stamina), Color(0.20, 0.54, 0.88))
 	_animate_hud_bar(player_sta_bar, hud_player_stamina, float(player.stamina))
 	hud_player_stamina = float(player.stamina)
-	_hud_label(player_col, "DMG %d   DEF %d   SPD %d%%" % [int(player.damage), int(player.defence), int(_speed_chance(player.speed))], 11, Color(0.58, 0.69, 0.80))
+	_hud_abs_label(combat_hud, "DMG %d     DEF %d     SPD %d%%" % [int(player.damage), int(player.defence), int(_speed_chance(player.speed))], Rect2(40.0 * sx, 113.0 * sy, 535.0 * sx, 20.0 * sy), 11, Color(0.62, 0.70, 0.77))
 
-	# Opponent status — mirrored at top right.
-	var enemy_card := _hud_panel(combat_hud, Rect2(1025.0 * sx, 26.0 * sy, 535.0 * sx, 120.0 * sy), Color(0.055, 0.028, 0.035, 0.94))
-	var enemy_col := VBoxContainer.new()
-	enemy_col.add_theme_constant_override("separation", 3)
-	enemy_card.add_child(enemy_col)
-	var enemy_name := _hud_label(enemy_col, str(enemy.get("name", "OPPONENT")).to_upper(), 14, Color(0.96, 0.79, 0.73))
-	enemy_name.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	var enemy_hp_label := _hud_label(enemy_col, "%d / %d HP" % [int(enemy.health), int(enemy.max_health)], 22, Color(0.96, 0.94, 0.92))
-	enemy_hp_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	var enemy_hp_bar := _hud_bar(enemy_col, hud_enemy_hp if hud_enemy_hp >= 0.0 else float(enemy.health), float(enemy.max_health), Color(0.91, 0.27, 0.29))
-	enemy_hp_bar.custom_minimum_size = Vector2(480.0 * sx, 13.0 * sy)
+	# Opponent status — mirrored on the right.
+	_hud_abs_label(combat_hud, str(enemy.get("name", "OPPONENT")).to_upper(), Rect2(1025.0 * sx, 20.0 * sy, 535.0 * sx, 24.0 * sy), 14, Color(0.94, 0.79, 0.75), HORIZONTAL_ALIGNMENT_RIGHT)
+	_hud_abs_label(combat_hud, "%d / %d" % [int(enemy.health), int(enemy.max_health)], Rect2(1482.0 * sx, 47.0 * sy, 78.0 * sx, 32.0 * sy), 23, Color(0.96, 0.93, 0.91), HORIZONTAL_ALIGNMENT_RIGHT)
+	var enemy_hp_bar := _hud_abs_bar(combat_hud, Rect2(1025.0 * sx, 57.0 * sy, 449.0 * sx, 13.0 * sy), float(enemy.health), float(enemy.max_health), Color(0.88, 0.25, 0.29))
 	_animate_hud_bar(enemy_hp_bar, hud_enemy_hp, float(enemy.health))
 	hud_enemy_hp = float(enemy.health)
-	var enemy_sta_label := _hud_label(enemy_col, "%d / %d STA" % [int(enemy.stamina), int(enemy.max_stamina)], 13, Color(0.40, 0.72, 0.98))
-	enemy_sta_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	var enemy_sta_bar := _hud_bar(enemy_col, hud_enemy_stamina if hud_enemy_stamina >= 0.0 else float(enemy.stamina), float(enemy.max_stamina), Color(0.22, 0.58, 0.91))
-	enemy_sta_bar.custom_minimum_size = Vector2(480.0 * sx, 10.0 * sy)
+	_hud_abs_label(combat_hud, "%d STA" % int(enemy.stamina), Rect2(1482.0 * sx, 84.0 * sy, 78.0 * sx, 24.0 * sy), 13, Color(0.43, 0.72, 0.96), HORIZONTAL_ALIGNMENT_RIGHT)
+	var enemy_sta_bar := _hud_abs_bar(combat_hud, Rect2(1060.0 * sx, 90.0 * sy, 414.0 * sx, 10.0 * sy), float(enemy.stamina), float(enemy.max_stamina), Color(0.20, 0.54, 0.88))
 	_animate_hud_bar(enemy_sta_bar, hud_enemy_stamina, float(enemy.stamina))
 	hud_enemy_stamina = float(enemy.stamina)
-	var enemy_stats := _hud_label(enemy_col, "DMG %d   DEF %d   SPD %d%%" % [int(enemy.damage), int(enemy.defence), int(_speed_chance(enemy.speed))], 11, Color(0.70, 0.62, 0.62))
-	enemy_stats.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	_hud_abs_label(combat_hud, "DMG %d     DEF %d     SPD %d%%" % [int(enemy.damage), int(enemy.defence), int(_speed_chance(enemy.speed))], Rect2(1025.0 * sx, 113.0 * sy, 535.0 * sx, 20.0 * sy), 11, Color(0.70, 0.62, 0.62), HORIZONTAL_ALIGNMENT_RIGHT)
 
-	# Round and turn counter — top centre.
-	var round_card := _hud_panel(combat_hud, Rect2(680.0 * sx, 26.0 * sy, 240.0 * sx, 100.0 * sy), Color(0.045, 0.075, 0.105, 0.98))
-	var round_row := HBoxContainer.new()
-	round_row.add_theme_constant_override("separation", 18)
-	round_card.add_child(round_row)
-	var round_col := VBoxContainer.new()
-	round_row.add_child(round_col)
-	_hud_label(round_col, "ROUND", 11, Color(0.57, 0.72, 0.82))
-	_hud_label(round_col, "%02d" % round_no if not training_active else "SPAR", 30, Color(0.92, 0.95, 0.98))
-	var turn_col := VBoxContainer.new()
-	round_row.add_child(turn_col)
-	_hud_label(turn_col, "TURN", 11, Color(0.57, 0.72, 0.82))
-	_hud_label(turn_col, "%02d / 06" % turn_no if not training_active else "%02d / 06" % (training_turn + 1), 24, Color(0.92, 0.95, 0.98))
+	# Compact round/turn plate, floating above the arena.
+	var round_plate := ColorRect.new()
+	round_plate.position = Vector2(680.0 * sx, 26.0 * sy)
+	round_plate.size = Vector2(240.0 * sx, 100.0 * sy)
+	round_plate.color = Color(0.035, 0.060, 0.082, 0.94)
+	combat_hud.add_child(round_plate)
+	_hud_abs_label(combat_hud, "ROUND", Rect2(700.0 * sx, 34.0 * sy, 85.0 * sx, 18.0 * sy), 10, Color(0.58, 0.70, 0.78), HORIZONTAL_ALIGNMENT_CENTER)
+	_hud_abs_label(combat_hud, "TURN", Rect2(815.0 * sx, 34.0 * sy, 85.0 * sx, 18.0 * sy), 10, Color(0.58, 0.70, 0.78), HORIZONTAL_ALIGNMENT_CENTER)
+	_hud_abs_label(combat_hud, "SPAR" if training_active else "%02d" % round_no, Rect2(700.0 * sx, 55.0 * sy, 85.0 * sx, 48.0 * sy), 29, Color(0.94, 0.95, 0.96), HORIZONTAL_ALIGNMENT_CENTER)
+	_hud_abs_label(combat_hud, "%02d / 06" % (training_turn + 1) if training_active else "%02d / 06" % turn_no, Rect2(805.0 * sx, 59.0 * sy, 105.0 * sx, 40.0 * sy), 22, Color(0.94, 0.95, 0.96), HORIZONTAL_ALIGNMENT_CENTER)
 
-	# Central phase banner. Enemy intent is communicated by the fighter's pose,
-	# not by exposing the hidden move name in text.
-	var phase_text := "FIGHT PAUSED" if combat_paused else ("YOUR TURN  /  CHOOSE A MOVE" if not enemy_next_action.is_empty() else "READ THE FIGHTER")
-	var phase_card := _hud_panel(combat_hud, Rect2(650.0 * sx, 178.0 * sy, 300.0 * sx, 42.0 * sy), Color(0.025, 0.10, 0.13, 0.96))
-	var phase_label := _hud_label(phase_card, phase_text, 13, Color(0.46, 0.91, 0.83))
-	phase_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	phase_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	# Phase strip under the top band.
+	var phase_strip := ColorRect.new()
+	phase_strip.position = Vector2(650.0 * sx, 178.0 * sy)
+	phase_strip.size = Vector2(300.0 * sx, 42.0 * sy)
+	phase_strip.color = Color(0.025, 0.085, 0.095, 0.88)
+	combat_hud.add_child(phase_strip)
+	var phase_text: String = "FIGHT PAUSED" if combat_paused else ("YOUR TURN  /  CHOOSE A MOVE" if not enemy_next_action.is_empty() else "READ THE FIGHTER")
+	_hud_abs_label(combat_hud, phase_text, Rect2(658.0 * sx, 181.0 * sy, 284.0 * sx, 36.0 * sy), 12, Color(0.49, 0.87, 0.80), HORIZONTAL_ALIGNMENT_CENTER)
 
-	# Ringside commentary occupies the right side without covering the fighter.
-	var commentary := _hud_panel(combat_hud, Rect2(1328.0 * sx, 302.0 * sy, 232.0 * sx, 172.0 * sy), Color(0.018, 0.035, 0.055, 0.92))
-	var comment_col := VBoxContainer.new()
-	comment_col.add_theme_constant_override("separation", 7)
-	commentary.add_child(comment_col)
-	_hud_label(comment_col, "■  RINGSIDE / LIVE", 11, Color(0.43, 0.82, 0.73))
-	var corner_line := "Keep it sharp. Make every point of stamina count."
+	# Small ringside commentary, positioned clear of the opponent.
+	var commentary := ColorRect.new()
+	commentary.position = Vector2(1328.0 * sx, 302.0 * sy)
+	commentary.size = Vector2(232.0 * sx, 172.0 * sy)
+	commentary.color = Color(0.012, 0.025, 0.040, 0.80)
+	combat_hud.add_child(commentary)
+	_hud_abs_label(combat_hud, "■  RINGSIDE / LIVE", Rect2(1340.0 * sx, 311.0 * sy, 210.0 * sx, 20.0 * sy), 10, Color(0.43, 0.82, 0.73))
+	var corner_line: String = "Keep it sharp. Make every point of stamina count."
 	if training_active and not training_feedback.is_empty():
 		corner_line = training_feedback
 	elif not log_lines.is_empty():
 		corner_line = log_lines[log_lines.size() - 1]
-	var corner_quote := _hud_label(comment_col, "“%s”" % corner_line, 14, Color(0.90, 0.93, 0.97))
-	corner_quote.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_hud_label(comment_col, "THE VOICE OF THE PIT", 9, Color(0.48, 0.59, 0.69))
+	_hud_abs_label(combat_hud, "“%s”" % corner_line, Rect2(1340.0 * sx, 338.0 * sy, 208.0 * sx, 104.0 * sy), 13, Color(0.90, 0.92, 0.94))
+	_hud_abs_label(combat_hud, "THE VOICE OF THE PIT", Rect2(1340.0 * sx, 447.0 * sy, 210.0 * sx, 16.0 * sy), 9, Color(0.48, 0.59, 0.66))
 	if heart_active:
-		_hud_label(comment_col, "HEART — STILL STANDING", 11, Color(0.98, 0.40, 0.35))
+		_hud_abs_label(combat_hud, "HEART — STILL STANDING", Rect2(1340.0 * sx, 464.0 * sy, 210.0 * sx, 16.0 * sy), 10, Color(0.98, 0.40, 0.35))
 
-	# Corner bag — all three slots stay visible, including passive / hub-only
-	# items. Q/W/E only activate items whose timing permits combat use.
-	var bag_card := _hud_panel(combat_hud, Rect2(40.0 * sx, 680.0 * sy, 376.0 * sx, 156.0 * sy), Color(0.018, 0.032, 0.052, 0.96))
-	var bag_col := VBoxContainer.new()
-	bag_col.add_theme_constant_override("separation", 4)
-	bag_card.add_child(bag_col)
-	var bag_header := HBoxContainer.new()
-	bag_col.add_child(bag_header)
-	_hud_label(bag_header, "CORNER BAG", 13, Color(0.72, 0.86, 0.94))
-	_hud_label(bag_header, "%d / 3 SLOTS" % inventory.size(), 10, Color(0.55, 0.66, 0.76))
-	var bag_grid := GridContainer.new()
-	bag_grid.columns = 3
-	bag_grid.add_theme_constant_override("h_separation", 7)
-	bag_col.add_child(bag_grid)
+	# Corner bag: three equal, compact item slots.
+	_hud_abs_label(combat_hud, "CORNER BAG", Rect2(40.0 * sx, 678.0 * sy, 230.0 * sx, 24.0 * sy), 13, Color(0.76, 0.85, 0.91))
+	_hud_abs_label(combat_hud, "%d / 3 SLOTS" % inventory.size(), Rect2(270.0 * sx, 678.0 * sy, 145.0 * sx, 24.0 * sy), 10, Color(0.55, 0.66, 0.74), HORIZONTAL_ALIGNMENT_RIGHT)
 	for slot in range(3):
-		var item_id := str(inventory[slot]) if slot < inventory.size() else ""
+		var item_id: String = str(inventory[slot]) if slot < inventory.size() else ""
 		var item_key: String = ["Q", "W", "E"][slot]
-		var item_caption := "EMPTY\n%s" % item_key if item_id.is_empty() else "%s\n%s" % [item_key, _get_item_name(item_id).to_upper()]
-		var item_usable := not item_id.is_empty() and item_id not in ["ice", "salts"]
-		if item_usable:
-			item_caption += "\nREADY"
-		else:
-			item_caption += "\n" + ("HUB ONLY" if item_id == "ice" else "PASSIVE" if item_id == "salts" else "EMPTY")
-		var item_button := _hud_button(bag_grid, item_caption, _use_item.bind(item_id) if item_usable else Callable(), not item_usable, true)
-		item_button.custom_minimum_size = Vector2(108.0 * sx, 106.0 * sy)
-		item_button.add_theme_font_size_override("font_size", 10)
+		var item_name: String = "EMPTY" if item_id.is_empty() else _get_item_name(item_id).to_upper()
+		var item_state: String = "EMPTY"
+		var item_usable: bool = not item_id.is_empty() and item_id not in ["ice", "salts"]
+		if item_id == "ice":
+			item_state = "HUB ONLY"
+		elif item_id == "salts":
+			item_state = "PASSIVE"
+		elif item_usable:
+			item_state = "READY"
+		var item_caption: String = "%s\n%s\n%s" % [item_key, item_name, item_state]
+		var item_button := _hud_abs_button(combat_hud, item_caption, Rect2((40.0 + slot * 128.0) * sx, 710.0 * sy, 120.0 * sx, 124.0 * sy), _use_item.bind(item_id) if item_usable else Callable(), not item_usable)
 		if not item_id.is_empty():
-			var item_data := _get_item_data(item_id)
+			var item_data: Dictionary = _get_item_data(item_id)
 			item_button.tooltip_text = str(item_data.get("description", "")) + "\n" + _item_timing(item_id)
-	_hud_label(bag_col, "Items do not end your turn." if not inventory.is_empty() else "Your corner bag is empty.", 9, Color(0.56, 0.66, 0.74))
 
-	# Six fixed move slots make the 1–6 shortcuts predictable as the build grows.
-	var moves_card := _hud_panel(combat_hud, Rect2(800.0 * sx, 680.0 * sy, 760.0 * sx, 156.0 * sy), Color(0.018, 0.032, 0.052, 0.97))
-	var moves_col := VBoxContainer.new()
-	moves_col.add_theme_constant_override("separation", 4)
-	moves_card.add_child(moves_col)
-	var moves_header := HBoxContainer.new()
-	moves_col.add_child(moves_header)
-	_hud_label(moves_header, "CHOOSE YOUR MOVE", 13, Color(0.72, 0.86, 0.94))
-	_hud_label(moves_header, "One move ends your turn.", 9, Color(0.60, 0.69, 0.78))
-	var moves_grid := GridContainer.new()
-	moves_grid.columns = 6
-	moves_grid.add_theme_constant_override("h_separation", 6)
-	moves_col.add_child(moves_grid)
+	# Six equal move cards, aligned to the right-hand safe area.
+	_hud_abs_label(combat_hud, "CHOOSE YOUR MOVE", Rect2(800.0 * sx, 678.0 * sy, 260.0 * sx, 24.0 * sy), 13, Color(0.76, 0.85, 0.91))
+	_hud_abs_label(combat_hud, "ONE MOVE ENDS YOUR TURN", Rect2(1210.0 * sx, 678.0 * sy, 350.0 * sx, 24.0 * sy), 10, Color(0.58, 0.67, 0.74), HORIZONTAL_ALIGNMENT_RIGHT)
 	for slot in range(6):
-		var move_id := str(owned_moves[slot]) if slot < owned_moves.size() else ""
-		var slot_key := str(slot + 1)
+		var move_id: String = str(owned_moves[slot]) if slot < owned_moves.size() else ""
+		var slot_key: String = str(slot + 1)
+		var card_rect := Rect2((800.0 + slot * 128.0) * sx, 710.0 * sy, 120.0 * sx, 124.0 * sy)
 		if move_id.is_empty():
-			var empty_move := _hud_button(moves_grid, "—\nEMPTY\n—", Callable(), true, true)
-			empty_move.custom_minimum_size = Vector2(108.0 * sx, 106.0 * sy)
+			_hud_abs_button(combat_hud, "%s\nEMPTY" % slot_key, card_rect, Callable(), true)
 			continue
-		var move := _get_move(move_id)
-		if move.is_empty():
+		var move_data: Dictionary = _get_move(move_id)
+		if move_data.is_empty():
 			continue
-		var cost := float(move.get("cost", 0.0))
-		var enough_stamina := float(player.stamina) >= cost
-		var move_name := str(move.get("name", move_id)).to_upper()
-		var damage_range: Array = move.get("damage", [0, 0])
-		var damage_text := "%d–%d DMG" % [int(damage_range[0]), int(damage_range[1])] if damage_range.size() >= 2 and int(damage_range[1]) > 0 else str(move.get("description", "Utility move"))
-		var move_caption := "%s   %s\n%s\n%s" % [slot_key, "%d STA" % int(cost), move_name, damage_text]
-		var move_button := _hud_button(moves_grid, move_caption, _player_move.bind(move_id), not enough_stamina, true)
-		move_button.custom_minimum_size = Vector2(108.0 * sx, 106.0 * sy)
-		move_button.add_theme_font_size_override("font_size", 10)
-		move_button.tooltip_text = "%s\n%s  /  %d%% accuracy" % [str(move.get("description", "")), damage_text, int(move.get("accuracy", 100))]
+		var move_cost: float = float(move_data.get("cost", 0.0))
+		var enough_stamina: bool = float(player.stamina) >= move_cost
+		var move_name: String = str(move_data.get("name", move_id)).to_upper()
+		var damage_range: Array = move_data.get("damage", [0, 0])
+		var damage_text: String = "%d–%d DMG" % [int(damage_range[0]), int(damage_range[1])] if damage_range.size() >= 2 and int(damage_range[1]) > 0 else str(move_data.get("description", "UTILITY"))
+		var move_caption: String = "%s     %d STA\n\n%s\n%s" % [slot_key, int(move_cost), move_name, damage_text]
+		var move_button := _hud_abs_button(combat_hud, move_caption, card_rect, _player_move.bind(move_id), not enough_stamina, move_id == player_last_move_id)
+		move_button.tooltip_text = "%s\n%s  /  %d%% accuracy" % [str(move_data.get("description", "")), damage_text, int(move_data.get("accuracy", 100))]
 		if not enough_stamina:
-			move_button.tooltip_text += "\nUNAVAILABLE — need %d stamina." % int(cost - float(player.stamina))
-		if move_id == player_last_move_id:
-			var selected_style := StyleBoxFlat.new()
-			selected_style.bg_color = Color(0.035, 0.16, 0.19)
-			selected_style.border_color = Color(0.28, 0.78, 0.73)
-			selected_style.set_border_width_all(2)
-			move_button.add_theme_stylebox_override("normal", selected_style)
+			move_button.tooltip_text += "\nUNAVAILABLE — need %d stamina." % int(move_cost - float(player.stamina))
 
-	# Persistent drawer affordance and pause control.
-	var drawer_button := _hud_button(combat_hud, "TAB  /  ITEMS · MOVES · STATS", _toggle_combat_drawer, false, true)
-	drawer_button.position = Vector2(614.0 * sx, 846.0 * sy)
-	drawer_button.size = Vector2(372.0 * sx, 44.0 * sy)
-	var pause_button := _hud_button(combat_hud, "ESC  /  PAUSE", _resume_combat if combat_paused else _toggle_combat_pause, false, true)
-	pause_button.position = Vector2(1494.0 * sx, 850.0 * sy)
-	pause_button.size = Vector2(66.0 * sx, 40.0 * sy)
+	# Persistent controls retain the existing drawer, pause and review behaviour.
+	var drawer_button := _hud_abs_button(combat_hud, "TAB  /  FIGHTER DETAILS", Rect2(614.0 * sx, 846.0 * sy, 372.0 * sx, 44.0 * sy), _toggle_combat_drawer, false)
+	drawer_button.add_theme_font_size_override("font_size", 11)
+	var pause_button := _hud_abs_button(combat_hud, "ESC  /  PAUSE", Rect2(1494.0 * sx, 850.0 * sy, 66.0 * sx, 40.0 * sy), _resume_combat if combat_paused else _toggle_combat_pause, false)
+	pause_button.add_theme_font_size_override("font_size", 9)
 
 	if combat_drawer_open:
 		var drawer := _hud_panel(combat_hud, Rect2(500.0 * sx, 250.0 * sy, 600.0 * sx, 360.0 * sy), Color(0.012, 0.024, 0.041, 0.98))
