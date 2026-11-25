@@ -789,29 +789,28 @@ func _update_opponent_animation(delta: float) -> void:
 
 	elif opponent_telegraph_active:
 		# Hold a readable anticipation pose for the player's entire decision.
-		match true:
-			_ when opponent_telegraph_pose.contains("heavy") or opponent_telegraph_pose.contains("right") or opponent_telegraph_pose.contains("champion"):
-				target_position.x = -0.12
-				target_rotation.y = -0.20
-				target_rotation.z = -0.08
-			_ when opponent_telegraph_pose.contains("body") or opponent_telegraph_pose.contains("elbow"):
-				target_position.y = -0.10
-				target_position.z = 0.08
-				target_rotation.x = 0.20
-			_ when opponent_telegraph_pose.contains("jab") or opponent_telegraph_pose.contains("flurry") or opponent_telegraph_pose.contains("combination"):
-				target_position.z = 0.10
-				target_rotation.x = 0.07
-				target_rotation.y = 0.10
-			_ when opponent_telegraph_pose.contains("counter"):
-				target_position.z = -0.10
-				target_rotation.y = 0.18
-				target_rotation.z = 0.06
-			_ when opponent_telegraph_pose.contains("reset") or opponent_telegraph_pose.contains("desperate"):
-				target_position.y = -0.05
-				target_rotation.z = 0.05
-			_:
-				target_position.z = 0.04
-				target_rotation.y = 0.08
+		if opponent_telegraph_pose.contains("heavy") or opponent_telegraph_pose.contains("right") or opponent_telegraph_pose.contains("champion"):
+			target_position.x = -0.12
+			target_rotation.y = -0.20
+			target_rotation.z = -0.08
+		elif opponent_telegraph_pose.contains("body") or opponent_telegraph_pose.contains("elbow"):
+			target_position.y = -0.10
+			target_position.z = 0.08
+			target_rotation.x = 0.20
+		elif opponent_telegraph_pose.contains("jab") or opponent_telegraph_pose.contains("flurry") or opponent_telegraph_pose.contains("combination"):
+			target_position.z = 0.10
+			target_rotation.x = 0.07
+			target_rotation.y = 0.10
+		elif opponent_telegraph_pose.contains("counter"):
+			target_position.z = -0.10
+			target_rotation.y = 0.18
+			target_rotation.z = 0.06
+		elif opponent_telegraph_pose.contains("reset") or opponent_telegraph_pose.contains("desperate"):
+			target_position.y = -0.05
+			target_rotation.z = 0.05
+		else:
+			target_position.z = 0.04
+			target_rotation.y = 0.08
 
 	opponent_body.position = opponent_body.position.lerp(target_position, 1.0 - exp(-delta * 9.0))
 	opponent_body.rotation = opponent_body.rotation.lerp(target_rotation, 1.0 - exp(-delta * 9.0))
