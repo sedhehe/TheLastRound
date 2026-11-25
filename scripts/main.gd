@@ -959,6 +959,7 @@ func _player_move(id: String) -> void:
 		_show_combat()
 		return
 
+	var stamina_before_action := float(player.get("stamina", 0.0))
 	player_last_move_id = id
 	if training_active:
 		training_feedback = _training_feedback_for_move(id)
@@ -1040,6 +1041,9 @@ func _player_move(id: String) -> void:
 		return
 
 	player.stamina = clampf(player.stamina, 0.0, player.max_stamina)
+	var stamina_delta := float(player.stamina) - stamina_before_action
+	if absf(stamina_delta) >= 1.0:
+		_show_floating_number(absf(stamina_delta), true, false, stamina_delta > 0.0)
 
 	if enemy.health <= 0.0:
 		_win_fight()
@@ -1070,6 +1074,33 @@ func _player_move(id: String) -> void:
 			_prepare_enemy_telegraph()
 			_show_combat()
 
+
+func _show_floating_number(amount: float, is_stamina: bool, over_opponent: bool, is_gain: bool = false) -> void:
+	if not is_instance_valid(root_ui) or game_state != "combat":
+		return
+	var label := Label.new()
+	var prefix := "+" if is_gain else "-"
+	var suffix := " STA" if is_stamina else ""
+	label.text = "%s%d%s" % [prefix, roundi(amount), suffix]
+	label.add_theme_font_size_override("font_size", 24 if not is_stamina else 19)
+	var color := Color(0.40, 0.88, 1.0) if is_stamina else Color(1.0, 0.28, 0.22)
+	if is_gain:
+		color = Color(0.42, 0.92, 0.62)
+	label.add_theme_color_override("font_color", color)
+	label.add_theme_color_override("font_shadow_color", Color(0.0, 0.0, 0.0, 0.9))
+	label.add_theme_constant_override("shadow_offset_x", 2)
+	label.add_theme_constant_override("shadow_offset_y", 2)
+	label.z_index = 100
+	root_ui.add_child(label)
+	var start_position := Vector2(root_ui.size.x * (0.67 if over_opponent else 0.34), root_ui.size.y * (0.48 if over_opponent else 0.57))
+	if not over_opponent:
+		start_position.y = root_ui.size.y - 205.0
+	label.position = start_position
+	var tween := create_tween()
+	tween.set_parallel(true)
+	tween.tween_property(label, "position", start_position + Vector2(0, -48), 0.72).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	tween.tween_property(label, "modulate:a", 0.0, 0.72).set_delay(0.18)
+	tween.chain().tween_callback(label.queue_free)
 
 func _deal_player_damage(move: Dictionary, multiplier: float) -> void:
 	if rng.randf() * 100.0 > float(move.get("accuracy", 100.0)):
@@ -1113,6 +1144,7 @@ func _deal_player_damage(move: Dictionary, multiplier: float) -> void:
 		_log("Their tight guard absorbs part of the impact.")
 
 	enemy.health = maxf(0.0, enemy.health - reduced)
+	_show_floating_number(reduced, false, true)
 
 	if arena_visuals and arena_visuals.has_method("opponent_hit"):
 		arena_visuals.opponent_hit()
@@ -1208,7 +1240,9 @@ func _prepare_enemy_telegraph() -> void:
 		arena_visuals.show_enemy_telegraph(str(enemy_next_action.get("name", "")))
 
 
+	# The enemy response is resolved as one turn; show its resource changes as feedback.
 func _enemy_turn() -> void:
+	var player_stamina_before := float(player.get("stamina", 0.0))
 	if enemy_drained > 0:
 		enemy.stamina = maxf(0.0, enemy.stamina - 8.0)
 		enemy_drained -= 1
@@ -1289,6 +1323,7 @@ func _enemy_turn() -> void:
 		_log("The counter-puncher reads your committed attack and fires back.")
 
 	player.health = maxf(0.0, player.health - damage)
+	_show_floating_number(damage, false, false)
 
 	if str(enemy.get("trick", "")) == "dirty":
 		player.stamina = maxf(0.0, player.stamina - 5.0)
@@ -1304,6 +1339,10 @@ func _enemy_turn() -> void:
 		("BLOCKED — " if player_blocking else "")
 		+ "You take %d damage." % int(damage)
 	)
+
+	var stamina_change := float(player.stamina) - player_stamina_before
+	if absf(stamina_change) >= 1.0:
+		_show_floating_number(absf(stamina_change), true, false, stamina_change > 0.0)
 
 	if player.health <= 0.0:
 		if not revive_used and inventory.has("salts"):
