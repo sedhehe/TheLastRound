@@ -305,9 +305,15 @@ func _build_ui() -> void:
 	content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	ui_scroll.add_child(content)
 
-	root_ui.resized.connect(_layout_ui)
+	root_ui.resized.connect(_on_root_ui_resized)
 	_layout_ui()
 
+
+func _on_root_ui_resized() -> void:
+	if game_state == "combat":
+		_show_combat()
+	else:
+		_layout_ui()
 
 func _layout_ui() -> void:
 	if not is_instance_valid(panel) or not is_instance_valid(root_ui):
@@ -798,7 +804,7 @@ func _hud_button(parent: Control, caption: String, callback: Callable, disabled:
 	var button := Button.new()
 	button.text = caption
 	button.disabled = disabled
-	button.custom_minimum_size = Vector2(104 if compact else 138, 42)
+	button.custom_minimum_size = Vector2(104 if compact else 138, 32 if compact else 42)
 	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	button.add_theme_font_size_override("font_size", 13 if compact else 14)
 	var normal := StyleBoxFlat.new()
@@ -872,8 +878,8 @@ func _show_combat() -> void:
 	elif heart_active:
 		_hud_label(comment_col, "HEART — STILL STANDING", 12, Color(1.0, 0.35, 0.28))
 
-	var bottom_y := height - 148
-	var items_card := _hud_panel(combat_hud, Rect2(22, bottom_y, 220, 126), Color(0.025, 0.035, 0.055, 0.93))
+	var bottom_y := height - 166
+	var items_card := _hud_panel(combat_hud, Rect2(22, bottom_y, 220, 150), Color(0.025, 0.035, 0.055, 0.93))
 	var items_col := VBoxContainer.new()
 	items_col.add_theme_constant_override("separation", 4)
 	items_card.add_child(items_col)
@@ -888,7 +894,7 @@ func _show_combat() -> void:
 	if usable_item_count == 0:
 		_hud_label(items_col, "No active items", 12, Color(0.60, 0.65, 0.72))
 
-	var moves_card := _hud_panel(combat_hud, Rect2(258, bottom_y, width - 516, 126), Color(0.025, 0.035, 0.055, 0.94))
+	var moves_card := _hud_panel(combat_hud, Rect2(258, bottom_y, width - 516, 150), Color(0.025, 0.035, 0.055, 0.94))
 	var moves_col := VBoxContainer.new()
 	moves_col.add_theme_constant_override("separation", 5)
 	moves_card.add_child(moves_col)
@@ -905,7 +911,7 @@ func _show_combat() -> void:
 		_hud_button(moves_row, caption, _player_move.bind(str(id)), float(player.get("stamina", 0.0)) < cost, true)
 
 	var drawer_button := _hud_button(combat_hud, "FIGHTER  /  BAG  /  STATS  ▼" if not combat_drawer_open else "CLOSE DRAWER  ▲", _toggle_combat_drawer, false, true)
-	drawer_button.position = Vector2(width * 0.5 - 120, height - 194)
+	drawer_button.position = Vector2(width * 0.5 - 120, height - 210)
 	drawer_button.size = Vector2(240, 38)
 
 	var forfeit := _hud_button(combat_hud, "FORFEIT", _forfeit_run, false, true)
