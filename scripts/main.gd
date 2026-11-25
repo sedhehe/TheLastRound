@@ -1,6 +1,6 @@
 
 extends Node3D
-# UNDERDOG: self-contained playable vertical slice / tournament prototype.
+# The Last Round: self-contained playable vertical slice / tournament prototype.
 
 const ARENA_VISUALS = preload("res://scripts/arena_visuals.gd")
 const MOVE_FILE = "res://data/moves.json"
@@ -183,7 +183,7 @@ func _build_world() -> void:
 
 func _on_combat_log(message: String) -> void:
 	_log(message)
-	print("[UNDERDOG] ", message)
+	print("[THE LAST ROUND] ", message)
 
 
 func _on_realtime_fight_ended(player_won: bool) -> void:
@@ -417,7 +417,7 @@ func _show_main_menu() -> void:
 	game_state = "menu"
 	_disable_realtime_combat()
 
-	_heading("UNDERDOG", "NO CONTRACT. NO CORNER. NO WAY OUT.")
+	_heading("THE LAST ROUND", "NO CONTRACT. NO CORNER. NO WAY OUT.")
 	_label("An underground boxing roguelike.", 17)
 	_label("Eight fights stand between you and the Crown.", 14)
 	_label("CAREER RESPECT: %d  |  RANK: %s" % [lifetime_respect, _respect_rank()], 14, Color(0.88, 0.68, 0.38))
