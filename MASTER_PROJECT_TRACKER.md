@@ -359,3 +359,15 @@ Open the project in Godot 4.7 and run with F5. Stop the running game before pull
 - Fixed the Energy Drink crash path: the item already restored 35 stamina and marked a pending 10-stamina crash, but only the move-action path consumed that pending penalty. Using Energy Drink directly skipped the crash. The shared combat-item response path now applies the 10-stamina cost after the opponent's response, clears the pending flag, and records the stamina loss.
 - This is a gameplay-logic correction only. No UI, arena, fighter-model or animation files were changed.
 - Runtime verification remains pending; do not mark the related QA check passed until tested in Godot.
+
+
+## 2026-11-25 — Reference review and combat controls/HUD pass
+
+- Inspected the uploaded 12-page `UI_reference_review.pdf` and the original 64 PNGs in `New folder.zip`. The combat component rules, combat state review index, K01 preferences board, R25 controls, R26–R28 settings, all 22 combat states, run flow screens, and fighter pose references are now available as actual source images.
+- Replaced the provisional combat HUD composition with the supplied 1600×900 reference hierarchy: player/opponent status across the top, centered round/turn counter, central phase banner, ringside commentary at right, three persistent corner-bag slots at bottom-left, six move slots at bottom-right, and the fighter drawer/pause affordances.
+- The move row now reserves six stable positions. Keyboard move slots therefore remain stable as new moves are acquired.
+- Corner bag now keeps all three slots visible. Q/W/E map to combat-usable items in bag order; Ice remains hub-only and Smelling Salts remain passive.
+- Added R25 keyboard navigation: 1–6 moves, Q/W/E item slots, Tab fighter drawer, Esc pause/resume, F1 combat review index. Added a 22-card review index based on the combat state list; its scenario descriptions do not mutate the live fight.
+- Enemy intent remains communicated through fighter animation/body language; the phase banner deliberately does not reveal the hidden move name.
+- No changes were made to fighter geometry, arena lighting, crowd, or pose animation in this pass. Those are reserved for the visual-reference implementation pass.
+- Runtime verification is pending; source edits are committed but have not been run in Godot 4.7.
