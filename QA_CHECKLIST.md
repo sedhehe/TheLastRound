@@ -169,3 +169,25 @@ Production order:
 - [x] Old `underdog_save.json`, temp, backup, corrupt and `underdog_meta.json` files are removed on startup.
 
 **User-confirmed:** The three-slot save system was tested in Godot and works correctly.
+
+
+## 2026-11-25 — UI and animation implementation checks (runtime QA pending)
+
+Implementation committed; none of these checks are marked passed until verified in Godot.
+
+- [ ] Combat HUD shows both fighters' health and stamina without obscuring the arena view.
+- [ ] Health and stamina values/bars match the underlying fighter dictionaries after every player and enemy action.
+- [ ] Damage numbers appear over the correct fighter; stamina loss and stamina recovery use distinguishable feedback.
+- [ ] Move buttons are disabled when stamina is insufficient and invoke the correct existing move action.
+- [ ] Every combat-usable item remains individually accessible; Ice and passive Smelling Salts remain unavailable as manual combat actions.
+- [ ] Fighter drawer opens/closes without leaving the arena and displays current stats, moves, bag contents and salts state.
+- [ ] HUD fits the 1280×720 reference viewport and smaller supported window sizes without controls overlapping or becoming unreachable.
+- [ ] Keyboard focus/navigation and mouse/touch interaction work across the HUD and drawer.
+- [ ] Heavy/right, body/elbow, jab/flurry/combination, counter and reset/desperate tells produce distinct anticipation poses before the enemy response.
+- [ ] Enemy attack follow-through and hit reaction resolve after the held telegraph pose and return to neutral cleanly.
+- [ ] Coach spar uses the same visible anticipation cues and still allows the player to retry an incorrect lesson choice without advancing the exchange.
+- [ ] Combat HUD remains stable across round transitions, KO, win, reward entry, pause/forfeit and run-end transitions.
+- [ ] Floating feedback labels clean themselves up and do not accumulate after long fights.
+- [ ] No runtime errors, invalid node references or GDScript parse errors are produced.
+
+**Verification note:** Implementation is committed but not executed in Godot in this environment. All above remain unchecked.
