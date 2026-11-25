@@ -1154,9 +1154,19 @@ func _show_floating_number(amount: float, is_stamina: bool, over_opponent: bool,
 	label.add_theme_constant_override("shadow_offset_y", 2)
 	label.z_index = 100
 	root_ui.add_child(label)
-	var start_position := Vector2(root_ui.size.x * (0.67 if over_opponent else 0.34), root_ui.size.y * (0.48 if over_opponent else 0.57))
-	if not over_opponent:
-		start_position.y = root_ui.size.y - 205.0
+	var start_position := Vector2(root_ui.size.x * (0.67 if over_opponent else 0.34), root_ui.size.y * 0.50)
+	var active_camera := get_viewport().get_camera_3d()
+	if is_instance_valid(active_camera):
+		var world_position := Vector3.ZERO
+		if over_opponent and is_instance_valid(opponent_mesh):
+			world_position = opponent_mesh.global_position + Vector3.UP * 2.45
+		elif is_instance_valid(player_controller) and is_instance_valid(player_controller.camera):
+			var player_camera := player_controller.camera
+			world_position = player_camera.global_position - player_camera.global_transform.basis.z * 0.85 - player_camera.global_transform.basis.y * 0.20
+		if not active_camera.is_position_behind(world_position):
+			start_position = active_camera.unproject_position(world_position)
+	start_position.x = clampf(start_position.x, 24.0, root_ui.size.x - 120.0)
+	start_position.y = clampf(start_position.y, 90.0, root_ui.size.y - 190.0)
 	label.position = start_position
 	var tween := create_tween()
 	tween.set_parallel(true)
