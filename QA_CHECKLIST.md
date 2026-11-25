@@ -52,6 +52,8 @@ Regression checks added after the turn-based combat pass:
 - [x] Complete a reward selection and verify the next fight index increments exactly once.
 - [ ] Verify rewards cannot exceed the move-slot or inventory caps.
 - [ ] Verify each item has the intended timing: passive, combat-use, or between-fight.
+- [ ] Verify combat item use consumes the selected item and spends the player's turn.
+- [ ] Verify Corner Ice is activated from the hub and Smelling Salts trigger automatically.
 - [x] Verify run save/continue preserves the current build and all pending effects.
 - [x] Confirm every usable combat item has its own button, even when Ice or Smelling Salts are earlier in the inventory.
 - [x] Confirm a full move loadout offers upgrades to owned moves rather than repeatedly offering an unselectable new move.
@@ -112,13 +114,17 @@ Regression checks added after the turn-based combat pass:
 - [ ] Confirm hub Save Run displays immediate success and failure feedback without requiring a menu transition.
 - [ ] Confirm an unsupported save version is rejected and preserved in that slot's `the_last_round_slot_N.corrupt.json` file.
 - [ ] Confirm a malformed save is quarantined and Continue is disabled afterward.
-- [ ] Confirm Fighter Training starts a six-exchange spar against the coach (one full training round).
-- [ ] Confirm each scripted coach tell and expected action appears in the correct order.
-- [ ] Confirm the coach gives relevant feedback after defensive, attack and stamina-management choices.
-- [ ] Confirm the practice move set includes Jab, Block, Rest, Slip, Feint, Clinch, Counter and Body Shot.
-- [ ] Confirm the spar ends after six exchanges and offers Spar Again, Start a New Run and Back to Main Menu.
-- [ ] Confirm ending/restarting the spar does not alter run Respect, lifetime Respect, tournament progress, inventory or the run save.
-- [ ] Confirm leaving the spar returns cleanly to the main menu and starting a new run enters fight 1 normally.
+- [x] Confirm Fighter Training starts a six-exchange spar against the coach (one full training round).
+- [x] Confirm each scripted coach tell and expected action appears in the correct order.
+- [x] Confirm the coach gives relevant feedback after defensive, attack and stamina-management choices.
+- [x] Confirm the practice move set includes Jab, Block, Rest, Slip, Feint, Clinch, Counter and Body Shot.
+- [x] Confirm the spar ends after six exchanges and offers Spar Again, Start a New Run and Back to Main Menu.
+- [x] Confirm ending/restarting the spar does not alter run Respect, lifetime Respect, tournament progress, inventory or the run save.
+- [x] Confirm leaving the spar returns cleanly to the main menu and starting a new run enters fight 1 normally.
+- [ ] Confirm an incorrect lesson move explains the mistake and keeps the same coach exchange/tell active.
+- [ ] Confirm a valid lesson move advances exactly one exchange after the coach responds.
+- [ ] Confirm the Corner Bag lesson explains all eight items, their timing, effects and activation steps.
+- [ ] Confirm the Corner Bag lesson can be opened after the spar and returned from without restarting the tutorial or changing run data.
 
 
 ## Phase 4 — Interactive coach spar
@@ -149,15 +155,17 @@ Production order:
 
 ## Three-slot save system — implementation checks
 
-- [ ] Main menu displays exactly three clearly numbered run slots.
-- [ ] Empty slots offer a new run and disable Continue.
-- [ ] Occupied slots show their checkpoint status and offer Continue.
-- [ ] Starting a new run over an occupied slot requires explicit confirmation.
-- [ ] Saving Slot 1 does not create or overwrite Slot 2 or Slot 3 files.
-- [ ] Continue Slot 1 restores only Slot 1's fight, fighter stats, moves, inventory and effects.
-- [ ] Continue Slot 2 and Slot 3 restore their own independent state.
-- [ ] Replacing one occupied slot leaves the other two slots unchanged.
-- [ ] Completing or losing a run clears only the active slot.
-- [ ] A corrupt slot is quarantined without affecting valid saves in other slots.
-- [ ] Career Respect remains global and shared across all slots.
-- [ ] Old `underdog_save.json`, temp, backup, corrupt and `underdog_meta.json` files are removed on startup.
+- [x] Main menu displays exactly three clearly numbered run slots.
+- [x] Empty slots offer a new run and disable Continue.
+- [x] Occupied slots show their checkpoint status and offer Continue.
+- [x] Starting a new run over an occupied slot requires explicit confirmation.
+- [x] Saving Slot 1 does not create or overwrite Slot 2 or Slot 3 files.
+- [x] Continue Slot 1 restores only Slot 1's fight, fighter stats, moves, inventory and effects.
+- [x] Continue Slot 2 and Slot 3 restore their own independent state.
+- [x] Replacing one occupied slot leaves the other two slots unchanged.
+- [x] Completing or losing a run clears only the active slot.
+- [x] A corrupt slot is quarantined without affecting valid saves in other slots.
+- [x] Career Respect remains global and shared across all slots.
+- [x] Old `underdog_save.json`, temp, backup, corrupt and `underdog_meta.json` files are removed on startup.
+
+**User-confirmed:** The three-slot save system was tested in Godot and works correctly.
