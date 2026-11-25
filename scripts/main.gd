@@ -467,6 +467,13 @@ func _show_slot_overwrite_confirmation(slot: int) -> void:
 func _new_run(slot: int = -1) -> void:
 	if slot >= 0 and slot < SAVE_SLOT_COUNT:
 		selected_slot = slot
+	var previous_slot_save := _slot_save_path(selected_slot)
+	if FileAccess.file_exists(previous_slot_save):
+		var remove_error := DirAccess.remove_absolute(ProjectSettings.globalize_path(previous_slot_save))
+		if remove_error != OK:
+			menu_notice = "Could not replace Slot %d. The existing run was kept." % [selected_slot + 1]
+			_show_main_menu()
+			return
 	training_active = false
 	run_ended = false
 	run_seed = int(Time.get_unix_time_from_system())
