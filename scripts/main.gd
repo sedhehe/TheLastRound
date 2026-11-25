@@ -6,8 +6,11 @@ const ARENA_VISUALS = preload("res://scripts/arena_visuals.gd")
 const MOVE_FILE = "res://data/moves.json"
 const ENEMY_FILE = "res://data/enemies.json"
 const ITEM_FILE = "res://data/items.json"
-const SAVE_PATH = "user://underdog_save.json"
-const META_PATH = "user://underdog_meta.json"
+const SAVE_SLOT_COUNT := 3
+const SAVE_VERSION := 3
+const META_PATH = "user://the_last_round_career.json"
+
+var selected_slot := 0
 
 const FIGHT_COUNT := 8
 # Four opening opponents, two rematches in the semi-finals, the eliminator,
@@ -86,6 +89,7 @@ var enemy_start_position := Vector3.ZERO
 func _ready() -> void:
 	rng.randomize()
 
+	_remove_legacy_save_files()
 	_load_meta()
 	moves = _read_json(MOVE_FILE)
 	enemy_templates = _read_json(ENEMY_FILE)
@@ -426,12 +430,13 @@ func _show_main_menu() -> void:
 		_label(menu_notice, 13, Color(1.0, 0.72, 0.42))
 		menu_notice = ""
 
-	_button("NEW RUN", _new_run)
-	_button(
-		"CONTINUE",
-		_continue_run,
-		not FileAccess.file_exists(SAVE_PATH)
-	)
+	_label("CHOOSE YOUR CORNER", 18, Color(0.9, 0.36, 0.22))
+	for slot in range(SAVE_SLOT_COUNT):
+		var slot_path := _slot_save_path(slot)
+		var has_save := FileAccess.file_exists(slot_path)
+		_label("SLOT %d  —  %s" % [slot + 1, _slot_status(slot)], 15, Color(0.82, 0.78, 0.72))
+		_button("CONTINUE SLOT %d" % [slot + 1], _continue_run.bind(slot), not has_save)
+		_button("NEW RUN IN SLOT %d" % [slot + 1], _request_new_run.bind(slot))
 	_button("FIGHTER TRAINING", _show_tutorial)
 	_button("CODEX", _show_codex)
 	_button("SETTINGS", _show_settings)
@@ -443,7 +448,25 @@ func _show_main_menu() -> void:
 	)
 
 
-func _new_run() -> void:
+func _request_new_run(slot: int) -> void:
+	if slot < 0 or slot >= SAVE_SLOT_COUNT:
+		return
+	if FileAccess.file_exists(_slot_save_path(slot)):
+		_show_slot_overwrite_confirmation(slot)
+	else:
+		_new_run(slot)
+
+
+func _show_slot_overwrite_confirmation(slot: int) -> void:
+	_heading("REPLACE SLOT %d?" % [slot + 1], "THIS WILL DELETE THE RUN IN THIS SLOT.")
+	_label("The other two slots will remain untouched.", 14)
+	_button("CONFIRM NEW RUN", _new_run.bind(slot))
+	_button("CANCEL", _show_main_menu)
+
+
+func _new_run(slot: int = -1) -> void:
+	if slot >= 0 and slot < SAVE_SLOT_COUNT:
+		selected_slot = slot
 	training_active = false
 	run_ended = false
 	run_seed = int(Time.get_unix_time_from_system())
@@ -1735,12 +1758,11 @@ func _end_run(won: bool, reason: String) -> void:
 		]
 	)
 
-	if FileAccess.file_exists(SAVE_PATH):
-		DirAccess.remove_absolute(
-			ProjectSettings.globalize_path(SAVE_PATH)
-		)
+	var completed_slot_path := _slot_save_path(selected_slot)
+	if FileAccess.file_exists(completed_slot_path):
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(completed_slot_path))
 
-	_button("TRY AGAIN", _new_run)
+	_button("TRY AGAIN", _new_run.bind(selected_slot))
 	_button("MAIN MENU", _show_main_menu)
 
 
@@ -1748,9 +1770,31 @@ func _end_run(won: bool, reason: String) -> void:
 # SAVE / CONTINUE
 # ---------------------------------------------------------
 
+func _slot_save_path(slot: int) -> String:
+	return "user://the_last_round_slot_%d.json" % [slot + 1]
+
+
+func _slot_status(slot: int) -> String:
+	var path := _slot_save_path(slot)
+	if not FileAccess.file_exists(path):
+		return "EMPTY"
+	var file := FileAccess.open(path, FileAccess.READ)
+	if file == null:
+		return "SAVE UNAVAILABLE"
+	var parsed = JSON.parse_string(file.get_as_text())
+	if not parsed is Dictionary or int(parsed.get("version", -1)) != SAVE_VERSION:
+		return "DAMAGED / INCOMPATIBLE"
+	var fight := clampi(int(parsed.get("fight_index", 0)), 0, FIGHT_COUNT - 1)
+	return "CHECKPOINT — FIGHT %d / %d" % [fight + 1, FIGHT_COUNT]
+
+
 func _save_run() -> void:
+	var save_path := _slot_save_path(selected_slot)
+	var temp_path := "user://the_last_round_slot_%d.tmp" % [selected_slot + 1]
+	var backup_path := "user://the_last_round_slot_%d.bak" % [selected_slot + 1]
 	var data := {
-		"version": 2,
+		"version": SAVE_VERSION,
+		"slot": selected_slot,
 		"fight_index": fight_index,
 		"player": player,
 		"owned_moves": owned_moves,
@@ -1765,10 +1809,9 @@ func _save_run() -> void:
 		"next_fight_speed_bonus": next_fight_speed_bonus
 	}
 
-	var temp_path := "user://underdog_save.tmp"
 	var file := FileAccess.open(temp_path, FileAccess.WRITE)
 	if file == null:
-		push_error("Could not create temporary run save.")
+		push_error("Could not create temporary run save for slot %d." % [selected_slot + 1])
 		hub_notice = "SAVE FAILED — could not create a checkpoint."
 		if game_state == "hub":
 			_show_bracket()
@@ -1778,13 +1821,10 @@ func _save_run() -> void:
 	file.flush()
 	file.close()
 
-	# Preserve the previous checkpoint until the new temporary file has
-	# successfully taken its place. This avoids losing a valid save on failure.
-	var save_absolute := ProjectSettings.globalize_path(SAVE_PATH)
+	var save_absolute := ProjectSettings.globalize_path(save_path)
 	var temp_absolute := ProjectSettings.globalize_path(temp_path)
-	var backup_path := "user://underdog_save.bak"
 	var backup_absolute := ProjectSettings.globalize_path(backup_path)
-	var had_previous_save := FileAccess.file_exists(SAVE_PATH)
+	var had_previous_save := FileAccess.file_exists(save_path)
 
 	if FileAccess.file_exists(backup_path):
 		DirAccess.remove_absolute(backup_absolute)
@@ -1792,7 +1832,7 @@ func _save_run() -> void:
 	if had_previous_save:
 		var backup_error := DirAccess.rename_absolute(save_absolute, backup_absolute)
 		if backup_error != OK:
-			push_error("Could not back up previous run save. Error: %d" % backup_error)
+			push_error("Could not back up slot %d. Error: %d" % [selected_slot + 1, backup_error])
 			DirAccess.remove_absolute(temp_absolute)
 			hub_notice = "SAVE FAILED — your previous checkpoint was left untouched."
 			if game_state == "hub":
@@ -1801,7 +1841,7 @@ func _save_run() -> void:
 
 	var rename_error := DirAccess.rename_absolute(temp_absolute, save_absolute)
 	if rename_error != OK:
-		push_error("Could not replace run save. Error: %d" % rename_error)
+		push_error("Could not replace slot %d save. Error: %d" % [selected_slot + 1, rename_error])
 		DirAccess.remove_absolute(temp_absolute)
 		var restore_error := OK
 		if had_previous_save:
@@ -1810,16 +1850,19 @@ func _save_run() -> void:
 	else:
 		if FileAccess.file_exists(backup_path):
 			DirAccess.remove_absolute(backup_absolute)
-		hub_notice = "RUN SAVED — your corner is waiting."
+		hub_notice = "SLOT %d SAVED — your corner is waiting." % [selected_slot + 1]
 
 	if game_state == "hub":
 		_show_bracket()
 
 
-func _continue_run() -> void:
-	var file := FileAccess.open(SAVE_PATH, FileAccess.READ)
+func _continue_run(slot: int = -1) -> void:
+	if slot >= 0 and slot < SAVE_SLOT_COUNT:
+		selected_slot = slot
+	var save_path := _slot_save_path(selected_slot)
+	var file := FileAccess.open(save_path, FileAccess.READ)
 	if file == null:
-		menu_notice = "NO VALID RUN SAVE FOUND. Start a new run."
+		menu_notice = "NO VALID SAVE FOUND IN SLOT %d. Start a new run." % [selected_slot + 1]
 		_show_main_menu()
 		return
 
@@ -1829,8 +1872,8 @@ func _continue_run() -> void:
 		return
 
 	var data: Dictionary = parsed
-	if int(data.get("version", -1)) != 2:
-		_reject_run_save("This run save uses an unsupported version.")
+	if int(data.get("version", -1)) != SAVE_VERSION or int(data.get("slot", -1)) != selected_slot:
+		_reject_run_save("This run save uses an unsupported version or belongs to another slot.")
 		return
 
 	var saved_player = data.get("player", {})
@@ -1888,27 +1931,44 @@ func _continue_run() -> void:
 	next_fight_speed_bonus = float(data.get("next_fight_speed_bonus", 0.0))
 
 	rng.seed = run_seed + fight_index * 991
-	menu_notice = "RUN CONTINUED — back to the circuit."
+	menu_notice = "SLOT %d CONTINUED — back to the circuit." % [selected_slot + 1]
 	_show_bracket()
 
 
 func _reject_run_save(reason: String) -> void:
 	push_warning(reason)
-	var save_absolute := ProjectSettings.globalize_path(SAVE_PATH)
-	var corrupt_path := "user://underdog_save.corrupt.json"
+	var save_path := _slot_save_path(selected_slot)
+	var corrupt_path := "user://the_last_round_slot_%d.corrupt.json" % [selected_slot + 1]
+	var save_absolute := ProjectSettings.globalize_path(save_path)
 	var corrupt_absolute := ProjectSettings.globalize_path(corrupt_path)
 	var quarantine_error := OK
-	if FileAccess.file_exists(SAVE_PATH):
+	if FileAccess.file_exists(save_path):
 		if FileAccess.file_exists(corrupt_path):
 			DirAccess.remove_absolute(corrupt_absolute)
 		quarantine_error = DirAccess.rename_absolute(save_absolute, corrupt_absolute)
 
 	if quarantine_error == OK:
-		menu_notice = "SAVE UNAVAILABLE: %s Damaged save preserved as underdog_save.corrupt.json; start a fresh run." % reason
+		menu_notice = "SLOT %d UNAVAILABLE: %s Damaged save preserved for recovery." % [selected_slot + 1, reason]
 	else:
-		menu_notice = "SAVE UNAVAILABLE: %s The damaged save could not be moved; the original file was left in place." % reason
-		push_error("Could not quarantine invalid run save. Error: %d" % quarantine_error)
+		menu_notice = "SLOT %d UNAVAILABLE: %s The original file was left in place." % [selected_slot + 1, reason]
+		push_error("Could not quarantine invalid slot save. Error: %d" % quarantine_error)
 	_show_main_menu()
+
+
+func _remove_legacy_save_files() -> void:
+	var legacy_paths := [
+		"user://underdog_save.json",
+		"user://underdog_save.tmp",
+		"user://underdog_save.bak",
+		"user://underdog_save.corrupt.json",
+		"user://underdog_meta.json"
+	]
+	for legacy_path in legacy_paths:
+		if FileAccess.file_exists(legacy_path):
+			var absolute_path := ProjectSettings.globalize_path(legacy_path)
+			var remove_error := DirAccess.remove_absolute(absolute_path)
+			if remove_error != OK:
+				push_warning("Could not remove legacy save file: " + legacy_path)
 
 
 func _load_meta() -> void:
@@ -2091,7 +2151,7 @@ func _finish_training() -> void:
 	_label("• Spend stamina with a plan. A powerful move is useless when you're exhausted.")
 	_label("This was a practice bout. No run progress, Respect, items or save data were changed.", 13, Color(0.72, 0.82, 0.68))
 	_button("SPAR AGAIN", _start_training)
-	_button("START A NEW RUN", _new_run)
+	_button("START A NEW RUN", _request_new_run.bind(selected_slot))
 	_button("BACK TO MAIN MENU", _show_main_menu)
 
 
