@@ -51,6 +51,7 @@
 - The user has tested the playable coach tutorial. They requested that an incorrect lesson move retry the same exchange rather than advance, and that the tutorial explain every item and how/when to use it.
 - Menu, hub, combat and Codex content now use a responsive vertical scroll container; the panel adapts to the viewport, follows keyboard focus and resets scroll on screen changes.
 - Fighter Training now launches a six-exchange playable spar against a coach, matching one complete six-turn round. Scripted tells teach reading a heavy right, body shot, quick jab and recovery window; contextual corner feedback explains the player's choices. The practice loadout exposes core attack, defence, counter and utility moves. Training is isolated from run progression, Respect and save data.
+- Following the user's playtest, incorrect coach-drill choices now leave the same exchange and telegraph active and show corrective guidance; only an accepted response advances the exchange. The post-spar Corner Bag lesson explains all eight items, their exact effects and timing, how combat item buttons work, the opponent response/turn cost, hub-only Ice, automatic Smelling Salts and the three-item capacity.
 - Run checkpoints write through a temporary file before promotion. The save system now has three independent run slots, each with its own checkpoint, temporary file, backup and corruption quarantine. Each slot can be continued independently or explicitly replaced after confirmation. Career Respect remains global across all three slots.
 - The Codex has a top-level back action and a guide to enemy archetype mechanics.
 - Enemy mechanics now differ: the brawler's Heavy Right hits harder; the speedster's landed attacks drain stamina; the tank's guard reduces incoming damage while it has stamina; the counter-puncher punishes committed attack moves; the dirty fighter drains stamina on a hit; and the final champion surges on turns 3 and 6.
@@ -176,7 +177,7 @@ The roster is a deliberate current implementation. Rematches scale with fight in
 - [x] Complete Codex entries for reward categories, move upgrades and current stat reward effects/trade-offs.
 - [ ] Settings/accessibility completeness.
 - [ ] Keep gameplay rules and state separate from presentation wherever practical.
-- [x] Replace the text-only Fighter Training tutorial with a playable five-exchange coach spar using the turn-based combat flow.
+- [x] Replace the text-only Fighter Training tutorial with a playable six-exchange coach spar using the turn-based combat flow.
 - [x] Add scripted coach telegraphs and contextual feedback after player actions.
 - [x] Keep practice runs isolated from tournament progression, Respect, rewards and save data.
 - [x] User-tested the coach spar and its exit/restart/new-run transitions in Godot.
