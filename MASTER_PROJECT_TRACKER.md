@@ -1,6 +1,6 @@
-# UNDERDOG — Master Project Tracker
+# The Last Round — Master Project Tracker
 
-**Project:** UNDERDOG  
+**Project:** The Last Round  
 **Engine:** Godot 4.7  
 **Genre:** First-person-presented, turn-based boxing roguelike  
 **Tracker updated:** 25 November 2026  
