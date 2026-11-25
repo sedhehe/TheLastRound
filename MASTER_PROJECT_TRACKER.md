@@ -47,6 +47,8 @@
 
 - Turn-based combat was restored as the active combat flow; the real-time combat path is not the intended gameplay loop.
 - The user confirmed Phase 1 was working and asked development to continue.
+- The user has now tested the three independent save slots in Godot and confirmed they work correctly.
+- The user has tested the playable coach tutorial. They requested that an incorrect lesson move retry the same exchange rather than advance, and that the tutorial explain every item and how/when to use it.
 - Menu, hub, combat and Codex content now use a responsive vertical scroll container; the panel adapts to the viewport, follows keyboard focus and resets scroll on screen changes.
 - Fighter Training now launches a six-exchange playable spar against a coach, matching one complete six-turn round. Scripted tells teach reading a heavy right, body shot, quick jab and recovery window; contextual corner feedback explains the player's choices. The practice loadout exposes core attack, defence, counter and utility moves. Training is isolated from run progression, Respect and save data.
 - Run checkpoints write through a temporary file before promotion. The save system now has three independent run slots, each with its own checkpoint, temporary file, backup and corruption quarantine. Each slot can be continued independently or explicitly replaced after confirmation. Career Respect remains global across all three slots.
@@ -177,7 +179,10 @@ The roster is a deliberate current implementation. Rematches scale with fight in
 - [x] Replace the text-only Fighter Training tutorial with a playable five-exchange coach spar using the turn-based combat flow.
 - [x] Add scripted coach telegraphs and contextual feedback after player actions.
 - [x] Keep practice runs isolated from tournament progression, Respect, rewards and save data.
-- [ ] Validate the coach spar and its exit/restart/new-run transitions in Godot.
+- [x] User-tested the coach spar and its exit/restart/new-run transitions in Godot.
+- [x] Add same-exchange retry feedback for incorrect tutorial moves.
+- [x] Add a post-spar Corner Bag lesson covering all items and how/when to use them.
+- [ ] Validate the new incorrect-move retry behavior and Corner Bag lesson in Godot.
 - [ ] Clear item/effect and reward information in the UI.
 
 **Status:** UI redesign is the next active phase. Existing gameplay systems and functional screens remain the foundation; redesign presentation without discarding working logic.
