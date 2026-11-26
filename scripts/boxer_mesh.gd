@@ -144,7 +144,8 @@ static func build_boxer_rig(
 	skin_color: Color = Color(0.62, 0.43, 0.31),
 	shorts_color: Color = Color(0.05, 0.07, 0.10),
 	glove_color: Color = Color(0.48, 0.06, 0.05),
-	hair_color: Color = Color(0.07, 0.07, 0.09)
+	hair_color: Color = Color(0.07, 0.07, 0.09),
+	hair_style: String = "cropped"
 ) -> Dictionary:
 	var skin_tex := make_grime_texture(skin_color, 0.07, 701, 0.14)
 	var shorts_tex := make_grime_texture(shorts_color, 0.14, 702, 0.12)
@@ -190,8 +191,17 @@ static func build_boxer_rig(
 	_add_mesh(head, "Jaw", make_faceted_taper(Vector2(0.108, 0.104), Vector2(0.072, 0.088), 0.09, 8, 1.0), Vector3(0.0, -0.102, 0.016), skin_mat)
 	_add_mesh(head, "LEar", make_faceted_box(Vector3(0.020, 0.058, 0.036)), Vector3(-0.128, 0.0, 0.0), skin_mat)
 	_add_mesh(head, "REar", make_faceted_box(Vector3(0.020, 0.058, 0.036)), Vector3(0.128, 0.0, 0.0), skin_mat)
-	_add_mesh(head, "HairTop", make_faceted_sphere(0.140, Vector3(0.94, 0.68, 1.06), 4, 12), Vector3(0.0, 0.076, -0.012), hair_mat)
-	_add_mesh(head, "HairBack", make_faceted_taper(Vector2(0.124, 0.124), Vector2(0.100, 0.100), 0.13, 8, 1.0), Vector3(0.0, 0.015, -0.046), hair_mat)
+	match hair_style:
+		"bald":
+			pass
+		"mohawk":
+			_add_mesh(head, "MohawkRidge", make_faceted_box(Vector3(0.052, 0.095, 0.24)), Vector3(0.0, 0.145, -0.015), hair_mat)
+		"slick":
+			_add_mesh(head, "HairTop", make_faceted_sphere(0.142, Vector3(0.96, 0.72, 1.12), 4, 12), Vector3(0.0, 0.082, -0.024), hair_mat)
+			_add_mesh(head, "HairBack", make_faceted_taper(Vector2(0.126, 0.128), Vector2(0.104, 0.104), 0.16, 8, 1.0), Vector3(0.0, 0.01, -0.052), hair_mat)
+		_:
+			_add_mesh(head, "HairTop", make_faceted_sphere(0.140, Vector3(0.94, 0.68, 1.06), 4, 12), Vector3(0.0, 0.076, -0.012), hair_mat)
+			_add_mesh(head, "HairBack", make_faceted_taper(Vector2(0.124, 0.124), Vector2(0.100, 0.100), 0.13, 8, 1.0), Vector3(0.0, 0.015, -0.046), hair_mat)
 
 	# Tailored boxing trunks (waistband + fitted legs seamlessly meeting thighs)
 	_add_mesh(parent, "Belt", make_faceted_taper(Vector2(0.255, 0.175), Vector2(0.275, 0.185), 0.09, 10, 1.0), Vector3(0.0, 1.10, 0.0), band_mat)

@@ -19,7 +19,13 @@ var animate_loop: bool = false
 var show_ring_stage: bool = false
 
 
-func _init(p_rect: Rect2, p_torso_color: Color = Color(0.55, 0.36, 0.26), p_pose: String = "idle", p_animate: bool = false, p_show_ring: bool = false) -> void:
+var _hair_style: String = "cropped"
+var _shorts_color: Color = Color(0.05, 0.07, 0.10)
+var _glove_color: Color = Color(0.48, 0.06, 0.05)
+var _hair_color: Color = Color(0.07, 0.07, 0.09)
+
+
+func _init(p_rect: Rect2, p_torso_color: Color = Color(0.55, 0.36, 0.26), p_pose: String = "idle", p_animate: bool = false, p_show_ring: bool = false, p_visual: Dictionary = {}) -> void:
 	position = p_rect.position
 	size = p_rect.size
 	stretch = true
@@ -27,6 +33,14 @@ func _init(p_rect: Rect2, p_torso_color: Color = Color(0.55, 0.36, 0.26), p_pose
 	pose_mode = p_pose
 	animate_loop = p_animate
 	show_ring_stage = p_show_ring
+	if not p_visual.is_empty():
+		p_torso_color = Color.from_string(str(p_visual.get("skin", "#9c6b4d")), p_torso_color)
+		_shorts_color = Color.from_string(str(p_visual.get("shorts", "#121a26")), Color(0.05, 0.07, 0.10))
+		_glove_color = Color.from_string(str(p_visual.get("gloves", "#7a100d")), Color(0.48, 0.06, 0.05))
+		_hair_color = Color.from_string(str(p_visual.get("hair", "#111216")), Color(0.07, 0.07, 0.09))
+		_hair_style = str(p_visual.get("hair_style", "cropped"))
+	else:
+		_shorts_color = p_torso_color.darkened(0.65)
 
 	viewport = SubViewport.new()
 	viewport.own_world_3d = true
@@ -107,10 +121,8 @@ func _build_stage(p_accent_color: Color) -> void:
 	boxer_root = Node3D.new()
 	viewport.add_child(boxer_root)
 
-	# Keep natural boxer skin & dark trunks with subtle accent tint
-	var skin := p_accent_color.lerp(Color(0.60, 0.42, 0.31), 0.72)
-	var shorts := p_accent_color.darkened(0.65)
-	var rig := TLRBoxerMesh.build_boxer_rig(boxer_root, skin, shorts, Color(0.46, 0.06, 0.05), Color(0.06, 0.06, 0.08))
+	var skin := p_accent_color
+	var rig := TLRBoxerMesh.build_boxer_rig(boxer_root, skin, _shorts_color, _glove_color, _hair_color, _hair_style)
 	torso_mat = rig.torso_mat
 	left_upper_arm = rig.left_upper_arm
 	right_upper_arm = rig.right_upper_arm
@@ -178,6 +190,22 @@ func _apply_pose(pose: String, t: float = 0.0) -> void:
 			r_elbow = Vector3(0.46, 1.32, 0.06)
 			l_hand = Vector3(-0.36, 1.42, 0.24)
 			r_hand = Vector3(0.36, 1.42, 0.24)
+		"taunt":
+			var sway := sin(t * 2.5) * 0.14 if animate_loop else 0.10
+			boxer_root.rotation.x = -0.10
+			boxer_root.rotation.y = sway
+			l_elbow = Vector3(-0.56, 1.44, 0.08)
+			r_elbow = Vector3(0.56, 1.44, 0.08)
+			l_hand = Vector3(-0.52, 1.54, 0.28)
+			r_hand = Vector3(0.52, 1.54, 0.28)
+		"enrage":
+			var roar := sin(t * 5.0) * 0.06 if animate_loop else 0.05
+			boxer_root.position.y = -0.10
+			boxer_root.rotation.x = 0.20 + roar
+			l_elbow = Vector3(-0.48, 1.48, 0.24)
+			r_elbow = Vector3(0.48, 1.48, 0.24)
+			l_hand = Vector3(-0.34, 1.84, 0.44)
+			r_hand = Vector3(0.34, 1.84, 0.44)
 		_:
 			if animate_loop:
 				boxer_root.position.y = sin(t * 2.2) * 0.02

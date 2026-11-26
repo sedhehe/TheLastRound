@@ -34,12 +34,12 @@ const TEXT_DIM := Color(0.38, 0.46, 0.55, 1.0)
 static var _font_hero: Font
 static var _font_display: Font
 static var _font_body: Font
-static var text_scale: float = 1.0
+static var text_scale: float = 1.12
 static var high_contrast: bool = false
 
 
 static func apply_accessibility(large_text: bool, hi_contrast: bool) -> void:
-	text_scale = 1.14 if large_text else 1.0
+	text_scale = 1.24 if large_text else 1.12
 	high_contrast = hi_contrast
 
 
@@ -57,6 +57,18 @@ static func c_text_muted() -> Color:
 
 static func c_text_dim() -> Color:
 	return Color(0.62, 0.72, 0.82, 1.0) if high_contrast else TEXT_DIM
+
+
+static func rarity_meta(rarity: String) -> Dictionary:
+	match rarity.to_lower():
+		"uncommon":
+			return {"label": "UNCOMMON", "color": MINT, "bg": Color(0.039, 0.133, 0.125, 0.94), "border": Color(0.22, 0.65, 0.52, 0.95)}
+		"rare":
+			return {"label": "RARE", "color": CYAN, "bg": SURFACE_TEAL, "border": BORDER_TEAL}
+		"contraband":
+			return {"label": "CONTRABAND", "color": AMBER, "bg": SURFACE_AMBER, "border": BORDER_AMBER}
+		_:
+			return {"label": "COMMON", "color": TEXT_MUTED, "bg": SURFACE_DARK, "border": BORDER_SUBTLE}
 
 
 static func font_hero() -> Font:
@@ -139,7 +151,7 @@ static func make_label(
 	var lbl := Label.new()
 	lbl.text = text
 	lbl.add_theme_font_override("font", font_display() if display else font_body())
-	var scaled_sz := mini(26, roundi(float(size) * text_scale)) if size <= 24 else size
+	var scaled_sz := mini(28, roundi(float(size) * text_scale)) if size <= 24 else size
 	lbl.add_theme_font_size_override("font_size", scaled_sz)
 	var final_col := color
 	if high_contrast:
@@ -515,6 +527,47 @@ class UIIcon extends Control:
 					pts.append(Vector2(cx + cos(ang) * rad, cy + sin(ang) * rad))
 				pts.append(pts[0])
 				draw_polyline(pts, c, stroke, true)
+			"perk":
+				var pts := PackedVector2Array([
+					Vector2(cx, cy - r * 0.96),
+					Vector2(cx + r * 0.28, cy - r * 0.28),
+					Vector2(cx + r * 0.96, cy),
+					Vector2(cx + r * 0.28, cy + r * 0.28),
+					Vector2(cx, cy + r * 0.96),
+					Vector2(cx - r * 0.28, cy + r * 0.28),
+					Vector2(cx - r * 0.96, cy),
+					Vector2(cx - r * 0.28, cy - r * 0.28),
+					Vector2(cx, cy - r * 0.96)
+				])
+				draw_polyline(pts, c, stroke, true)
+				draw_circle(Vector2(cx, cy), r * 0.20, c)
+			"contract":
+				draw_rect(Rect2(cx - r * 0.68, cy - r * 0.85, r * 1.36, r * 1.70), c, false, stroke)
+				draw_line(Vector2(cx - r * 0.38, cy - r * 0.42), Vector2(cx + r * 0.38, cy - r * 0.42), c, stroke * 0.85, true)
+				draw_line(Vector2(cx - r * 0.38, cy - r * 0.05), Vector2(cx + r * 0.38, cy - r * 0.05), c, stroke * 0.85, true)
+				draw_circle(Vector2(cx + r * 0.22, cy + r * 0.42), r * 0.22, c)
+			"cash":
+				draw_arc(Vector2(cx, cy), r * 0.86, 0.0, TAU, 20, c, stroke, true)
+				draw_line(Vector2(cx, cy - r * 0.56), Vector2(cx, cy + r * 0.56), c, stroke * 0.9, true)
+				draw_line(Vector2(cx - r * 0.28, cy - r * 0.32), Vector2(cx + r * 0.28, cy - r * 0.32), c, stroke * 0.85, true)
+				draw_line(Vector2(cx - r * 0.28, cy), Vector2(cx + r * 0.28, cy), c, stroke * 0.85, true)
+				draw_line(Vector2(cx - r * 0.28, cy + r * 0.32), Vector2(cx + r * 0.28, cy + r * 0.32), c, stroke * 0.85, true)
+			"cutman_kit", "sparring_tonics":
+				draw_rect(Rect2(cx - r * 0.72, cy - r * 0.72, r * 1.44, r * 1.44), c, false, stroke)
+				draw_line(Vector2(cx - r * 0.36, cy), Vector2(cx + r * 0.36, cy), c, stroke, true)
+				draw_line(Vector2(cx, cy - r * 0.36), Vector2(cx, cy + r * 0.36), c, stroke, true)
+			"adrenaline_shot", "nitro_salts":
+				draw_line(Vector2(cx + r * 0.15, cy - r * 0.95), Vector2(cx - r * 0.45, cy + r * 0.05), c, stroke, true)
+				draw_line(Vector2(cx - r * 0.45, cy + r * 0.05), Vector2(cx + r * 0.35, cy + r * 0.05), c, stroke, true)
+				draw_line(Vector2(cx + r * 0.35, cy + r * 0.05), Vector2(cx - r * 0.20, cy + r * 0.95), c, stroke, true)
+			"pepper_wrap", "brass_duster":
+				draw_rect(Rect2(cx - r * 0.85, cy - r * 0.35, r * 1.7, r * 0.7), c, false, stroke)
+				draw_circle(Vector2(cx - r * 0.44, cy), r * 0.18, c)
+				draw_circle(Vector2(cx, cy), r * 0.18, c)
+				draw_circle(Vector2(cx + r * 0.44, cy), r * 0.18, c)
+			"shop", "event":
+				draw_rect(Rect2(cx - r * 0.8, cy - r * 0.45, r * 1.6, r * 1.3), c, false, stroke)
+				draw_arc(Vector2(cx, cy - r * 0.45), r * 0.42, PI, TAU, 12, c, stroke, true)
 			_:
 				draw_arc(Vector2(cx, cy), r * 0.65, 0.0, TAU, 16, c, stroke, true)
 

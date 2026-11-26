@@ -143,6 +143,8 @@ static func build_combat_hud(main: Node, root_ui: Control) -> Control:
 
 	var player_header := "YOU  /  COACH SPAR" if main.training_active else ("YOU  /  %s" % str(main._respect_rank()))
 	TLRTheme.make_abs_label(hud, player_header, Rect2(40 * s, 18 * s, bar_w + 68 * s, 22 * s), 14, TLRTheme.TEXT_PRIMARY, true)
+	if not main.training_active:
+		TLRTheme.make_abs_label(hud, "CASH $%d" % int(main.cash), Rect2(40 * s, 18 * s, bar_w + 86 * s, 22 * s), 13, TLRTheme.AMBER, true, HORIZONTAL_ALIGNMENT_RIGHT)
 	TLRTheme.make_abs_label(hud, str(int(roundf(float(main.player.health)))), Rect2(40 * s, 42 * s, 76 * s, 44 * s), 42, TLRTheme.TEXT_PRIMARY, true)
 	TLRTheme.make_abs_label(hud, "/ %d" % int(main.player.max_health), Rect2(40 * s, 86 * s, 76 * s, 18 * s), 12, TLRTheme.TEXT_MUTED, true)
 
@@ -152,11 +154,19 @@ static func build_combat_hud(main: Node, root_ui: Control) -> Control:
 	_make_slanted_combat_bar(hud, Rect2(126 * s, 72 * s, sta_w, 13 * s), float(main.player.stamina), float(main.player.max_stamina), TLRTheme.BLUE, TLRTheme.BLUE_GHOST, main.hud_player_stamina, main, false)
 	main.hud_player_stamina = float(main.player.stamina)
 
-	TLRTheme.make_abs_label(hud, "%d / %d STA" % [int(roundf(float(main.player.stamina))), int(main.player.max_stamina)], Rect2(126 * s, 92 * s, 220 * s, 20 * s), 13, TLRTheme.BLUE, true)
-	TLRTheme.make_abs_label(hud, "DMG %d   DEF %d   SPD %d%%" % [int(main.player.damage), int(main.player.defence), int(main._speed_chance(float(main.player.speed)))], Rect2(126 * s, 114 * s, bar_w, 20 * s), 12, TLRTheme.TEXT_MUTED, false)
+	TLRTheme.make_abs_label(hud, "%d / %d STA" % [int(roundf(float(main.player.stamina))), int(main.player.max_stamina)], Rect2(126 * s, 88 * s, 220 * s, 18 * s), 12, TLRTheme.BLUE, true)
+	var adr_val := clampf(float(main.adrenaline), 0.0, 100.0)
+	var adr_ready: bool = adr_val >= 100.0 and not bool(main.training_active)
+	var adr_w := bar_w * 0.54
+	_make_slanted_combat_bar(hud, Rect2(126 * s, 109 * s, adr_w, 9 * s), adr_val, 100.0, TLRTheme.ACCENT_ORANGE if adr_ready else TLRTheme.AMBER, Color(0.28, 0.16, 0.05, 0.55), adr_val, main, false)
+	var adr_txt := "LIGHTS OUT ×1.75!" if adr_ready else ("ADR %d%%" % int(roundf(adr_val)))
+	TLRTheme.make_abs_label(hud, adr_txt, Rect2(126 * s + adr_w + 10 * s, 105 * s, maxf(96 * s, bar_w - adr_w - 6 * s), 16 * s), 11, TLRTheme.ACCENT_ORANGE if adr_ready else TLRTheme.AMBER, true)
+	TLRTheme.make_abs_label(hud, "DMG %d   DEF %d   SPD %d%%" % [int(main.player.damage), int(main.player.defence), int(main._speed_chance(float(main.player.speed)))], Rect2(126 * s, 124 * s, bar_w, 18 * s), 12, TLRTheme.TEXT_MUTED, false)
 
 	# --- OPPONENT STATUS (TOP RIGHT, DOCKED TO RIGHT EDGE) ---
 	var enemy_name := "COACH  /  TRAINING PARTNER" if main.training_active else str(main.enemy.get("name", "OPPONENT")).to_upper()
+	if main.enemy_enraged and not main.training_active:
+		enemy_name += "  •  ENRAGED"
 	TLRTheme.make_abs_label(hud, enemy_name, Rect2(rx - bar_w - 84 * s, 18 * s, bar_w + 84 * s, 22 * s), 14, TLRTheme.TEXT_PRIMARY, true, HORIZONTAL_ALIGNMENT_RIGHT)
 	TLRTheme.make_abs_label(hud, str(int(roundf(float(main.enemy.health)))), Rect2(rx - 76 * s, 42 * s, 76 * s, 44 * s), 42, TLRTheme.TEXT_PRIMARY, true, HORIZONTAL_ALIGNMENT_RIGHT)
 	TLRTheme.make_abs_label(hud, "/ %d" % int(main.enemy.max_health), Rect2(rx - 76 * s, 86 * s, 76 * s, 18 * s), 12, TLRTheme.TEXT_MUTED, true, HORIZONTAL_ALIGNMENT_RIGHT)
@@ -226,8 +236,46 @@ static func build_combat_hud(main: Node, root_ui: Control) -> Control:
 	else:
 		main.animate_phase_banner = false
 
+	var c_live: Dictionary = main._contract_live_status()
+	if bool(c_live.get("active", false)):
+		var c_fail := bool(c_live.get("failed", false))
+		var c_w := 430.0 * s
+		var c_bg: Color = TLRTheme.SURFACE_CRIMSON if c_fail else Color(0.11, 0.08, 0.03, 0.94)
+		var c_bd: Color = TLRTheme.BORDER_CRIMSON if c_fail else TLRTheme.AMBER
+		var c_col: Color = TLRTheme.CORAL if c_fail else TLRTheme.AMBER
+		var c_bar := TLRTheme.make_panel(hud, Rect2(cx - c_w * 0.5, 198 * s, c_w, 30 * s), c_bg, c_bd, 2, 0, 0)
+		c_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		TLRTheme.make_abs_label(c_bar, "CONTRACT: %s (+$%d)  •  %s" % [str(c_live.get("name", "")).to_upper(), int(c_live.get("bonus", 0)), str(c_live.get("progress", ""))], Rect2(10 * s, 2 * s, c_w - 20 * s, 24 * s), 11, c_col, true, HORIZONTAL_ALIGNMENT_CENTER, VERTICAL_ALIGNMENT_CENTER)
+
 	# --- LEFT ACTIVE EFFECT PILLS (11 Combat — Buffs and debuffs.png) ---
 	var status_pills: Array[Dictionary] = []
+	var enemy_kind := str(main.enemy_next_action.get("kind", "attack")).to_lower()
+	if not main.training_active and not main.current_bout_modifier.is_empty() and str(main.current_bout_modifier.get("id", "")) != "standard":
+		status_pills.append({"text": "RULE / %s: %s" % [str(main.current_bout_modifier.get("name", "")).to_upper(), str(main.current_bout_modifier.get("desc", ""))], "bg": TLRTheme.SURFACE_DARK, "border": TLRTheme.BORDER_SUBTLE, "col": TLRTheme.CYAN})
+	if main.player_momentum and not bool(main.training_active):
+		status_pills.append({"text": "MOMENTUM READY / FREE FOLLOW-UP (NO OPP COUNTER!)", "bg": TLRTheme.SURFACE_TEAL, "border": TLRTheme.CYAN, "col": TLRTheme.CYAN})
+	if int(main.brass_charges) > 0:
+		status_pills.append({"text": "BRASS INSERT / +12 DMG & STAGGER (%d HITS LEFT)" % int(main.brass_charges), "bg": TLRTheme.SURFACE_AMBER, "border": TLRTheme.BORDER_AMBER, "col": TLRTheme.AMBER})
+	if main.adrenaline >= 100.0 and not bool(main.training_active):
+		status_pills.append({"text": "LIGHTS OUT READY / NEXT HIT ×1.75 • STAGGER • +$25", "bg": TLRTheme.SURFACE_AMBER, "border": TLRTheme.ACCENT_ORANGE, "col": TLRTheme.ACCENT_ORANGE})
+	if main.player_counter_window:
+		status_pills.append({"text": "OPENING / COUNTER ×1.45 • POWER ×1.25", "bg": TLRTheme.SURFACE_TEAL, "border": TLRTheme.BORDER_TEAL, "col": TLRTheme.MINT})
+	if main.player_combo_ready:
+		status_pills.append({"text": "RHYTHM / NEXT POWER SHOT +25% & +12% ACC", "bg": TLRTheme.SURFACE_AMBER, "border": TLRTheme.BORDER_AMBER, "col": TLRTheme.AMBER})
+	if main.enemy_staggered:
+		status_pills.append({"text": "OPP STAGGERED / -35% ATK • -15% ACC", "bg": TLRTheme.SURFACE_TEAL, "border": TLRTheme.BORDER_TEAL, "col": TLRTheme.MINT})
+	if main.enemy_enraged:
+		status_pills.append({"text": "PHASE 2 ENRAGE / OPP +25% POWER & AGGRESSION", "bg": TLRTheme.SURFACE_CRIMSON, "border": TLRTheme.BORDER_CRIMSON, "col": TLRTheme.CORAL})
+	if main.enemy_taunt_buff:
+		status_pills.append({"text": "OPP FIRED UP / +35% OPP POWER NEXT HIT", "bg": TLRTheme.SURFACE_CRIMSON, "border": TLRTheme.BORDER_CRIMSON, "col": TLRTheme.CORAL})
+	if int(main.player_bleeding) > 0:
+		status_pills.append({"text": "CUT BLEEDING / -4 HP PER TURN (%dT)" % int(main.player_bleeding), "bg": TLRTheme.SURFACE_CRIMSON, "border": TLRTheme.BORDER_CRIMSON, "col": TLRTheme.CORAL})
+	if enemy_kind == "guard":
+		status_pills.append({"text": "OPP GUARDING / BREAK: BODY · OVERHAND · FEINT", "bg": TLRTheme.SURFACE_AMBER, "border": TLRTheme.BORDER_AMBER, "col": TLRTheme.AMBER})
+	elif enemy_kind == "recovery":
+		status_pills.append({"text": "OPP WINDED / PUNISH +30% OR REST SAFE", "bg": TLRTheme.SURFACE_TEAL, "border": TLRTheme.BORDER_TEAL, "col": TLRTheme.MINT})
+	elif enemy_kind == "taunt":
+		status_pills.append({"text": "OPP SHOWBOATING / HIT TO INTERRUPT (+35% BUFF)", "bg": TLRTheme.SURFACE_AMBER, "border": TLRTheme.BORDER_AMBER, "col": TLRTheme.AMBER})
 	if main.heart_active:
 		status_pills.append({"text": "HEART / +8% CRIT CHANCE", "bg": TLRTheme.SURFACE_CRIMSON, "border": TLRTheme.BORDER_CRIMSON, "col": TLRTheme.CORAL})
 	if int(main.enemy_blinded) > 0:
@@ -243,27 +291,67 @@ static func build_combat_hud(main: Node, root_ui: Control) -> Control:
 	if float(main.next_fight_speed_bonus) > 0.0:
 		status_pills.append({"text": "CROWD FAVOURITE / +%d%% SPD NEXT FIGHT" % int(main.next_fight_speed_bonus), "bg": TLRTheme.SURFACE_TEAL, "border": TLRTheme.BORDER_TEAL, "col": TLRTheme.MINT})
 
-	for pi in range(status_pills.size()):
+	for pi in range(mini(7, status_pills.size())):
 		var sp: Dictionary = status_pills[pi]
-		var pill := TLRTheme.make_panel(hud, Rect2(40 * s, (166 + pi * 36) * s, 310 * s, 28 * s), sp.bg, sp.border, 1, 0, 0)
+		var pill := TLRTheme.make_panel(hud, Rect2(40 * s, (152 + pi * 31) * s, 356 * s, 27 * s), sp.bg, sp.border, 1, 0, 0)
 		pill.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		TLRTheme.make_abs_label(pill, str(sp.text), Rect2(10 * s, 3 * s, 290 * s, 22 * s), 11, sp.col, true, HORIZONTAL_ALIGNMENT_LEFT, VERTICAL_ALIGNMENT_CENTER)
+		TLRTheme.make_abs_label(pill, str(sp.text), Rect2(10 * s, 2 * s, 336 * s, 22 * s), 10, sp.col, true, HORIZONTAL_ALIGNMENT_LEFT, VERTICAL_ALIGNMENT_CENTER)
 
 	# --- RINGSIDE COMMENTARY / COACH CUE (DOCKED TO RIGHT EDGE) ---
 	if main.training_active:
-		var cw := 264.0 * s
-		var ch := 244.0 * s
-		var comm := TLRTheme.make_panel(hud, Rect2(rx - cw, cy - ch * 0.5 - 52.0 * s, cw, ch), Color(0.031, 0.082, 0.133, 0.92), TLRTheme.BORDER_TEAL, 1, 0, 0)
-		comm.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		TLRTheme.make_abs_label(comm, "■  COACH / LESSON %02d" % train_ex, Rect2(14 * s, 12 * s, 236 * s, 18 * s), 11, TLRTheme.MINT, true)
-		var tell_line := str(main.enemy_next_action.get("tell", "Coach studies your guard."))
-		TLRTheme.make_abs_label(comm, tell_line, Rect2(14 * s, 38 * s, 236 * s, 64 * s), 13, TLRTheme.CYAN, false)
-		TLRTheme.make_abs_label(comm, "“%s”" % str(main.training_feedback), Rect2(14 * s, 108 * s, 236 * s, 92 * s), 13, TLRTheme.TEXT_PRIMARY, false)
+		var cw := 326.0 * s
 		var rec_ids: Array = main._training_recommended_moves()
-		var rec_names: Array[String] = []
-		for r_id in rec_ids:
-			rec_names.append(str(main._get_move(str(r_id)).get("name", r_id)).to_upper())
-		TLRTheme.make_abs_label(comm, "TRY: " + " · ".join(rec_names), Rect2(14 * s, 212 * s, 236 * s, 20 * s), 10, TLRTheme.MINT, true)
+		var b_cnt := mini(rec_ids.size(), 4)
+		var rows := 1 if b_cnt <= 2 else 2
+		var ch := (308.0 + (46.0 if rows == 2 else 0.0)) * s
+		var comm := TLRTheme.make_panel(hud, Rect2(rx - cw, cy - ch * 0.5 - 28.0 * s, cw, ch), Color(0.031, 0.082, 0.133, 0.94), TLRTheme.BORDER_TEAL, 2, 0, 0)
+		var iw := cw - 28.0 * s
+		TLRTheme.make_abs_label(comm, "■  COACH / LESSON %02d OF %02d" % [train_ex, int(main.TRAINING_EXCHANGES)], Rect2(14 * s, 12 * s, iw, 20 * s), 12, TLRTheme.MINT, true)
+		var tell_line := str(main.enemy_next_action.get("tell", "Coach studies your guard."))
+		TLRTheme.make_abs_label(comm, tell_line, Rect2(14 * s, 36 * s, iw, 54 * s), 13, TLRTheme.CYAN, false)
+
+		var div := ColorRect.new()
+		div.position = Vector2(14 * s, 96 * s)
+		div.size = Vector2(iw, 1)
+		div.color = Color(0.18, 0.38, 0.48, 0.70)
+		comm.add_child(div)
+
+		if bool(main.training_retry_flag):
+			TLRTheme.make_abs_label(comm, str(main.training_feedback), Rect2(14 * s, 106 * s, iw, 110 * s), 12, TLRTheme.AMBER, false)
+		else:
+			var has_prev := int(main.training_turn) > 0 and not str(main.training_feedback).is_empty()
+			if has_prev:
+				TLRTheme.make_abs_label(comm, str(main.training_feedback), Rect2(14 * s, 102 * s, iw, 46 * s), 11, TLRTheme.MINT, false)
+				TLRTheme.make_abs_label(comm, str(main._training_lesson_prompt()), Rect2(14 * s, 150 * s, iw, 68 * s), 12, TLRTheme.TEXT_PRIMARY, false)
+			else:
+				TLRTheme.make_abs_label(comm, str(main._training_lesson_prompt()), Rect2(14 * s, 106 * s, iw, 110 * s), 13, TLRTheme.TEXT_PRIMARY, false)
+
+		TLRTheme.make_abs_label(comm, "SUGGESTED ANSWER:", Rect2(14 * s, 224 * s, iw, 18 * s), 11, TLRTheme.MINT, true)
+		var cols := 1 if b_cnt == 1 else 2
+		var b_gap := 8.0 * s
+		var bw_try := (iw - float(cols - 1) * b_gap) / float(cols)
+		var bh_try := 36.0 * s
+		for bi in range(b_cnt):
+			var rm_id := str(rec_ids[bi])
+			var r_slot: int = main.owned_moves.find(rm_id)
+			var r_key := str(r_slot + 1) if r_slot >= 0 else ""
+			var rm_name := str(main._get_move(rm_id).get("name", rm_id)).to_upper()
+			var r_lbl := "%s [%s]" % [rm_name, r_key] if not r_key.is_empty() else rm_name
+			var col_i := bi % cols
+			var row_i := bi / cols
+			var bx := 14.0 * s + float(col_i) * (bw_try + b_gap)
+			var by := 248.0 * s + float(row_i) * (bh_try + b_gap)
+			var try_btn := TLRTheme.make_abs_button(comm, r_lbl, Rect2(bx, by, bw_try, bh_try), main._player_move.bind(rm_id), "teal", false, 12)
+			try_btn.clip_text = true
+			for sb_key in ["normal", "hover", "focus", "pressed"]:
+				var sb := try_btn.get_theme_stylebox(sb_key)
+				if sb is StyleBoxFlat:
+					var dup := sb.duplicate() as StyleBoxFlat
+					dup.content_margin_left = 6
+					dup.content_margin_right = 6
+					dup.content_margin_top = 4
+					dup.content_margin_bottom = 4
+					try_btn.add_theme_stylebox_override(sb_key, dup)
 	elif bool(main.settings.get("subtitles", true)):
 		var cw := 232.0 * s
 		var ch := 174.0 * s
@@ -338,23 +426,35 @@ static func build_combat_hud(main: Node, root_ui: Control) -> Control:
 			TLRTheme.make_abs_label(btn, item_key, Rect2(iw - 26 * cs, 10 * s, 16 * cs, 18 * s), 11, TLRTheme.TEXT_DIM, true, HORIZONTAL_ALIGNMENT_RIGHT)
 			TLRTheme.make_abs_label(btn, "EMPTY", Rect2(8 * cs, 54 * s, iw - 16 * cs, 24 * s), 13, TLRTheme.TEXT_DIM, true, HORIZONTAL_ALIGNMENT_CENTER)
 		else:
-			var icon := TLRTheme.UIIcon.new(item_id, TLRTheme.TEXT_PRIMARY if usable else TLRTheme.TEXT_MUTED, Vector2(20 * cs, 20 * cs))
+			var icon_col: Color = TLRTheme.TEXT_PRIMARY if usable else TLRTheme.TEXT_MUTED
+			var rmeta: Dictionary = TLRTheme.rarity_meta(str(main._get_item_rarity(item_id)))
+			if str(main._get_item_rarity(item_id)) != "common":
+				icon_col = Color(rmeta.color)
+				btn.add_theme_stylebox_override("normal", TLRTheme.style_box(rmeta.bg if usable else TLRTheme.SURFACE_DARK, rmeta.border, 1, 0, 0, 0))
+			var icon := TLRTheme.UIIcon.new(item_id, icon_col, Vector2(20 * cs, 20 * cs))
 			icon.position = Vector2(12 * cs, 12 * s)
 			btn.add_child(icon)
-			TLRTheme.make_abs_label(btn, "×1", Rect2(iw - 44 * cs, 12 * s, 32 * cs, 18 * s), 11, TLRTheme.BLUE if usable else TLRTheme.TEXT_DIM, true, HORIZONTAL_ALIGNMENT_RIGHT)
+			var rar_tag := "×1" if str(main._get_item_rarity(item_id)) == "common" else str(rmeta.label).substr(0, 4)
+			TLRTheme.make_abs_label(btn, rar_tag, Rect2(iw - 52 * cs, 12 * s, 40 * cs, 18 * s), 10, Color(rmeta.color) if str(main._get_item_rarity(item_id)) != "common" else (TLRTheme.BLUE if usable else TLRTheme.TEXT_DIM), true, HORIZONTAL_ALIGNMENT_RIGHT)
 			var short_name := str(main._get_item_name(item_id)).to_upper()
 			if item_id == "energy": short_name = "ENERGY"
 			elif item_id == "ice": short_name = "CORNER ICE"
 			elif item_id == "salts": short_name = "LAST STAND"
 			elif item_id == "crowd": short_name = "CROWD FAVOUR"
 			elif item_id == "loaded_tape": short_name = "LOADED TAPE"
+			elif item_id == "adrenaline_shot": short_name = "ADRENALINE"
+			elif item_id == "sparring_tonics": short_name = "TONIC"
+			elif item_id == "cutman_kit": short_name = "CUTMAN SWAB"
+			elif item_id == "pepper_wrap": short_name = "LINIMENT"
+			elif item_id == "brass_duster": short_name = "BRASS INSERT"
+			elif item_id == "nitro_salts": short_name = "NITRO SALTS"
 			var name_lbl := TLRTheme.make_abs_label(btn, short_name, Rect2(10 * cs, 50 * s, iw - 30 * cs, 34 * s), roundi(14 * card_scale), TLRTheme.TEXT_PRIMARY if usable else TLRTheme.TEXT_MUTED, true)
 			name_lbl.clip_text = true
 			TLRTheme.make_abs_label(btn, item_key, Rect2(iw - 24 * cs, 52 * s, 16 * cs, 20 * s), 11, TLRTheme.TEXT_MUTED, true, HORIZONTAL_ALIGNMENT_RIGHT)
 			TLRTheme.make_abs_label(btn, TLRScreens._item_short_hint(item_id), Rect2(10 * cs, 90 * s, iw - 18 * cs, 26 * s), 10, TLRTheme.TEXT_MUTED if usable else TLRTheme.TEXT_DIM, false)
 
 			var idata: Dictionary = main._get_item_data(item_id)
-			var t_cat := "ITEM / COMBAT USE" if usable else ("ITEM / HUB ONLY" if item_id == "ice" else "ITEM / PASSIVE")
+			var t_cat := "[%s] ITEM / %s" % [str(rmeta.label), ("QUICK-USE" if item_id in ["cutman_kit", "adrenaline_shot", "nitro_salts"] else ("COMBAT USE" if usable else ("HUB ONLY" if item_id == "ice" else "PASSIVE")))]
 			var t_cost := "KEY %s" % item_key
 			var t_desc := str(idata.get("description", ""))
 			var t_foot: String = str(main._item_timing(item_id))
@@ -366,7 +466,7 @@ static func build_combat_hud(main: Node, root_ui: Control) -> Control:
 	# --- CHOOSE YOUR MOVE (DOCKED BOTTOM RIGHT, 6 SLOTS) ---
 	var moves_x0 := rx - (5.0 * cstep + cw_card)
 	TLRTheme.make_abs_label(hud, "CHOOSE YOUR MOVE", Rect2(moves_x0, bot_base + 678 * s, 280 * cs, 24 * s), 15, TLRTheme.TEXT_PRIMARY, true)
-	TLRTheme.make_abs_label(hud, "One move ends your turn.", Rect2(rx - 320 * cs, bot_base + 678 * s, 320 * cs, 24 * s), 12, TLRTheme.TEXT_MUTED, false, HORIZONTAL_ALIGNMENT_RIGHT)
+	TLRTheme.make_abs_label(hud, "MOMENTUM ACTIVE: FREE FOLLOW-UP!" if bool(main.player_momentum) else "One move ends your turn.", Rect2(rx - 320 * cs, bot_base + 678 * s, 320 * cs, 24 * s), 12, TLRTheme.CYAN if bool(main.player_momentum) else TLRTheme.TEXT_MUTED, bool(main.player_momentum), HORIZONTAL_ALIGNMENT_RIGHT)
 
 	for slot in range(6):
 		var move_id := str(main.owned_moves[slot]) if slot < main.owned_moves.size() else ""
@@ -383,27 +483,47 @@ static func build_combat_hud(main: Node, root_ui: Control) -> Control:
 			continue
 
 		var md: Dictionary = main._get_move(move_id)
-		var move_cost := float(md.get("cost", 0.0))
+		var move_cost := float(main._effective_move_cost(md))
 		var enough := float(main.player.get("stamina", 0.0)) >= move_cost
 		var is_rec: bool = bool(main.training_active) and main._training_recommended_moves().has(move_id) and enough
-		var is_sel: bool = (move_id == str(main.player_last_move_id)) or is_rec
+		var boost_tag := ""
+		if enough and not main.training_active:
+			if main.adrenaline >= 100.0 and str(md.get("kind", "")) == "attack":
+				boost_tag = "LIGHTS OUT ×1.75!"
+			elif main.player_counter_window and move_id == "counter":
+				boost_tag = "WINDOW ×1.45"
+			elif main.player_counter_window and move_id in ["hook", "uppercut", "haymaker", "overhand", "one_two"]:
+				boost_tag = "OPENING ×1.25"
+			elif main.player_combo_ready and move_id in ["hook", "uppercut", "haymaker", "overhand", "body_shot"]:
+				boost_tag = "RHYTHM ×1.25"
+			elif enemy_kind == "guard" and move_id in ["body_shot", "overhand", "feint"]:
+				boost_tag = "GUARD BREAK!"
+			elif enemy_kind == "taunt" and str(md.get("kind", "")) == "attack":
+				boost_tag = "INTERRUPT!"
+			elif main.player_momentum and str(md.get("kind", "")) in ["attack", "counter", "dirty"]:
+				boost_tag = "FREE FOLLOW-UP!"
+		var is_sel: bool = (move_id == str(main.player_last_move_id)) or is_rec or not boost_tag.is_empty()
 		var btn := _make_slot_card_button(hud, Rect2(mx, my, mw, mh), main._player_move.bind(move_id), not enough, is_sel)
+		var move_lv: int = main._move_level(move_id)
 
 		var icon := TLRTheme.UIIcon.new(move_id, TLRTheme.TEXT_PRIMARY if enough else TLRTheme.TEXT_DIM, Vector2(20 * cs, 20 * cs))
 		icon.position = Vector2(12 * cs, 12 * s)
 		btn.add_child(icon)
-		TLRTheme.make_abs_label(btn, "%d STA" % int(move_cost), Rect2(36 * cs, 12 * s, mw - 46 * cs, 18 * s), 11, TLRTheme.BLUE if enough else TLRTheme.TEXT_DIM, true, HORIZONTAL_ALIGNMENT_RIGHT)
+		var cost_badge := ("%d STA" % int(move_cost)) if move_lv <= 1 else ("LV.%d · %d STA" % [move_lv, int(move_cost)])
+		TLRTheme.make_abs_label(btn, cost_badge, Rect2(34 * cs, 12 * s, mw - 44 * cs, 18 * s), 10 if move_lv > 1 else 11, TLRTheme.AMBER if move_lv > 1 and enough else (TLRTheme.BLUE if enough else TLRTheme.TEXT_DIM), true, HORIZONTAL_ALIGNMENT_RIGHT)
 
 		var m_name := str(md.get("name", move_id)).to_upper()
 		var m_lbl := TLRTheme.make_abs_label(btn, m_name, Rect2(10 * cs, 52 * s, mw - 26 * cs, 32 * s), roundi(16 * card_scale), TLRTheme.TEXT_PRIMARY if enough else TLRTheme.TEXT_DIM, true)
 		m_lbl.clip_text = true
 		TLRTheme.make_abs_label(btn, slot_key, Rect2(mw - 22 * cs, 54 * s, 14 * cs, 18 * s), 11, TLRTheme.TEXT_MUTED, true, HORIZONTAL_ALIGNMENT_RIGHT)
-		var sub_hint := TLRScreens._move_short_hint(move_id, md) if enough else ("Need %d STA" % int(move_cost))
-		TLRTheme.make_abs_label(btn, sub_hint, Rect2(10 * cs, 88 * s, mw - 18 * cs, 28 * s), 10, TLRTheme.TEXT_MUTED if enough else TLRTheme.TEXT_DIM, false)
+		var sub_hint := boost_tag if not boost_tag.is_empty() else (TLRScreens._move_short_hint(move_id, md) if enough else ("Need %d STA" % int(move_cost)))
+		TLRTheme.make_abs_label(btn, sub_hint, Rect2(10 * cs, 88 * s, mw - 18 * cs, 28 * s), 10, TLRTheme.MINT if not boost_tag.is_empty() else (TLRTheme.TEXT_MUTED if enough else TLRTheme.TEXT_DIM), false)
 
 		var dmg: Array = md.get("damage", [0, 0])
 		var dmg_line := "%d–%d base damage • %d%% accuracy" % [int(dmg[0]), int(dmg[1]), int(md.get("accuracy", 100))] if dmg.size() >= 2 and int(dmg[1]) > 0 else ("%d%% accuracy • %s" % [int(md.get("accuracy", 100)), str(md.get("kind", "utility")).capitalize()])
-		var t_cat := "MOVE / %s" % str(md.get("kind", "action")).to_upper()
+		if move_lv > 1 and dmg.size() >= 2 and int(dmg[1]) > 0:
+			dmg_line += " (+%d%% Lv.%d)" % [(move_lv - 1) * 22, move_lv]
+		var t_cat := "MOVE / %s  •  LV.%d" % [str(md.get("kind", "action")).to_upper(), move_lv]
 		var t_foot: String = dmg_line + ("\nReady • Ends your turn" if enough else ("\nUNAVAILABLE — need %d more stamina" % int(move_cost - float(main.player.stamina))))
 		btn.mouse_entered.connect(_show_rich_tooltip.bind(tooltip_panel, mx, my, w, s, t_cat, m_name, "%d STAMINA" % int(move_cost), str(md.get("description", "")), t_foot))
 		btn.mouse_exited.connect(_hide_rich_tooltip.bind(tooltip_panel))
@@ -413,8 +533,11 @@ static func build_combat_hud(main: Node, root_ui: Control) -> Control:
 	var tab_x := clampf(cx - tab_w * 0.5, 40.0 * s + 3.0 * cstep + 8.0 * s, rx - 440.0 * s - tab_w if main.training_active else rx - 84.0 * s - tab_w)
 	TLRTheme.make_abs_button(hud, "TAB  /  ITEMS, MOVES & STATS   %s" % ("⌄" if main.combat_drawer_open else "⌃"), Rect2(tab_x, bot_base + 844 * s, tab_w, 42 * s), main._toggle_combat_drawer, "default", false, 11 if tab_w < 300.0 * s else 12)
 	if main.training_active:
-		TLRTheme.make_abs_button(hud, "WATCH SIX TELLS", Rect2(rx - 420 * s, bot_base + 844 * s, 166 * s, 42 * s), main._show_telegraph_practice, "default", false, 11)
-		TLRTheme.make_abs_button(hud, "EXIT SPAR", Rect2(rx - 244 * s, bot_base + 844 * s, 162 * s, 42 * s), main._exit_training_to_menu, "default", false, 11)
+		TLRTheme.make_abs_button(hud, "WATCH ALL 8 TELLS", Rect2(rx - 420 * s, bot_base + 844 * s, 166 * s, 42 * s), main._show_telegraph_practice, "default", false, 11)
+		if bool(main.pending_first_run_tutorial):
+			TLRTheme.make_abs_button(hud, "SKIP TO RUN  →", Rect2(rx - 244 * s, bot_base + 844 * s, 162 * s, 42 * s), main._skip_tutorial_to_run, "teal", false, 11)
+		else:
+			TLRTheme.make_abs_button(hud, "EXIT SPAR", Rect2(rx - 244 * s, bot_base + 844 * s, 162 * s, 42 * s), main._exit_training_to_menu, "default", false, 11)
 	TLRTheme.make_abs_button(hud, "ESC  II", Rect2(rx - 72 * s, bot_base + 844 * s, 72 * s, 42 * s), main._resume_combat if main.combat_paused else main._toggle_combat_pause, "default", false, 12)
 
 	# --- OVERLAYS ---
@@ -435,7 +558,7 @@ static func _lowest_move_cost(main: Node) -> float:
 	for m_id in main.owned_moves:
 		var md: Dictionary = main._get_move(str(m_id))
 		if not md.is_empty():
-			low = minf(low, float(md.get("cost", 0.0)))
+			low = minf(low, float(main._effective_move_cost(md)))
 	return low if low < 999.0 else 0.0
 
 
@@ -573,41 +696,52 @@ static func _build_fighter_drawer(main: Node, hud: Control, w: float, h: float, 
 	for mi in range(mini(6, main.owned_moves.size())):
 		var m_id := str(main.owned_moves[mi])
 		var md: Dictionary = main._get_move(m_id)
+		var m_lv: int = main._move_level(m_id)
 		var my := (148 + mi * 58) * s
 		var row := TLRTheme.make_panel(drawer, Rect2(388 * s, my, 404 * s, 50 * s), TLRTheme.SURFACE_DARK, TLRTheme.BORDER_CARD, 1, 0, 0)
-		var m_cost := float(md.get("cost", 0.0))
+		var m_cost := float(main._effective_move_cost(md))
 		var ready := float(main.player.stamina) >= m_cost
-		TLRTheme.make_abs_label(row, str(md.get("name", m_id)).to_upper(), Rect2(14 * s, 6 * s, 160 * s, 20 * s), 14, TLRTheme.TEXT_PRIMARY, true)
-		TLRTheme.make_abs_label(row, "%d STA" % int(m_cost), Rect2(180 * s, 6 * s, 80 * s, 20 * s), 12, TLRTheme.BLUE, true)
+		var m_title := str(md.get("name", m_id)).to_upper() + (("  LV.%d" % m_lv) if m_lv > 1 else "")
+		TLRTheme.make_abs_label(row, m_title, Rect2(14 * s, 6 * s, 180 * s, 20 * s), 13, TLRTheme.TEXT_PRIMARY, true)
+		TLRTheme.make_abs_label(row, "%d STA" % int(m_cost), Rect2(200 * s, 6 * s, 72 * s, 20 * s), 12, TLRTheme.BLUE, true)
 		TLRTheme.make_abs_label(row, "READY" if ready else "LOW STA", Rect2(290 * s, 6 * s, 100 * s, 20 * s), 11, TLRTheme.MINT if ready else TLRTheme.AMBER, true, HORIZONTAL_ALIGNMENT_RIGHT)
 		TLRTheme.make_abs_label(row, str(md.get("description", "")), Rect2(14 * s, 26 * s, 376 * s, 18 * s), 11, TLRTheme.TEXT_MUTED, false)
 
-	# Column 3: Stats & Active Effects
+	# Column 3: Stats, Active Effects & Traits
 	TLRTheme.make_abs_label(drawer, "FIGHTER STATS", Rect2(824 * s, 114 * s, 300 * s, 22 * s), 14, TLRTheme.CYAN, true)
 	var stat_rows := [
 		["HEALTH", "%d / %d" % [int(main.player.health), int(main.player.max_health)]],
 		["STAMINA", "%d / %d" % [int(main.player.stamina), int(main.player.max_stamina)]],
-		["DAMAGE", str(int(main.player.damage))],
-		["DEFENCE", str(int(main.player.defence))],
-		["SPEED", "%d%%" % int(main._speed_chance(float(main.player.speed)))]
+		["DAMAGE / DEF", "%d  /  %d" % [int(main.player.damage), int(main.player.defence)]],
+		["SPEED", "%d%%" % int(main._speed_chance(float(main.player.speed)))],
+		["ADRENALINE", "%d%%" % int(roundf(float(main.adrenaline)))]
 	]
 	for si in range(stat_rows.size()):
-		var sy_pos := (152 + si * 34) * s
-		TLRTheme.make_abs_label(drawer, stat_rows[si][0], Rect2(824 * s, sy_pos, 140 * s, 22 * s), 13, TLRTheme.TEXT_MUTED, true)
-		TLRTheme.make_abs_label(drawer, stat_rows[si][1], Rect2(970 * s, sy_pos, 150 * s, 24 * s), 18, TLRTheme.TEXT_PRIMARY, true, HORIZONTAL_ALIGNMENT_RIGHT)
+		var sy_pos := (148 + si * 30) * s
+		TLRTheme.make_abs_label(drawer, stat_rows[si][0], Rect2(824 * s, sy_pos, 140 * s, 22 * s), 12, TLRTheme.TEXT_MUTED, true)
+		TLRTheme.make_abs_label(drawer, stat_rows[si][1], Rect2(970 * s, sy_pos, 150 * s, 22 * s), 16, TLRTheme.TEXT_PRIMARY, true, HORIZONTAL_ALIGNMENT_RIGHT)
 
-	TLRTheme.make_abs_label(drawer, "ACTIVE EFFECTS & LAST STAND", Rect2(824 * s, 344 * s, 300 * s, 22 * s), 13, TLRTheme.CYAN, true)
+	TLRTheme.make_abs_label(drawer, "ACTIVE EFFECTS & LAST STAND", Rect2(824 * s, 306 * s, 300 * s, 20 * s), 12, TLRTheme.CYAN, true)
 	var eff: Array[String] = []
 	if main.loaded_bonus > 0: eff.append("Loaded Tape +%d next hit" % int(main.loaded_bonus))
 	if int(main.enemy_blinded) > 0: eff.append("Vaseline -15% opp acc (%dT)" % int(main.enemy_blinded))
 	if int(main.enemy_drained) > 0: eff.append("Rosin -8 opp STA (%dT)" % int(main.enemy_drained))
 	if main.bribe_ready: eff.append("Dirty move protected")
 	if main.energy_penalty_pending: eff.append("Energy crash (-10 STA next turn)")
+	if int(main.player_bleeding) > 0: eff.append("Bleeding -4 HP/T (%dT)" % int(main.player_bleeding))
 	var salts_str := "Salts: SPENT" if main.revive_used else ("Salts: READY" if main.inventory.has("salts") else "Salts: NOT IN BAG")
 	var eff_text := (", ".join(eff) if not eff.is_empty() else "No temporary effects active.") + "\n" + salts_str
-	TLRTheme.make_abs_label(drawer, eff_text, Rect2(824 * s, 374 * s, 300 * s, 80 * s), 13, TLRTheme.TEXT_MUTED, false)
+	TLRTheme.make_abs_label(drawer, eff_text, Rect2(824 * s, 330 * s, 300 * s, 60 * s), 12, TLRTheme.TEXT_MUTED, false)
 
-	TLRTheme.make_abs_label(drawer, "CAREER RESPECT %d  •  %s" % [int(main.lifetime_respect), str(main._respect_rank())], Rect2(824 * s, 468 * s, 300 * s, 42 * s), 12, TLRTheme.TEXT_DIM, false)
+	TLRTheme.make_abs_label(drawer, "FIGHTING TRAITS (%d / %d)" % [main.owned_perks.size(), int(main.PERK_MAX)], Rect2(824 * s, 398 * s, 300 * s, 20 * s), 12, TLRTheme.AMBER, true)
+	var perk_parts: Array[String] = []
+	for pid in main.owned_perks:
+		var pd: Dictionary = main._get_perk_data(str(pid))
+		perk_parts.append(str(pd.get("name", pid)).to_upper())
+	var perk_str := " · ".join(perk_parts) if not perk_parts.is_empty() else "None yet — earn after bouts or buy in Corner Market."
+	TLRTheme.make_abs_label(drawer, perk_str, Rect2(824 * s, 422 * s, 300 * s, 46 * s), 11, TLRTheme.TEXT_PRIMARY if not perk_parts.is_empty() else TLRTheme.TEXT_DIM, false)
+
+	TLRTheme.make_abs_label(drawer, "CASH $%d  •  RESPECT %d (%s)" % [int(main.cash), int(main.lifetime_respect), str(main._respect_rank())], Rect2(824 * s, 476 * s, 300 * s, 36 * s), 11, TLRTheme.TEXT_DIM, false)
 
 	TLRTheme.make_abs_button(shade, "TAB  /  CLOSE FIGHTER DRAWER   ⌄", Rect2(cx - 186 * s, h - 56 * s, 372 * s, 42 * s), main._toggle_combat_drawer, "teal", false, 12)
 	if main.animate_drawer_open and not bool(main.settings.get("reduced_motion", false)):
@@ -654,8 +788,9 @@ static func _build_pause_overlay(main: Node, hud: Control, s: float, cx: float, 
 	hud.add_child(shade)
 
 	var is_train := bool(main.training_active)
+	var is_first_tut := is_train and bool(main.pending_first_run_tutorial)
 	var cw := 480.0 * s
-	var ch := (446.0 if is_train else 386.0) * s
+	var ch := (504.0 if is_first_tut else (446.0 if is_train else 386.0)) * s
 	var card := TLRTheme.make_panel(shade, Rect2(cx - cw * 0.5, cy - ch * 0.5, cw, ch), TLRTheme.SURFACE_SOLID, TLRTheme.BORDER_SUBTLE, 2, 0, 0)
 	TLRTheme.make_abs_label(card, "THE LAST ROUND / COACH SPAR" if is_train else "THE LAST ROUND", Rect2(36 * s, 28 * s, 360 * s, 22 * s), 13, TLRTheme.CYAN, true)
 	TLRTheme.make_abs_label(card, "TRAINING PAUSED" if is_train else "FIGHT PAUSED", Rect2(36 * s, 56 * s, 408 * s, 48 * s), 38, TLRTheme.TEXT_PRIMARY, true)
@@ -666,9 +801,14 @@ static func _build_pause_overlay(main: Node, hud: Control, s: float, cx: float, 
 	if is_train:
 		TLRTheme.make_abs_button(card, "RESUME TRAINING", Rect2(36 * s, 156 * s, 408 * s, 48 * s), main._resume_combat, "teal", false, 14)
 		TLRTheme.make_abs_button(card, "CORNER BAG LESSON", Rect2(36 * s, 218 * s, 408 * s, 48 * s), main._show_training_items, "default", false, 14)
-		TLRTheme.make_abs_button(card, "WATCH ALL SIX TELLS", Rect2(36 * s, 280 * s, 408 * s, 48 * s), main._show_telegraph_practice, "default", false, 14)
-		TLRTheme.make_abs_button(card, "EXIT TO MAIN MENU", Rect2(36 * s, 342 * s, 408 * s, 48 * s), main._exit_training_to_menu, "default", false, 14)
-		TLRTheme.make_abs_label(card, "ESC / Resume   •   Keys 1–6 / Choose Move   •   Q W E / Items", Rect2(36 * s, 406 * s, 408 * s, 22 * s), 12, TLRTheme.TEXT_DIM, false)
+		TLRTheme.make_abs_button(card, "WATCH ALL 8 TELLS", Rect2(36 * s, 280 * s, 408 * s, 48 * s), main._show_telegraph_practice, "default", false, 14)
+		if is_first_tut:
+			TLRTheme.make_abs_button(card, "SKIP TUTORIAL  →  START RUN", Rect2(36 * s, 342 * s, 408 * s, 48 * s), main._skip_tutorial_to_run, "teal", false, 14)
+			TLRTheme.make_abs_button(card, "EXIT TO MAIN MENU", Rect2(36 * s, 404 * s, 408 * s, 48 * s), main._exit_training_to_menu, "default", false, 14)
+			TLRTheme.make_abs_label(card, "ESC / Resume   •   Keys 1–8 / Choose Move   •   Q W E / Items", Rect2(36 * s, 466 * s, 408 * s, 22 * s), 12, TLRTheme.TEXT_DIM, false)
+		else:
+			TLRTheme.make_abs_button(card, "EXIT TO MAIN MENU", Rect2(36 * s, 342 * s, 408 * s, 48 * s), main._exit_training_to_menu, "default", false, 14)
+			TLRTheme.make_abs_label(card, "ESC / Resume   •   Keys 1–8 / Choose Move   •   Q W E / Items", Rect2(36 * s, 406 * s, 408 * s, 22 * s), 12, TLRTheme.TEXT_DIM, false)
 	else:
 		TLRTheme.make_abs_button(card, "RESUME FIGHT", Rect2(36 * s, 156 * s, 408 * s, 48 * s), main._resume_combat, "teal", false, 14)
 		TLRTheme.make_abs_button(card, "REVIEW ALL COMBAT STATES", Rect2(36 * s, 218 * s, 408 * s, 48 * s), main._open_review_from_pause, "default", false, 14)

@@ -40,6 +40,16 @@ var _spectators: Array[Dictionary] = []
 var _dust_particles: CPUParticles3D
 var _impact_particles: CPUParticles3D
 var _active_camera: Camera3D
+var cutscene_camera: Camera3D
+var _cutscene_active := false
+var _cut_start_pos := Vector3(0.0, 1.8, 2.2)
+var _cut_end_pos := Vector3(0.0, 1.8, 1.8)
+var _cut_start_look := Vector3(0.0, 1.3, -2.5)
+var _cut_end_look := Vector3(0.0, 1.3, -2.5)
+var _cut_elapsed := 0.0
+var _cut_duration := 4.8
+var _cut_orbit := false
+var _target_spot_color := Color(0.76, 0.91, 1.0)
 
 var rng := RandomNumberGenerator.new()
 
@@ -76,11 +86,13 @@ func _process(delta: float) -> void:
 	_update_crowd(delta)
 	_update_camera_shake(delta)
 	_update_lighting_flicker()
+	_update_cutscene_camera(delta)
 
 
 func _update_lighting_flicker() -> void:
 	if not is_instance_valid(spot_light):
 		return
+	spot_light.light_color = spot_light.light_color.lerp(_target_spot_color, 0.08)
 	if reduced_motion:
 		spot_light.light_energy = 7.2
 		return
@@ -88,6 +100,101 @@ func _update_lighting_flicker() -> void:
 	if fmod(idle_time, 5.7) > 5.56:
 		flicker -= 0.95
 	spot_light.light_energy = maxf(5.6, 7.2 + flicker)
+
+
+func begin_cutscene_shot(cam_preset: String, pose: String, spot_col: Color, duration: float = 5.0) -> void:
+	_cutscene_active = true
+	_cut_elapsed = 0.0
+	_cut_duration = maxf(1.5, duration)
+	_target_spot_color = spot_col
+	_cut_orbit = false
+	set_gloves_visible(false)
+
+	var opp_center := opponent_home_position + Vector3(0.0, 1.50, 0.0)
+	match cam_preset:
+		"establish":
+			_cut_start_pos = Vector3(-2.65, 1.45, 2.35)
+			_cut_end_pos = Vector3(-1.35, 1.58, 1.65)
+			_cut_start_look = Vector3(0.0, 1.35, -2.2)
+			_cut_end_look = Vector3(0.0, 1.45, -2.8)
+		"corner":
+			_cut_start_pos = Vector3(2.55, 1.32, 0.65)
+			_cut_end_pos = Vector3(2.15, 1.42, 0.05)
+			_cut_start_look = opp_center + Vector3(-0.25, 0.05, 0.25)
+			_cut_end_look = opp_center + Vector3(0.0, 0.08, 0.0)
+		"staredown":
+			_cut_start_pos = Vector3(-0.72, 1.64, 1.45)
+			_cut_end_pos = Vector3(-0.42, 1.68, 0.65)
+			_cut_start_look = opp_center + Vector3(0.0, 0.16, 0.0)
+			_cut_end_look = opp_center + Vector3(0.0, 0.20, 0.0)
+		"opponent_closeup":
+			_cut_start_pos = Vector3(0.75, 1.72, -1.35)
+			_cut_end_pos = Vector3(0.32, 1.82, -1.78)
+			_cut_start_look = opp_center + Vector3(0.0, 0.22, 0.05)
+			_cut_end_look = opp_center + Vector3(0.0, 0.26, 0.08)
+		"champion_loom":
+			_cut_start_pos = Vector3(-0.52, 0.94, -1.38)
+			_cut_end_pos = Vector3(0.0, 1.48, -1.82)
+			_cut_start_look = opp_center + Vector3(0.0, 0.30, 0.0)
+			_cut_end_look = opp_center + Vector3(0.0, 0.24, 0.0)
+		"victory_crown":
+			_cut_orbit = true
+			_cut_start_pos = Vector3(2.8, 2.75, 1.6)
+			_cut_end_pos = Vector3(-2.4, 2.45, 0.8)
+			_cut_start_look = Vector3(0.0, 1.15, -2.5)
+			_cut_end_look = Vector3(0.0, 1.10, -2.9)
+		_:
+			_cut_start_pos = Vector3(0.0, 1.78, 1.95)
+			_cut_end_pos = Vector3(0.0, 1.80, 1.45)
+			_cut_start_look = opp_center
+			_cut_end_look = opp_center
+
+	if is_instance_valid(cutscene_camera):
+		cutscene_camera.position = _cut_start_pos
+		cutscene_camera.look_at(_cut_start_look, Vector3.UP)
+		cutscene_camera.current = true
+
+	if pose == "idle":
+		opponent_telegraph_active = false
+		opponent_telegraph_pose = ""
+	else:
+		show_enemy_telegraph(pose)
+
+
+func end_cutscene(restore_cam: Camera3D = null) -> void:
+	_cutscene_active = false
+	_target_spot_color = Color(0.76, 0.91, 1.0)
+	if is_instance_valid(spot_light):
+		spot_light.light_color = _target_spot_color
+	opponent_telegraph_active = false
+	opponent_telegraph_pose = ""
+	if is_instance_valid(restore_cam):
+		restore_cam.current = true
+	elif is_instance_valid(_active_camera):
+		_active_camera.current = true
+	elif is_instance_valid(camera):
+		camera.current = true
+
+
+func _update_cutscene_camera(delta: float) -> void:
+	if not _cutscene_active or not is_instance_valid(cutscene_camera):
+		return
+	if reduced_motion:
+		cutscene_camera.position = _cut_start_pos.lerp(_cut_end_pos, 0.5)
+		cutscene_camera.look_at(_cut_start_look.lerp(_cut_end_look, 0.5), Vector3.UP)
+		return
+	_cut_elapsed += delta
+	var t := clampf(_cut_elapsed / maxf(0.5, _cut_duration), 0.0, 1.0)
+	var ease_t := t * t * (3.0 - 2.0 * t)
+	if _cut_orbit:
+		var ang := lerpf(-0.95, 0.95, ease_t)
+		var center := Vector3(0.0, 0.0, -2.55)
+		cutscene_camera.position = Vector3(center.x + sin(ang) * 3.15, lerpf(2.65, 2.25, ease_t), center.z + cos(ang) * 3.15)
+		cutscene_camera.look_at(opponent_home_position + Vector3(0.0, 1.18, 0.0), Vector3.UP)
+	else:
+		cutscene_camera.position = _cut_start_pos.lerp(_cut_end_pos, ease_t)
+		var look_pt := _cut_start_look.lerp(_cut_end_look, ease_t)
+		cutscene_camera.look_at(look_pt, Vector3.UP)
 
 
 func set_reduced_motion(enabled: bool) -> void:
@@ -497,17 +604,28 @@ func _update_crowd(delta: float) -> void:
 # OPPONENT MODEL (SCULPTED FLAT-SHADED LOW-POLY LIKE IMAGE 1)
 # ---------------------------------------------------------
 
-func _build_opponent() -> void:
+func _build_opponent(
+	skin_col: Color = Color(0.58, 0.39, 0.28),
+	shorts_col: Color = Color(0.05, 0.07, 0.10),
+	glove_col: Color = Color(0.48, 0.06, 0.05),
+	hair_col: Color = Color(0.07, 0.07, 0.09),
+	hair_style: String = "cropped",
+	body_scale: Vector3 = Vector3.ONE
+) -> void:
+	if is_instance_valid(opponent_body):
+		opponent_body.queue_free()
 	opponent_body = Node3D.new()
 	opponent_body.name = "OpponentVisual"
 	opponent_body.position = opponent_home_position
+	opponent_body.scale = body_scale
 
 	var rig := TLRBoxerMesh.build_boxer_rig(
 		opponent_body,
-		Color(0.58, 0.39, 0.28),
-		Color(0.05, 0.07, 0.10),
-		Color(0.48, 0.06, 0.05),
-		Color(0.07, 0.07, 0.09)
+		skin_col,
+		shorts_col,
+		glove_col,
+		hair_col,
+		hair_style
 	)
 	opponent_material = rig.torso_mat
 	opponent_left_upper_arm = rig.left_upper_arm
@@ -520,6 +638,17 @@ func _build_opponent() -> void:
 	opponent_right_glove = rig.right_glove
 
 	add_child(opponent_body)
+
+
+func set_opponent_appearance(vis: Dictionary) -> void:
+	var skin := Color.from_string(str(vis.get("skin", "#9c6b4d")), Color(0.58, 0.39, 0.28))
+	var shorts := Color.from_string(str(vis.get("shorts", "#121a26")), Color(0.05, 0.07, 0.10))
+	var gloves := Color.from_string(str(vis.get("gloves", "#7a100d")), Color(0.48, 0.06, 0.05))
+	var hair := Color.from_string(str(vis.get("hair", "#111216")), Color(0.07, 0.07, 0.09))
+	var hair_style := str(vis.get("hair_style", "cropped"))
+	var sc_arr = vis.get("scale", [1.0, 1.0, 1.0])
+	var sc := Vector3(float(sc_arr[0]), float(sc_arr[1]), float(sc_arr[2])) if sc_arr is Array and sc_arr.size() >= 3 else Vector3.ONE
+	_build_opponent(skin, shorts, gloves, hair, hair_style, sc)
 
 
 func set_opponent_color(color: Color) -> void:
@@ -538,6 +667,13 @@ func _build_camera() -> void:
 	camera.fov = 74.0
 	add_child(camera)
 	camera.look_at(opponent_home_position + Vector3.UP * 1.28, Vector3.UP)
+
+	cutscene_camera = Camera3D.new()
+	cutscene_camera.name = "CutsceneCamera"
+	cutscene_camera.position = Vector3(-2.0, 1.5, 2.0)
+	cutscene_camera.fov = 60.0
+	add_child(cutscene_camera)
+	cutscene_camera.look_at(opponent_home_position + Vector3.UP * 1.35, Vector3.UP)
 
 
 func _build_gloves() -> void:
@@ -889,13 +1025,43 @@ func _update_opponent_animation(delta: float) -> void:
 			l_hand = Vector3(-0.18, 1.84, 0.62)
 			r_elbow = Vector3(0.42, 1.44, 0.16)
 			r_hand = Vector3(0.22, 1.84, 0.34)
+		elif opponent_telegraph_pose.contains("guard") or opponent_telegraph_pose.contains("shell") or opponent_telegraph_pose.contains("defense"):
+			target_position.y = opponent_home_position.y - 0.03
+			target_position.z = opponent_home_position.z - 0.06
+			l_elbow = Vector3(-0.32, 1.46, 0.22)
+			r_elbow = Vector3(0.32, 1.46, 0.22)
+			l_hand = Vector3(-0.15, 1.94, 0.38)
+			r_hand = Vector3(0.15, 1.94, 0.38)
+		elif opponent_telegraph_pose.contains("taunt") or opponent_telegraph_pose.contains("showboat"):
+			target_position.y = opponent_home_position.y + 0.03
+			target_rotation.y = 0.22
+			l_elbow = Vector3(-0.46, 1.38, 0.08)
+			r_elbow = Vector3(0.52, 1.54, 0.14)
+			l_hand = Vector3(-0.36, 1.55, 0.28)
+			r_hand = Vector3(0.44, 1.88, 0.32)
+		elif opponent_telegraph_pose.contains("enrage") or opponent_telegraph_pose.contains("roar"):
+			target_position.y = opponent_home_position.y + 0.06
+			target_rotation.x = -0.14
+			l_elbow = Vector3(-0.58, 1.62, 0.06)
+			r_elbow = Vector3(0.58, 1.62, 0.06)
+			l_hand = Vector3(-0.50, 1.98, 0.20)
+			r_hand = Vector3(0.50, 1.98, 0.20)
+		elif opponent_telegraph_pose.contains("slump") or opponent_telegraph_pose.contains("kneel"):
+			target_position.y = opponent_home_position.y - 0.56
+			target_position.z = opponent_home_position.z - 0.18
+			target_rotation.x = 0.42
+			target_rotation.z = 0.08
+			l_elbow = Vector3(-0.38, 1.18, 0.18)
+			r_elbow = Vector3(0.38, 1.18, 0.18)
+			l_hand = Vector3(-0.22, 0.92, 0.34)
+			r_hand = Vector3(0.22, 0.92, 0.34)
 		elif opponent_telegraph_pose.contains("counter"):
 			target_position.z = opponent_home_position.z - 0.10
 			target_rotation.y = 0.18
 			target_rotation.z = 0.06
 			r_elbow = Vector3(0.46, 1.42, 0.06)
 			r_hand = Vector3(0.30, 1.86, 0.22)
-		elif opponent_telegraph_pose.contains("reset") or opponent_telegraph_pose.contains("desperate"):
+		elif opponent_telegraph_pose.contains("reset") or opponent_telegraph_pose.contains("desperate") or opponent_telegraph_pose.contains("breath") or opponent_telegraph_pose.contains("recovery"):
 			target_position.y = opponent_home_position.y - 0.05
 			l_elbow = Vector3(-0.48, 1.32, 0.04)
 			r_elbow = Vector3(0.48, 1.32, 0.04)

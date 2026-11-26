@@ -1,68 +1,254 @@
 [
   {
+    "id": "mick",
     "name": "Mick 'The Meter' Doyle",
     "archetype": "Brawler",
-    "health": 82,
-    "stamina": 80,
+    "health": 84,
+    "stamina": 82,
     "damage": 10,
-    "speed": 12,
+    "speed": 10,
     "defence": 3,
     "tell": "Loads up his right hand",
-    "trick": "aggressive"
+    "trick": "aggressive",
+    "tier": 1,
+    "visual": {
+      "skin": "#a57255",
+      "shorts": "#16263a",
+      "gloves": "#8c1412",
+      "hair": "#2b1b14",
+      "hair_style": "cropped",
+      "scale": [1.03, 0.99, 1.03]
+    }
   },
   {
+    "id": "gary",
     "name": "Glassjaw Gary",
     "archetype": "Speedster",
-    "health": 74,
-    "stamina": 105,
+    "health": 76,
+    "stamina": 108,
     "damage": 9,
-    "speed": 24,
+    "speed": 25,
     "defence": 2,
     "tell": "Bounces lightly on his toes",
-    "trick": "quick"
+    "trick": "quick",
+    "tier": 1,
+    "visual": {
+      "skin": "#b8876c",
+      "shorts": "#0e3038",
+      "gloves": "#b8c4cf",
+      "hair": "#1b1c22",
+      "hair_style": "slick",
+      "scale": [0.92, 1.05, 0.92]
+    }
   },
   {
+    "id": "louie",
+    "name": "Louie 'The Viper'",
+    "archetype": "Body Snatcher",
+    "health": 90,
+    "stamina": 102,
+    "damage": 10,
+    "speed": 16,
+    "defence": 4,
+    "tell": "Drops his lead shoulder toward your ribs",
+    "trick": "bleeder",
+    "tier": 1,
+    "visual": {
+      "skin": "#8a5a40",
+      "shorts": "#241332",
+      "gloves": "#1f5a38",
+      "hair": "#121318",
+      "hair_style": "cropped",
+      "scale": [0.94, 1.06, 0.94]
+    }
+  },
+  {
+    "id": "cal",
     "name": "Concrete Cal",
     "archetype": "Tank",
-    "health": 125,
-    "stamina": 90,
+    "health": 128,
+    "stamina": 92,
     "damage": 11,
     "speed": 6,
     "defence": 12,
     "tell": "Tucks his chin behind his gloves",
-    "trick": "guard"
+    "trick": "guard",
+    "tier": 2,
+    "visual": {
+      "skin": "#754c38",
+      "shorts": "#20281c",
+      "gloves": "#363b42",
+      "hair": "#111216",
+      "hair_style": "bald",
+      "scale": [1.10, 0.97, 1.08]
+    }
   },
   {
+    "id": "silk",
     "name": "Silk Moreno",
     "archetype": "Counter-puncher",
-    "health": 105,
-    "stamina": 100,
+    "health": 104,
+    "stamina": 102,
     "damage": 13,
     "speed": 18,
     "defence": 7,
     "tell": "Invites you forward with a loose guard",
-    "trick": "counter"
+    "trick": "counter",
+    "tier": 2,
+    "visual": {
+      "skin": "#9c6b4d",
+      "shorts": "#16141a",
+      "gloves": "#a17223",
+      "hair": "#151418",
+      "hair_style": "slick",
+      "scale": [0.98, 1.01, 0.98]
+    }
   },
   {
+    "id": "callahan",
+    "name": "'Mad Dog' Callahan",
+    "archetype": "Berserker",
+    "health": 110,
+    "stamina": 98,
+    "damage": 12,
+    "speed": 14,
+    "defence": 5,
+    "tell": "Snarls and bares his mouthguard before swinging",
+    "trick": "berserker",
+    "tier": 2,
+    "visual": {
+      "skin": "#b07c64",
+      "shorts": "#3b1113",
+      "gloves": "#8a1c19",
+      "hair": "#6b1f14",
+      "hair_style": "mohawk",
+      "scale": [1.04, 1.00, 1.04]
+    }
+  },
+  {
+    "id": "santos",
+    "name": "'Showtime' Santos",
+    "archetype": "Showboat",
+    "health": 116,
+    "stamina": 108,
+    "damage": 13,
+    "speed": 17,
+    "defence": 6,
+    "tell": "Waves you in with a cocky grin to bait an exchange",
+    "trick": "showboat",
+    "tier": 3,
+    "visual": {
+      "skin": "#8f5f42",
+      "shorts": "#262b38",
+      "gloves": "#1b4a7a",
+      "hair": "#141418",
+      "hair_style": "mohawk",
+      "scale": [1.00, 1.02, 1.00]
+    }
+  },
+  {
+    "id": "kowalski",
+    "name": "'Anvil' Kowalski",
+    "archetype": "Juggernaut",
+    "health": 145,
+    "stamina": 96,
+    "damage": 15,
+    "speed": 7,
+    "defence": 11,
+    "tell": "Planting both boots to uncork a crushing overhand",
+    "trick": "aggressive",
+    "tier": 3,
+    "visual": {
+      "skin": "#a87960",
+      "shorts": "#331e10",
+      "gloves": "#9c4716",
+      "hair": "#1f1d1b",
+      "hair_style": "bald",
+      "scale": [1.14, 1.04, 1.12]
+    }
+  },
+  {
+    "id": "razor",
     "name": "Razor Venn",
     "archetype": "Dirty Fighter",
-    "health": 112,
-    "stamina": 95,
+    "health": 122,
+    "stamina": 100,
     "damage": 14,
-    "speed": 14,
+    "speed": 15,
     "defence": 6,
     "tell": "Edges close with an elbow tucked",
-    "trick": "dirty"
+    "trick": "dirty",
+    "tier": 3,
+    "visual": {
+      "skin": "#704836",
+      "shorts": "#161a20",
+      "gloves": "#5c0f16",
+      "hair": "#111214",
+      "hair_style": "cropped",
+      "scale": [1.01, 1.01, 1.01]
+    }
   },
   {
+    "id": "undertaker",
     "name": "The Undertaker",
     "archetype": "Final Champion",
-    "health": 180,
-    "stamina": 130,
+    "health": 182,
+    "stamina": 132,
     "damage": 17,
     "speed": 20,
     "defence": 12,
     "tell": "Goes completely still",
-    "trick": "boss"
+    "trick": "boss",
+    "tier": 4,
+    "visual": {
+      "skin": "#6b544c",
+      "shorts": "#0b0c10",
+      "gloves": "#38090c",
+      "hair": "#0a0a0c",
+      "hair_style": "slick",
+      "scale": [1.08, 1.08, 1.08]
+    }
+  },
+  {
+    "id": "reaper",
+    "name": "'The Reaper' Vance",
+    "archetype": "Champion Ripper",
+    "health": 172,
+    "stamina": 124,
+    "damage": 16,
+    "speed": 22,
+    "defence": 9,
+    "tell": "Circles silently with a low razor hook",
+    "trick": "bleeder",
+    "tier": 4,
+    "visual": {
+      "skin": "#8a6250",
+      "shorts": "#33080b",
+      "gloves": "#141418",
+      "hair": "#141418",
+      "hair_style": "bald",
+      "scale": [1.04, 1.06, 1.04]
+    }
+  },
+  {
+    "id": "kurosawa",
+    "name": "Kenji 'Apex' Kurosawa",
+    "archetype": "Champion Tactician",
+    "health": 166,
+    "stamina": 136,
+    "damage": 16,
+    "speed": 26,
+    "defence": 11,
+    "tell": "Drops both shoulders in eerie stillness",
+    "trick": "counter",
+    "tier": 4,
+    "visual": {
+      "skin": "#be9477",
+      "shorts": "#d6dbe4",
+      "gloves": "#b08428",
+      "hair": "#12151e",
+      "hair_style": "cropped",
+      "scale": [1.00, 1.04, 1.00]
+    }
   }
 ]

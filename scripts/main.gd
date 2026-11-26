@@ -7,6 +7,7 @@ const TLRTheme = preload("res://scripts/ui_theme.gd")
 const TLRScreens = preload("res://scripts/ui_screens.gd")
 const TLRCombatUI = preload("res://scripts/ui_combat.gd")
 const TLRAudio = preload("res://scripts/audio_engine.gd")
+const TLRStory = preload("res://scripts/story_data.gd")
 const MOVE_FILE = "res://data/moves.json"
 const ENEMY_FILE = "res://data/enemies.json"
 const ITEM_FILE = "res://data/items.json"
@@ -18,9 +19,56 @@ const SETTINGS_PATH = "user://the_last_round_settings.json"
 var selected_slot := 0
 
 const FIGHT_COUNT := 8
-# Four opening opponents, two rematches in the semi-finals, the eliminator,
-# then the final champion. Rematches scale with fight_index.
-const FIGHT_ROSTER := [0, 1, 2, 3, 1, 2, 4, 5]
+const FIGHT_ROSTER := [0, 1, 2, 3, 4, 5, 6, 9]
+const PERK_MAX := 4
+const PERK_CATALOG: Array[Dictionary] = [
+	{"id": "iron_chin", "name": "Iron Chin", "rarity": "common", "price": 34, "desc": "Below 35% HP: +5 DEF and +30% punch damage."},
+	{"id": "rope_a_dope", "name": "Rope-A-Dope", "rarity": "common", "price": 34, "desc": "Block absorbs 85% DMG, reflects 5 DMG, and recovers +5 STA."},
+	{"id": "second_heart", "name": "Second Heart", "rarity": "common", "price": 32, "desc": "Recover +8 HP at every corner break between rounds."},
+	{"id": "dirty_work", "name": "Dirty Work", "rarity": "uncommon", "price": 42, "desc": "Dirty moves cost 0 STA, halve DQ risk, and pay +$15 Pit Cash."},
+	{"id": "combo_addict", "name": "Combo Addict", "rarity": "uncommon", "price": 44, "desc": "Consecutive hits stack +15% DMG (up to +60%)."},
+	{"id": "sucker_punch", "name": "Sucker Punch", "rarity": "uncommon", "price": 44, "desc": "First landed hit each round deals +55% DMG and drains 8 STA."},
+	{"id": "counter_king", "name": "Counter King", "rarity": "rare", "price": 54, "desc": "Counter & Opening shots deal +35% DMG and restore +6 STA."},
+	{"id": "greasy_gloves", "name": "Greasy Gloves", "rarity": "rare", "price": 54, "desc": "+8% Speed; every dodge lands an automatic 6 DMG counter-jab."},
+	{"id": "belt_hunter", "name": "Prize Hunter", "rarity": "rare", "price": 52, "desc": "Knockouts pay +$22 Pit Cash and boost Rare/Contraband drops."},
+	{"id": "glass_knuckles", "name": "Glass Knuckles", "rarity": "contraband", "price": 66, "desc": "+5 flat damage on every punch; -15 max HP."},
+	{"id": "bloodthirst", "name": "Bloodthirst", "rarity": "contraband", "price": 68, "desc": "Crits and Adrenaline Finishers heal +10 HP."},
+	{"id": "momentum_king", "name": "Flow State", "rarity": "contraband", "price": 68, "desc": "Momentum chain hits deal +25% bonus DMG and grant +12 Adrenaline."}
+]
+const STYLE_CATALOG: Array[Dictionary] = [
+	{
+		"id": "slugger",
+		"name": "PIT SLUGGER",
+		"tag": "HEAVY BRAWLER",
+		"desc": "Built to walk through punches and trade heavy hooks.",
+		"stats": "115 HP  •  95 STA  •  13 DMG  •  6 DEF  •  8% SPD",
+		"kit": "Jab, Block, Hook, Rest  •  Ice Pack  •  $30  •  Iron Chin"
+	},
+	{
+		"id": "counter_pro",
+		"name": "COUNTER ARTIST",
+		"tag": "SPEED & OPENINGS",
+		"desc": "Slip shots cleanly and punish mistakes with Lv.2 Counters.",
+		"stats": "95 HP  •  105 STA  •  10 DMG  •  4 DEF  •  18% SPD",
+		"kit": "Jab, Slip, Counter (Lv.2), Rest  •  Vaseline  •  $40"
+	},
+	{
+		"id": "dirty_rat",
+		"name": "ALLEY GRIFTER",
+		"tag": "DIRTY & RICH",
+		"desc": "Start loaded with Pit Cash, dirty tricks, and ref protection.",
+		"stats": "100 HP  •  100 STA  •  10 DMG  •  5 DEF  •  12% SPD",
+		"kit": "Jab, Block, Low Blow, Rest  •  Tape & Bribe  •  $65  •  Dirty Work"
+	},
+	{
+		"id": "wildcard",
+		"name": "PIT WILDCARD",
+		"tag": "RANDOMIZED BUILD",
+		"desc": "Unpredictable technique, random Uncommon/Rare gear, and a mystery Trait.",
+		"stats": "100 HP  •  112 STA  •  11 DMG  •  5 DEF  •  14% SPD",
+		"kit": "Random 4th Move  •  Random Item  •  Random Trait  •  $45"
+	}
+]
 
 var player_controller: PlayerController
 var player_combat: PlayerCombat
@@ -36,6 +84,13 @@ var player: Dictionary = {}
 var enemy: Dictionary = {}
 
 var owned_moves: Array[String] = ["jab", "block", "rest"]
+var move_levels: Dictionary = {}
+var owned_perks: Array[String] = []
+var run_roster: Array[int] = [0, 1, 2, 3, 4, 5, 6, 9]
+var alt_roster: Array[int] = [1, 2, 0, 4, 5, 3, 7, 10]
+var bout_branches: Array[int] = [0, 0, 0, 0, 0, 0, 0, 0]
+var bout_bounties: Array = []
+var player_style := "slugger"
 var inventory: Array = []
 var passive: Dictionary = {}
 
@@ -45,6 +100,31 @@ var turn_no := 1
 
 var player_blocking := false
 var player_slipping := false
+var player_combo_ready := false
+var player_counter_window := false
+var player_momentum := false
+var momentum_spent_turn := false
+var enemy_staggered := false
+var enemy_enraged := false
+var enemy_taunt_buff := false
+var player_bleeding := 0
+var brass_charges := 0
+var adrenaline := 0.0
+var combo_streak := 0
+var round_first_hit_available := true
+var fight_turns_total := 0
+var fight_used_block := false
+var fight_big_hits := 0
+var cash := 30
+var shop_bought_flags: Dictionary = {}
+var shop_stock: Dictionary = {}
+var shop_reroll_count := 0
+var current_hub_event: Dictionary = {}
+var hub_event_done := false
+var event_enemy_speed_buff := 0.0
+var contract_accepted := false
+var run_highest_hit := 0
+var run_knockouts := 0
 var enemy_blinded := 0
 var enemy_drained := 0
 var loaded_bonus := 0
@@ -52,6 +132,7 @@ var loaded_tape_risk := false
 var energy_penalty_pending := false
 var next_fight_speed_bonus := 0.0
 var enemy_next_action: Dictionary = {}
+var current_bout_modifier: Dictionary = {}
 
 var bribe_ready := false
 var revive_used := false
@@ -68,7 +149,7 @@ var tutorial_step := 0
 var training_active := false
 var training_turn := 0
 var training_feedback := ""
-const TRAINING_EXCHANGES := 6
+const TRAINING_EXCHANGES := 8
 
 var log_lines: Array[String] = []
 
@@ -112,6 +193,18 @@ var item_lesson_demo_used := false
 var item_lesson_show_all := false
 var practice_pose := "heavy"
 var training_retry_flag := false
+var tutorial_completed := false
+var pending_first_run_tutorial := false
+var story_seen_ids: Array[String] = []
+var active_cutscene: Dictionary = {}
+var cutscene_beat_idx := 0
+var cutscene_after_cb: Callable = Callable()
+var cutscene_text_label: Label = null
+var cutscene_next_btn: Button = null
+var cutscene_char_progress := 0.0
+var cutscene_typing := false
+var cutscene_is_last := false
+var _last_type_tick := -1
 
 var settings: Dictionary = {
 	"master_volume": 80,
@@ -129,7 +222,8 @@ var settings: Dictionary = {
 	"flash_effects": true,
 	"text_size": "Standard",
 	"subtitles": true,
-	"contrast": "Standard"
+	"contrast": "Standard",
+	"story_cutscenes": true
 }
 
 var arena_light: OmniLight3D
@@ -186,9 +280,24 @@ func _input(event: InputEvent) -> void:
 			return
 		return
 
+	if game_state == "cutscene":
+		if key in [KEY_ENTER, KEY_KP_ENTER, KEY_SPACE, KEY_RIGHT]:
+			_advance_cutscene()
+			get_viewport().set_input_as_handled()
+			return
+		if key == KEY_LEFT:
+			_prev_cutscene_beat()
+			get_viewport().set_input_as_handled()
+			return
+		if key == KEY_ESCAPE:
+			_skip_cutscene()
+			get_viewport().set_input_as_handled()
+			return
+		return
+
 	if game_state == "hub":
 		if key in [KEY_ENTER, KEY_KP_ENTER, KEY_SPACE]:
-			_start_fight()
+			_enter_next_bout()
 			get_viewport().set_input_as_handled()
 			return
 		if key == KEY_Q and inventory.size() >= 1:
@@ -213,9 +322,38 @@ func _input(event: InputEvent) -> void:
 			_show_codex()
 			get_viewport().set_input_as_handled()
 			return
+		if key == KEY_B:
+			_open_shop()
+			get_viewport().set_input_as_handled()
+			return
 		if key == KEY_ESCAPE:
 			_show_main_menu()
 			get_viewport().set_input_as_handled()
+			return
+
+	if game_state in ["shop", "event"]:
+		if key == KEY_ESCAPE:
+			_show_bracket()
+			get_viewport().set_input_as_handled()
+			return
+
+	if game_state == "event_result":
+		if key in [KEY_ENTER, KEY_KP_ENTER, KEY_SPACE, KEY_ESCAPE]:
+			_show_bracket()
+			get_viewport().set_input_as_handled()
+			return
+
+	if game_state == "style_select":
+		if key in [KEY_1, KEY_2, KEY_3, KEY_4]:
+			var s_idx := key - KEY_1
+			if s_idx < STYLE_CATALOG.size():
+				_start_story_run(selected_slot, str(STYLE_CATALOG[s_idx].get("id", "slugger")))
+				get_viewport().set_input_as_handled()
+			return
+		if key == KEY_ESCAPE:
+			_show_main_menu()
+			get_viewport().set_input_as_handled()
+			return
 			return
 		return
 
@@ -281,6 +419,8 @@ func _input(event: InputEvent) -> void:
 		KEY_4: move_slot = 3
 		KEY_5: move_slot = 4
 		KEY_6: move_slot = 5
+		KEY_7: move_slot = 6
+		KEY_8: move_slot = 7
 	if move_slot >= 0:
 		if move_slot < owned_moves.size():
 			_player_move(owned_moves[move_slot])
@@ -297,6 +437,30 @@ func _input(event: InputEvent) -> void:
 		if item_slot < item_slots.size():
 			_use_item(item_slots[item_slot])
 		get_viewport().set_input_as_handled()
+
+func _process(delta: float) -> void:
+	if game_state != "cutscene" or not cutscene_typing or not is_instance_valid(cutscene_text_label):
+		return
+	var total_chars := cutscene_text_label.text.length()
+	if bool(settings.get("reduced_motion", false)) or DisplayServer.get_name() == "headless":
+		cutscene_text_label.visible_characters = -1
+		cutscene_typing = false
+		if is_instance_valid(cutscene_next_btn):
+			cutscene_next_btn.text = "BEGIN  →" if cutscene_is_last else "NEXT  →"
+		return
+	cutscene_char_progress += delta * 56.0
+	var shown := mini(total_chars, int(cutscene_char_progress))
+	cutscene_text_label.visible_characters = shown
+	if shown > _last_type_tick and shown % 3 == 0 and shown < total_chars:
+		_last_type_tick = shown
+		if is_instance_valid(audio_engine) and audio_engine.has_method("play_typewriter_tick"):
+			audio_engine.play_typewriter_tick()
+	if shown >= total_chars:
+		cutscene_text_label.visible_characters = -1
+		cutscene_typing = false
+		if is_instance_valid(cutscene_next_btn):
+			cutscene_next_btn.text = "BEGIN  →" if cutscene_is_last else "NEXT  →"
+
 
 func _ready() -> void:
 	rng.randomize()
@@ -680,7 +844,7 @@ func _clear_ui() -> void:
 			animate_screen_enter = false
 			screen_canvas.modulate.a = 1.0
 	panel.hide()
-	ui_shade.color = Color(0.0, 0.0, 0.0, 0.0) if game_state == "menu" else TLRTheme.BG_DARK
+	ui_shade.color = Color(0.0, 0.0, 0.0, 0.0) if (game_state == "menu" or game_state == "cutscene") else TLRTheme.BG_DARK
 	for child in content.get_children():
 		child.queue_free()
 	if is_instance_valid(ui_scroll):
@@ -798,6 +962,8 @@ func _show_main_menu() -> void:
 	training_active = false
 	game_state = "menu"
 	_disable_realtime_combat()
+	if is_instance_valid(arena_visuals) and arena_visuals.has_method("end_cutscene"):
+		arena_visuals.end_cutscene(player_controller.camera if is_instance_valid(player_controller) else camera)
 	if is_instance_valid(opponent_mat):
 		opponent_mat.albedo_color = Color(0.34, 0.19, 0.16)
 	if is_instance_valid(audio_engine):
@@ -826,9 +992,7 @@ func _reset_career_record() -> void:
 	else:
 		confirm_career_reset = false
 		lifetime_respect = 0
-		var file := FileAccess.open(META_PATH, FileAccess.WRITE)
-		if file:
-			file.store_string(JSON.stringify({"respect_total": 0}))
+		_save_meta_flags()
 		menu_notice = "Career record reset to 0 Respect."
 	if game_state == "menu":
 		animate_screen_enter = false
@@ -847,8 +1011,13 @@ func _request_new_run(slot: int) -> void:
 	selected_slot = slot
 	if FileAccess.file_exists(_slot_save_path(slot)):
 		_show_slot_overwrite_confirmation(slot)
+	elif not tutorial_completed:
+		tutorial_completed = true
+		pending_first_run_tutorial = true
+		_save_meta_flags()
+		_start_training(true)
 	else:
-		_new_run(slot)
+		_show_style_select(slot)
 
 
 func _show_slot_overwrite_confirmation(slot: int) -> void:
@@ -857,7 +1026,17 @@ func _show_slot_overwrite_confirmation(slot: int) -> void:
 	TLRScreens.build_overwrite_confirm(self, screen_canvas, slot)
 
 
-func _new_run(slot: int = -1) -> void:
+func _show_style_select(slot: int = -1) -> void:
+	if slot >= 0 and slot < SAVE_SLOT_COUNT:
+		selected_slot = slot
+	game_state = "style_select"
+	animate_screen_enter = true
+	animate_cards_enter = true
+	_clear_ui()
+	TLRScreens.build_style_select(self, screen_canvas)
+
+
+func _new_run(slot: int = -1, style_id: String = "slugger", play_intro: bool = false) -> void:
 	if slot >= 0 and slot < SAVE_SLOT_COUNT:
 		selected_slot = slot
 	var previous_slot_save := _slot_save_path(selected_slot)
@@ -869,15 +1048,30 @@ func _new_run(slot: int = -1) -> void:
 			return
 	training_active = false
 	run_ended = false
-	run_seed = int(Time.get_unix_time_from_system())
+	story_seen_ids.clear()
+	run_seed = int(Time.get_unix_time_from_system()) ^ int(Time.get_ticks_usec()) ^ randi()
 	rng.seed = run_seed
 
 	fight_index = 0
 	round_no = 1
 	turn_no = 1
 
-	owned_moves = ["jab", "block", "rest"]
-	inventory = ["ice"]
+	player_style = style_id
+	move_levels.clear()
+	owned_perks.clear()
+	run_roster = _generate_run_roster(run_seed)
+	bout_branches = [0, 0, 0, 0, 0, 0, 0, 0]
+	adrenaline = 0.0
+	combo_streak = 0
+	contract_accepted = false
+	shop_bought_flags.clear()
+	shop_stock.clear()
+	shop_reroll_count = 0
+	current_hub_event.clear()
+	hub_event_done = false
+	event_enemy_speed_buff = 0.0
+	run_highest_hit = 0
+	run_knockouts = 0
 
 	passive = {
 		"damage": 0.0,
@@ -897,23 +1091,230 @@ func _new_run(slot: int = -1) -> void:
 	loaded_tape_risk = false
 	energy_penalty_pending = false
 	next_fight_speed_bonus = 0.0
+	brass_charges = 0
+	player_momentum = false
+	momentum_spent_turn = false
 	enemy_next_action.clear()
 	log_lines.clear()
 
-	player = {
-		"health": 100.0,
-		"max_health": 100.0,
-		"stamina": 100.0,
-		"max_stamina": 100.0,
-		"damage": 10.0,
-		"speed": 10.0,
-		"defence": 5.0,
-		"heart": false,
-		"knockdowns": 0
-	}
-	_apply_career_perks()
+	match style_id:
+		"counter_pro":
+			owned_moves = ["jab", "slip", "counter", "rest"]
+			move_levels = {"counter": 2}
+			inventory = ["vaseline"]
+			cash = 40
+			player = {"health": 95.0, "max_health": 95.0, "stamina": 105.0, "max_stamina": 105.0, "damage": 10.0, "speed": 18.0, "defence": 4.0, "heart": false, "knockdowns": 0}
+		"dirty_rat":
+			owned_moves = ["jab", "block", "low_blow", "rest"]
+			owned_perks = ["dirty_work"]
+			inventory = ["loaded_tape", "bribe"]
+			cash = 65
+			player = {"health": 100.0, "max_health": 100.0, "stamina": 100.0, "max_stamina": 100.0, "damage": 10.0, "speed": 12.0, "defence": 5.0, "heart": false, "knockdowns": 0}
+		"wildcard":
+			var wild_pool := ["uppercut", "body_shot", "overhand", "feint", "one_two", "hook"]
+			var wild_move := str(wild_pool[rng.randi_range(0, wild_pool.size() - 1)])
+			owned_moves = ["jab", "block", wild_move, "rest"]
+			var wild_items := ["cutman_kit", "pepper_wrap", "adrenaline_shot", "sparring_tonics", "energy"]
+			inventory = [str(wild_items[rng.randi_range(0, wild_items.size() - 1)])]
+			var wild_perks := ["combo_addict", "sucker_punch", "greasy_gloves", "rope_a_dope", "counter_king"]
+			owned_perks = [str(wild_perks[rng.randi_range(0, wild_perks.size() - 1)])]
+			cash = 45
+			player = {"health": 100.0, "max_health": 100.0, "stamina": 112.0, "max_stamina": 112.0, "damage": 11.0, "speed": 14.0, "defence": 5.0, "heart": false, "knockdowns": 0}
+		_:
+			# Pit Slugger (default)
+			owned_moves = ["jab", "block", "hook", "rest"]
+			owned_perks = ["iron_chin"]
+			inventory = ["ice"]
+			cash = 30
+			player = {"health": 115.0, "max_health": 115.0, "stamina": 95.0, "max_stamina": 95.0, "damage": 13.0, "speed": 8.0, "defence": 6.0, "heart": false, "knockdowns": 0}
 
-	_start_fight()
+	_apply_career_perks()
+	_generate_shop_stock(true)
+	_roll_hub_event()
+
+	if play_intro and bool(settings.get("story_cutscenes", true)) and DisplayServer.get_name() != "headless":
+		story_seen_ids.append("prologue")
+		_play_story_cutscene("prologue", _start_fight)
+	else:
+		_start_fight()
+
+
+func _start_story_run(slot: int = -1, style_id: String = "slugger") -> void:
+	_new_run(slot, style_id, true)
+
+
+func _boss_name() -> String:
+	var b_idx: int = _opponent_template_index(FIGHT_COUNT - 1)
+	if b_idx >= 0 and b_idx < enemy_templates.size():
+		return str(enemy_templates[b_idx].get("name", "The Undertaker"))
+	return "The Undertaker"
+
+
+func _pending_story_for_fight(f_idx: int) -> String:
+	if training_active or not bool(settings.get("story_cutscenes", true)) or DisplayServer.get_name() == "headless":
+		return ""
+	match f_idx:
+		3:
+			return "" if story_seen_ids.has("act2") else "act2"
+		5:
+			return "" if story_seen_ids.has("act3") else "act3"
+		7:
+			return "" if story_seen_ids.has("finale") else "finale"
+		_:
+			return ""
+
+
+func _enter_next_bout() -> void:
+	var scene_id := _pending_story_for_fight(fight_index)
+	if not scene_id.is_empty():
+		story_seen_ids.append(scene_id)
+		_play_story_cutscene(scene_id, _start_fight)
+	else:
+		_start_fight()
+
+
+func _story_context(override_fight_idx: int = -1) -> Dictionary:
+	var idx := fight_index if override_fight_idx < 0 else clampi(override_fight_idx, 0, FIGHT_COUNT - 1)
+	var opp_t: Dictionary = {}
+	var o_i := _opponent_template_index(idx)
+	if o_i >= 0 and o_i < enemy_templates.size():
+		opp_t = enemy_templates[o_i]
+	var boss_t: Dictionary = {}
+	var b_i := _opponent_template_index(FIGHT_COUNT - 1)
+	if b_i >= 0 and b_i < enemy_templates.size():
+		boss_t = enemy_templates[b_i]
+	var has_dirty := has_perk("dirty_work") or owned_moves.has("low_blow") or owned_moves.has("headbutt") or bribe_ready
+	return {
+		"player_style": player_style,
+		"opp_id": str(opp_t.get("id", "mick")),
+		"opp_name": str(opp_t.get("name", "Mick 'The Meter' Doyle")),
+		"opp_archetype": str(opp_t.get("archetype", "Brawler")),
+		"opp_visual": opp_t.get("visual", {}),
+		"boss_id": str(boss_t.get("id", "undertaker")),
+		"boss_name": str(boss_t.get("name", "The Undertaker")),
+		"boss_visual": boss_t.get("visual", {}),
+		"cash": cash,
+		"knockouts": run_knockouts,
+		"has_dirty": has_dirty
+	}
+
+
+func _play_story_cutscene(scene_id: String, after_cb: Callable = Callable(), preview_fight_idx: int = -1) -> void:
+	_disable_realtime_combat()
+	var f_for_scene := preview_fight_idx
+	if f_for_scene < 0:
+		match scene_id:
+			"prologue": f_for_scene = 0
+			"act2": f_for_scene = 3
+			"act3": f_for_scene = 5
+			"finale", "epilogue": f_for_scene = FIGHT_COUNT - 1
+			_: f_for_scene = fight_index
+	var ctx := _story_context(f_for_scene)
+	var vis: Dictionary = ctx.get("boss_visual", {}) if scene_id in ["finale", "epilogue"] else ctx.get("opp_visual", {})
+	if is_instance_valid(arena_visuals) and arena_visuals.has_method("set_opponent_appearance") and not vis.is_empty():
+		arena_visuals.set_opponent_appearance(vis)
+		opponent_mesh = arena_visuals.opponent_body
+		opponent_mat = arena_visuals.opponent_material
+
+	active_cutscene = TLRStory.get_cutscene(scene_id, ctx)
+	cutscene_beat_idx = 0
+	cutscene_after_cb = after_cb
+	game_state = "cutscene"
+	if is_instance_valid(audio_engine):
+		audio_engine.set_ambience("cutscene")
+	_apply_cutscene_beat()
+
+
+func _replay_story_cutscene(scene_id: String) -> void:
+	var from_hub := (game_state == "hub")
+	var return_cb := func() -> void:
+		game_state = "hub" if from_hub else "codex"
+		codex_tab = "story"
+		_show_codex()
+	_play_story_cutscene(scene_id, return_cb)
+
+
+func _apply_cutscene_beat() -> void:
+	var beats: Array = active_cutscene.get("beats", [])
+	if beats.is_empty():
+		_finish_cutscene()
+		return
+	cutscene_beat_idx = clampi(cutscene_beat_idx, 0, beats.size() - 1)
+	var beat: Dictionary = beats[cutscene_beat_idx]
+	animate_screen_enter = (cutscene_beat_idx == 0)
+	_clear_ui()
+	var ui_refs: Dictionary = TLRScreens.build_cutscene(self, screen_canvas, active_cutscene, cutscene_beat_idx)
+	cutscene_text_label = ui_refs.get("text_label") as Label
+	cutscene_next_btn = ui_refs.get("next_btn") as Button
+	cutscene_is_last = bool(ui_refs.get("is_last", false))
+	cutscene_char_progress = 0.0
+	_last_type_tick = -1
+	if bool(settings.get("reduced_motion", false)) or DisplayServer.get_name() == "headless":
+		cutscene_typing = false
+		if is_instance_valid(cutscene_text_label):
+			cutscene_text_label.visible_characters = -1
+	else:
+		cutscene_typing = true
+		if is_instance_valid(cutscene_next_btn):
+			cutscene_next_btn.text = "REVEAL LINE"
+
+	if is_instance_valid(arena_visuals) and arena_visuals.has_method("begin_cutscene_shot"):
+		var cam_p := str(beat.get("cam", "establish"))
+		var pose := str(beat.get("pose", "idle"))
+		var l_col: Color = beat.get("light", Color(0.76, 0.91, 1.0))
+		arena_visuals.begin_cutscene_shot(cam_p, pose, l_col, 4.8)
+		if cam_p == "victory_crown" and arena_visuals.has_method("trigger_crowd_surge"):
+			arena_visuals.trigger_crowd_surge(3.5)
+
+	var sfx_id := str(beat.get("sfx", ""))
+	if not sfx_id.is_empty() and is_instance_valid(audio_engine):
+		audio_engine.play_sfx(sfx_id, -4.5, 0.02)
+
+
+func _advance_cutscene() -> void:
+	if game_state != "cutscene":
+		return
+	if cutscene_typing and is_instance_valid(cutscene_text_label):
+		cutscene_typing = false
+		cutscene_text_label.visible_characters = -1
+		if is_instance_valid(cutscene_next_btn):
+			cutscene_next_btn.text = "BEGIN  →" if cutscene_is_last else "NEXT  →"
+		return
+	var beats: Array = active_cutscene.get("beats", [])
+	if cutscene_beat_idx + 1 < beats.size():
+		cutscene_beat_idx += 1
+		_apply_cutscene_beat()
+	else:
+		_finish_cutscene()
+
+
+func _prev_cutscene_beat() -> void:
+	if game_state != "cutscene":
+		return
+	if cutscene_beat_idx > 0:
+		cutscene_beat_idx -= 1
+		_apply_cutscene_beat()
+
+
+func _skip_cutscene() -> void:
+	if game_state != "cutscene":
+		return
+	_finish_cutscene()
+
+
+func _finish_cutscene() -> void:
+	cutscene_typing = false
+	cutscene_text_label = null
+	cutscene_next_btn = null
+	var cb := cutscene_after_cb
+	cutscene_after_cb = Callable()
+	active_cutscene.clear()
+	if is_instance_valid(arena_visuals) and arena_visuals.has_method("end_cutscene"):
+		arena_visuals.end_cutscene(player_controller.camera if is_instance_valid(player_controller) else camera)
+	if cb.is_valid():
+		cb.call()
+	else:
+		_start_fight()
 
 
 # ---------------------------------------------------------
@@ -946,6 +1347,21 @@ func _start_fight() -> void:
 	turn_no = 1
 	player_blocking = false
 	player_slipping = false
+	player_combo_ready = false
+	player_counter_window = false
+	player_momentum = false
+	momentum_spent_turn = false
+	enemy_staggered = false
+	enemy_enraged = false
+	enemy_taunt_buff = false
+	player_bleeding = 0
+	brass_charges = 0
+	adrenaline = 0.0
+	combo_streak = 0
+	round_first_hit_available = true
+	fight_turns_total = 0
+	fight_used_block = false
+	fight_big_hits = 0
 	enemy_blinded = 0
 	enemy_drained = 0
 	loaded_bonus = 0
@@ -955,7 +1371,10 @@ func _start_fight() -> void:
 	next_fight_speed_bonus = 0.0
 	enemy_next_action.clear()
 	player_last_move_id = ""
+	current_bout_modifier = _bout_modifier_for_fight(fight_index) if not training_active else {}
 	_disable_realtime_combat()
+	if is_instance_valid(arena_visuals) and arena_visuals.has_method("end_cutscene"):
+		arena_visuals.end_cutscene(player_controller.camera if is_instance_valid(player_controller) else camera)
 
 	var roster_index := _opponent_template_index(fight_index)
 	if roster_index < 0 or roster_index >= enemy_templates.size():
@@ -968,6 +1387,7 @@ func _start_fight() -> void:
 	var visual_scale := 1.0 + float(fight_index) * 0.115
 
 	enemy = {
+		"id": str(template.get("id", "")),
 		"name": template.get("name", "Unknown Fighter"),
 		"archetype": template.get("archetype", "Boxer"),
 		"health": float(template.get("health", 100.0)) * visual_scale,
@@ -975,16 +1395,19 @@ func _start_fight() -> void:
 		"stamina": float(template.get("stamina", 100.0)) * visual_scale,
 		"max_stamina": float(template.get("stamina", 100.0)) * visual_scale,
 		"damage": float(template.get("damage", 10.0)) * (1.0 + fight_index * 0.07),
-		"speed": float(template.get("speed", 10.0)) + fight_index * 1.2,
+		"speed": float(template.get("speed", 10.0)) + fight_index * 1.2 + event_enemy_speed_buff,
 		"defence": float(template.get("defence", 5.0)) + fight_index * 0.7,
 		"tell": template.get("tell", ""),
 		"trick": template.get("trick", ""),
 		"accuracy": 82.0
 	}
+	event_enemy_speed_buff = 0.0
 
-	if fight_index == 7:
-		enemy["name"] = "THE UNDERTAKER"
-		enemy["archetype"] = "Final Champion"
+	if is_instance_valid(arena_visuals) and arena_visuals.has_method("set_opponent_appearance"):
+		arena_visuals.set_opponent_appearance(template.get("visual", {}))
+		opponent_mesh = arena_visuals.opponent_body
+		opponent_mat = arena_visuals.opponent_material
+	elif fight_index == 7:
 		enemy_mat_color(Color(0.12, 0.10, 0.12))
 	else:
 		enemy_mat_color(Color(0.34, 0.19, 0.16))
@@ -995,10 +1418,196 @@ func _start_fight() -> void:
 	# Turn-based combat is authoritative. Keep the real-time actors disabled.
 	_disable_realtime_combat()
 	_prepare_enemy_telegraph()
+	if not training_active and not current_bout_modifier.is_empty():
+		_log("STIPULATION — %s: %s" % [str(current_bout_modifier.get("name", "")).to_upper(), str(current_bout_modifier.get("desc", ""))])
+	if not training_active:
+		var walk_lore := TLRStory.get_fighter_lore(str(enemy.get("id", "")))
+		var walk_line := str(walk_lore.get("walkout", ""))
+		if not walk_line.is_empty():
+			_log("%s: “%s”" % [str(enemy.get("name", "Opponent")), walk_line])
 	if is_instance_valid(audio_engine):
 		audio_engine.set_ambience("combat")
 		audio_engine.play_sfx("bell_round", -4.0, 0.02)
 	_show_combat()
+
+
+func _bout_modifier_for_fight(f_idx: int) -> Dictionary:
+	var pool: Array[Dictionary] = [
+		{"id": "short_fuse", "name": "Short Fuse", "desc": "Heavy hits (+25% DMG) land harder both ways."},
+		{"id": "iron_lungs", "name": "Iron Lungs", "desc": "High tempo: move stamina costs reduced by 3."},
+		{"id": "back_alley", "name": "Back Alley Rules", "desc": "Bribed ref: dirty moves & loaded tape carry 50% less DQ risk."},
+		{"id": "glass_pit", "name": "Glass Pit", "desc": "+10% Critical Hit chance for explosive swings."},
+		{"id": "body_war", "name": "Body War", "desc": "Body shots & clinches drain +6 extra opponent stamina."},
+		{"id": "quick_draw", "name": "Flow State Pit", "desc": "First landed hit each round grants Momentum (Free Follow-up)!"},
+		{"id": "high_roller", "name": "High Roller Stake", "desc": "+50% Pit Cash payout for winning this bout."}
+	]
+	if f_idx <= 0:
+		if absi(run_seed) % 2 == 0:
+			return {"id": "standard", "name": "Underground Standard", "desc": "Standard 3-round bout. Read the tells."}
+		return pool[absi(run_seed * 7) % pool.size()].duplicate(true)
+	if f_idx >= FIGHT_COUNT - 1:
+		return {"id": "championship", "name": "Blood Pit Finale", "desc": "+12% CRIT both ways. Champion surges on Turns 3 & 6."}
+	var pick := absi(run_seed * 31 + f_idx * 17) % pool.size()
+	return pool[pick].duplicate(true)
+
+
+func _effective_move_cost(move: Dictionary) -> float:
+	var m_id := str(move.get("id", ""))
+	if m_id in ["headbutt", "low_blow"] and has_perk("dirty_work"):
+		return 0.0
+	var cost := float(move.get("cost", 0.0))
+	var lv := _move_level(m_id)
+	if cost > 0.0 and lv > 1:
+		cost = maxf(2.0, cost - float(lv - 1))
+	if not training_active and str(current_bout_modifier.get("id", "")) == "iron_lungs" and cost > 0.0:
+		cost = maxf(2.0, cost - 3.0)
+	return cost
+
+
+func _move_level(id: String) -> int:
+	return maxi(1, int(move_levels.get(id, 1)))
+
+
+func has_perk(perk_id: String) -> bool:
+	return owned_perks.has(perk_id)
+
+
+func _get_perk_data(perk_id: String) -> Dictionary:
+	for p in PERK_CATALOG:
+		if str(p.get("id", "")) == perk_id:
+			return p
+	return {}
+
+
+func _generate_run_roster(seed_val: int) -> Array[int]:
+	var total := enemy_templates.size()
+	if total < 10:
+		var fallback: Array[int] = []
+		alt_roster.clear()
+		bout_bounties.clear()
+		for i in range(FIGHT_COUNT):
+			var idx := mini(i, maxi(0, total - 1))
+			fallback.append(idx)
+			alt_roster.append((idx + 1) % maxi(1, total))
+			bout_bounties.append({"a": "cash", "b": "rare_item"})
+		return fallback
+
+	var local_rng := RandomNumberGenerator.new()
+	local_rng.seed = seed_val + 77
+
+	# Partition non-boss pool dynamically & boss pool [9..total-1]
+	var non_boss: Array[int] = []
+	var bosses: Array[int] = []
+	for ti in range(total):
+		var tier := int(enemy_templates[ti].get("tier", 1))
+		if tier >= 4:
+			bosses.append(ti)
+		else:
+			non_boss.append(ti)
+	if bosses.is_empty():
+		bosses.append(total - 1)
+
+	# Full Fisher-Yates shuffle on non_boss and bosses so brackets vary wildly every run
+	for pool_arr in [non_boss, bosses]:
+		for i in range(pool_arr.size() - 1, 0, -1):
+			var j := local_rng.randi_range(0, i)
+			var tmp: int = pool_arr[i]
+			pool_arr[i] = pool_arr[j]
+			pool_arr[j] = tmp
+
+	var tier_score: Dictionary = {}
+	for ti in non_boss:
+		tier_score[ti] = int(enemy_templates[ti].get("tier", 1)) * 2 + local_rng.randi_range(0, 1)
+
+	# Build primary roster (7 unique non-boss fighters sorted lightly by early/mid/late tiers + 1 random Champion)
+	var picked := non_boss.slice(0, mini(7, non_boss.size()))
+	while picked.size() < 7:
+		picked.append(local_rng.randi_range(0, non_boss.size() - 1))
+	picked.sort_custom(func(a: int, b: int) -> bool:
+		return int(tier_score.get(a, 0)) < int(tier_score.get(b, 0))
+	)
+	picked.append(bosses[0])
+
+	# Build Alternate Challenger for each bout (never equal to primary) & distinct Bounties
+	alt_roster.clear()
+	bout_bounties.clear()
+	var bounty_types := ["cash", "rare_item", "trait_drop", "recovery", "skill_manual"]
+	for i in range(FIGHT_COUNT):
+		if i == FIGHT_COUNT - 1:
+			var alt_b: int = bosses[1] if bosses.size() > 1 else bosses[0]
+			alt_roster.append(alt_b)
+		else:
+			var cand: int = non_boss[(i + local_rng.randi_range(2, non_boss.size() - 1)) % non_boss.size()]
+			if cand == picked[i]:
+				cand = (cand + 1) % non_boss.size()
+			alt_roster.append(cand)
+		var ba: String = bounty_types[local_rng.randi_range(0, bounty_types.size() - 1)]
+		var bb: String = bounty_types[(bounty_types.find(ba) + local_rng.randi_range(1, bounty_types.size() - 1)) % bounty_types.size()]
+		bout_bounties.append({"a": ba, "b": bb})
+
+	return picked
+
+
+func _bounty_label(tag: String) -> String:
+	match tag:
+		"cash": return "+$35 PURSE"
+		"rare_item": return "RARE ITEM DROP"
+		"trait_drop": return "GUARANTEED TRAIT"
+		"recovery": return "+22 HP POST-WIN"
+		"skill_manual": return "+1 MOVE UPGRADE"
+		_: return "STANDARD PURSE"
+
+
+func _current_bout_bounty() -> String:
+	if fight_index < 0 or fight_index >= bout_bounties.size():
+		return "cash"
+	var pair: Dictionary = bout_bounties[fight_index]
+	var br := int(bout_branches[fight_index]) if fight_index < bout_branches.size() else 0
+	return str(pair.get("b" if br == 1 else "a", "cash"))
+
+
+func _contract_for_fight(f_idx: int) -> Dictionary:
+	var pool: Array[Dictionary] = [
+		{"id": "speed_ko", "name": "BLITZ KO", "desc": "Win in <= 8 turns for +$55 Pit Cash.", "bonus": 55},
+		{"id": "no_block", "name": "NO SHELLS", "desc": "Win without using Block for +$50 Pit Cash.", "bonus": 50},
+		{"id": "showstopper", "name": "SHOWSTOPPER", "desc": "Land 2+ Crits or Finishers for +$55 Pit Cash.", "bonus": 55},
+		{"id": "untouched", "name": "CLEAN SHEET", "desc": "Finish above 55% HP for +$45 Pit Cash.", "bonus": 45}
+	]
+	var idx := absi(run_seed * 13 + f_idx * 29) % pool.size()
+	return pool[idx].duplicate(true)
+
+
+func _contract_live_status() -> Dictionary:
+	if not contract_accepted or training_active:
+		return {"active": false}
+	var c := _contract_for_fight(fight_index)
+	var cid := str(c.get("id", ""))
+	var c_bonus := int(c.get("bonus", 50))
+	var failed := false
+	var progress := ""
+	match cid:
+		"speed_ko":
+			failed = fight_turns_total >= 8
+			progress = ("TURN %d / 8 — ON PACE ✓" % mini(8, fight_turns_total + 1)) if not failed else ("TURN %d / 8 — FAILED ✗" % (fight_turns_total + 1))
+		"no_block":
+			failed = fight_used_block
+			progress = "NO BLOCKS USED ✓" if not failed else "BLOCKED — FAILED ✗"
+		"showstopper":
+			progress = ("BIG HITS: %d / 2 ✓" if fight_big_hits >= 2 else "CRITS / FINISHERS: %d / 2") % fight_big_hits
+		"untouched":
+			var pct := int(roundf(float(player.get("health", 100.0)) / maxf(1.0, float(player.get("max_health", 100.0))) * 100.0))
+			failed = pct < 55
+			progress = ("HP %d%% >= 55%% ✓" % pct) if not failed else ("HP %d%% < 55%% ✗" % pct)
+	return {"active": true, "name": str(c.get("name", "CONTRACT")), "bonus": c_bonus, "progress": progress, "failed": failed}
+
+
+func _grant_adrenaline(amount: float) -> void:
+	if training_active:
+		return
+	var prev := adrenaline
+	adrenaline = clampf(adrenaline + amount, 0.0, 100.0)
+	if prev < 100.0 and adrenaline >= 100.0:
+		_log("ADRENALINE FULL! Your next punch unleashes LIGHTS OUT (×1.75 DMG + Stagger)!")
 
 
 
@@ -1028,12 +1637,21 @@ func _get_item_data(id: String) -> Dictionary:
 	return {}
 
 
+func _get_item_rarity(id: String) -> String:
+	var item := _get_item_data(id)
+	return str(item.get("rarity", "common")).to_lower()
+
+
 func _item_timing(id: String) -> String:
 	match id:
 		"ice":
 			return "Between fights — restore 22 health in the hub."
 		"salts":
 			return "Passive — automatically revive once after a lethal hit."
+		"sparring_tonics":
+			return "Anytime (Hub or Combat) — +12 permanent max HP and heal +18 HP."
+		"cutman_kit", "adrenaline_shot", "nitro_salts":
+			return "Quick-Use — activates in combat WITHOUT spending your turn!"
 		"crowd":
 			return "Combat-use — activate during a fight; +5 speed for the next fight."
 		_:
@@ -1456,11 +2074,25 @@ func _forfeit_run() -> void:
 func _exit_training_to_menu() -> void:
 	training_active = false
 	training_retry_flag = false
+	pending_first_run_tutorial = false
 	combat_paused = false
 	combat_drawer_open = false
 	combat_review_open = false
 	_disable_realtime_combat()
 	_show_main_menu()
+
+
+func _skip_tutorial_to_run() -> void:
+	training_active = false
+	training_retry_flag = false
+	pending_first_run_tutorial = false
+	tutorial_completed = true
+	_save_meta_flags()
+	combat_paused = false
+	combat_drawer_open = false
+	combat_review_open = false
+	_disable_realtime_combat()
+	_show_style_select(selected_slot)
 
 
 # ---------------------------------------------------------
@@ -1482,7 +2114,7 @@ func _player_move(id: String) -> void:
 	if move.is_empty():
 		return
 
-	var cost := float(move.get("cost", 0))
+	var cost := _effective_move_cost(move)
 	if float(player.get("stamina", 0.0)) < cost:
 		_log("You're too exhausted to use %s." % str(move.get("name", id)))
 		_show_combat()
@@ -1502,6 +2134,9 @@ func _player_move(id: String) -> void:
 
 	var stamina_before_action := float(player.get("stamina", 0.0))
 	var enemy_stamina_before_action := float(enemy.get("stamina", 0.0))
+	var consumed_momentum := player_momentum and not training_active
+	player_momentum = false
+	momentum_spent_turn = consumed_momentum
 	player_last_move_id = id
 	if training_active:
 		training_retry_flag = false
@@ -1524,20 +2159,27 @@ func _player_move(id: String) -> void:
 	if round_transition_open:
 		return
 
+	var enemy_kind := str(enemy_next_action.get("kind", "attack")).to_lower()
+
 	if id == "rest":
 		player.stamina = minf(
 			player.max_stamina,
 			player.stamina + 24.0
 		)
+		player_combo_ready = false
 		combat_banner_title = "TAKE A BREATH"
-		combat_banner_sub = "+24 stamina restored • You are exposed"
-		_log("You take a breath. +24 stamina. The opening is there.")
+		combat_banner_sub = "+24 STA restored" + (" • Clean breathing window!" if enemy_kind == "recovery" else " • Guard is open")
+		_log("You take a breath. +24 stamina.")
 
 	elif id == "block":
 		player.stamina = maxf(0.0, player.stamina - cost)
 		player_blocking = true
+		fight_used_block = true
+		player_combo_ready = false
+		if has_perk("rope_a_dope"):
+			player.stamina = minf(player.max_stamina, player.stamina + 5.0)
 		combat_banner_title = "GUARD HOLDS"
-		combat_banner_sub = "Damage reduced • %d stamina spent" % int(cost)
+		combat_banner_sub = ("Rope-A-Dope (+5 STA, reflect) • " if has_perk("rope_a_dope") else "Damage reduced • ") + "%d stamina spent" % int(cost)
 		_log("You shell up behind your gloves.")
 
 	elif id == "slip":
@@ -1546,45 +2188,74 @@ func _player_move(id: String) -> void:
 		if is_instance_valid(audio_engine):
 			audio_engine.play_sfx("foot_shuffle", -4.0)
 		combat_banner_title = "CLEAN SLIP"
-		combat_banner_sub = "Evading incoming blow • %d stamina spent" % int(cost)
-		_log("You prepare a sharp slip.")
+		combat_banner_sub = "Evading blow • Opens counter window"
+		_log("You slip off the centerline, lining up an opening.")
 
 	elif id == "feint":
 		player.stamina -= cost
 		enemy_blinded = maxi(enemy_blinded, 1)
-		combat_banner_title = "FEINT LANDS"
-		combat_banner_sub = "Opponent accuracy lowered • %d stamina spent" % int(cost)
-		_log("Your feint makes the opponent hesitate.")
+		player_combo_ready = true
+		_grant_adrenaline(15.0)
+		var gained_mom := false
+		if not consumed_momentum and not training_active:
+			player_momentum = true
+			gained_mom = true
+		var broke_guard := (enemy_kind in ["guard", "taunt"])
+		if broke_guard:
+			enemy_staggered = true
+			enemy_taunt_buff = false
+			enemy.stamina = maxf(0.0, enemy.stamina - 8.0)
+			combat_banner_title = "GUARD PULLED OPEN!"
+			combat_banner_sub = ("MOMENTUM + " if gained_mom else "") + "Rhythm Ready (+25% power) • Opp staggered"
+			_log("Your feint draws his gloves out of position!")
+		else:
+			combat_banner_title = "FEINT + MOMENTUM!" if gained_mom else "FEINT LANDS"
+			combat_banner_sub = ("FREE FOLLOW-UP ACTION! • " if gained_mom else "") + "Rhythm Ready (+25% power)"
+			_log("Your feint freezes his read — follow up before he resets!")
 
 	elif id == "clinch":
 		player.stamina -= cost
-		enemy.stamina = maxf(0.0, enemy.stamina - 10.0)
+		var drain_amt := 16.0 if str(current_bout_modifier.get("id", "")) == "body_war" else 10.0
+		enemy.stamina = maxf(0.0, enemy.stamina - drain_amt)
 		player.stamina = minf(player.max_stamina, player.stamina + 8.0)
+		enemy_staggered = true
+		enemy_taunt_buff = false
+		_grant_adrenaline(15.0)
 		combat_banner_title = "TIED UP"
-		combat_banner_sub = "Opponent -10 STA • You recover +8 STA"
-		_log("You smother the attack in a clinch.")
+		combat_banner_sub = "Opp -%d STA & Staggered • You +8 STA" % int(drain_amt)
+		_log("You smother them in a clinch, disrupting their rhythm.")
 
 	elif id == "counter":
 		player.stamina -= cost
 
 		var tell := str(enemy_next_action.get("tell", enemy.get("tell", ""))).to_lower()
 		var action_name := str(enemy_next_action.get("name", "")).to_lower()
-		var guessed := tell.contains("right") or tell.contains("loads") or action_name.contains("right")
+		var guessed := player_counter_window or tell.contains("right") or tell.contains("loads") or action_name.contains("right") or action_name.contains("flurry") or action_name.contains("combination")
 
 		if guessed:
-			_deal_player_damage(move, 1.35)
-			combat_banner_title = "PERFECT COUNTER"
-			combat_banner_sub = "Counter window consumed • %d stamina spent" % int(cost)
-			_log("Perfect read! Counter lands hard.")
+			var mult := 1.45 if player_counter_window else 1.35
+			if has_perk("counter_king"):
+				mult += 0.35
+				player.stamina = minf(player.max_stamina, player.stamina + 6.0)
+			_deal_player_damage(move, mult)
+			player_counter_window = false
+			combat_banner_title = "COUNTER OPENING!" if mult > 1.4 else "PERFECT COUNTER"
+			combat_banner_sub = "Clean intercept (×%.2f) • %d stamina spent" % [mult, int(cost)]
+			_log("Sharp intercept! Counter lands clean.")
 		else:
 			combat_banner_title = "COUNTER WHIFFS"
-			combat_banner_sub = "Wrong read • %d stamina spent" % int(cost)
-			_log("Wrong read. The counter misses its window.")
+			combat_banner_sub = "Wrong read — use after Slip/Heavy Tell • %d STA" % int(cost)
+			_log("No opening there. The counter misses its window.")
 
 	elif id in ["headbutt", "low_blow"]:
 		player.stamina -= cost
+		var dq_chance := 0.18 if id == "headbutt" else 0.27
+		if str(current_bout_modifier.get("id", "")) == "back_alley":
+			dq_chance *= 0.5
+		if has_perk("dirty_work"):
+			dq_chance *= 0.5
 
-		if not bribe_ready and rng.randf() < (0.18 if id == "headbutt" else 0.27):
+		if not bribe_ready and rng.randf() < dq_chance:
 			_log("The referee catches the dirty move. DISQUALIFIED.")
 			_end_run(false, "Disqualified for an illegal move.")
 			return
@@ -1593,10 +2264,14 @@ func _player_move(id: String) -> void:
 			bribe_ready = false
 
 		_deal_player_damage(move, 1.0)
+		enemy_staggered = true
+		enemy_taunt_buff = false
+		if has_perk("dirty_work") and not training_active:
+			cash += 15
 		if is_instance_valid(audio_engine):
 			audio_engine.play_sfx("crowd_boo", -5.5)
 		combat_banner_title = "%s CONNECTS" % str(move.get("name", id)).to_upper()
-		combat_banner_sub = "%d stamina spent" % int(cost)
+		combat_banner_sub = "Opponent Staggered • " + ("+$15 Dirty Work" if has_perk("dirty_work") else "%d stamina spent" % int(cost))
 
 		if id == "low_blow":
 			enemy.stamina = maxf(0.0, enemy.stamina - 18.0)
@@ -1604,23 +2279,86 @@ func _player_move(id: String) -> void:
 	else:
 		player.stamina -= cost
 		var enemy_hp_before := float(enemy.health)
-		_deal_player_damage(move, 1.0)
+		var tactical_mult := 1.0
+		var tactical_tag := ""
+
+		var used_setup := false
+		var clear_combo := false
+		var clear_window := false
+		if player_combo_ready and id in ["hook", "uppercut", "haymaker", "overhand", "body_shot"]:
+			tactical_mult *= 1.25
+			clear_combo = true
+			used_setup = true
+			tactical_tag = "RHYTHM +25%"
+		if player_counter_window and id in ["hook", "uppercut", "haymaker", "overhand", "one_two"]:
+			tactical_mult *= (1.60 if has_perk("counter_king") else 1.25)
+			if has_perk("counter_king"):
+				player.stamina = minf(player.max_stamina, player.stamina + 6.0)
+			clear_window = true
+			used_setup = true
+			tactical_tag = "OPENING!"
+
+		var broke_guard := false
+		if enemy_kind == "guard":
+			if id in ["overhand", "body_shot"]:
+				tactical_mult *= 1.40
+				broke_guard = true
+				enemy_staggered = true
+				tactical_tag = "GUARD BROKEN!"
+			else:
+				tactical_mult *= 0.50
+				tactical_tag = "GLANCING (GUARDED)"
+		elif enemy_kind == "recovery":
+			tactical_mult *= 1.30
+			enemy_next_action["recover_interrupted"] = true
+			tactical_tag = "PUNISHED RECOVERY!"
+		elif enemy_kind == "taunt":
+			tactical_mult *= 1.25
+			enemy_staggered = true
+			enemy_next_action["taunt_broken"] = true
+			tactical_tag = "TAUNT INTERRUPTED!"
+
+		if str(current_bout_modifier.get("id", "")) == "short_fuse" and id in ["hook", "uppercut", "haymaker", "overhand"]:
+			tactical_mult *= 1.25
+
+		var was_first_round_hit := round_first_hit_available
+		_deal_player_damage(move, tactical_mult)
+		if clear_combo:
+			player_combo_ready = false
+		if clear_window:
+			player_counter_window = false
 		var dmg_dealt := roundi(enemy_hp_before - float(enemy.health))
 		if dmg_dealt > 0:
-			combat_banner_title = "%s CONNECTS" % str(move.get("name", id)).to_upper()
-			combat_banner_sub = "%d damage dealt • %d stamina spent" % [dmg_dealt, int(cost)]
+			combo_streak += 1
+			if id in ["jab", "one_two"]:
+				player_combo_ready = true
+			elif not used_setup:
+				player_combo_ready = false
+			if not consumed_momentum and not training_active:
+				if broke_guard or enemy_kind == "taunt" or (was_first_round_hit and str(current_bout_modifier.get("id", "")) == "quick_draw"):
+					player_momentum = true
+			var banner_prefix := tactical_tag + " • " if not tactical_tag.is_empty() else ""
+			var next_hint := " • MOMENTUM READY!" if player_momentum else (" • Rhythm Ready!" if player_combo_ready and id in ["jab", "one_two"] else "")
+			combat_banner_title = "%s%s CONNECTS" % ["GUARD SHATTERED: " if broke_guard else "", str(move.get("name", id)).to_upper()]
+			combat_banner_sub = "%s%d damage • %d STA%s" % [banner_prefix, dmg_dealt, int(cost), next_hint]
+			if broke_guard:
+				_grant_adrenaline(32.0)
 		else:
+			combo_streak = 0
+			player_combo_ready = false
 			combat_banner_title = "%s MISSES" % str(move.get("name", id)).to_upper()
 			combat_banner_sub = "%d stamina spent" % int(cost)
 
 		if id == "body_shot":
-			enemy.stamina = maxf(0.0, enemy.stamina - 12.0)
+			var body_drain := (18.0 if str(current_bout_modifier.get("id", "")) == "body_war" else 12.0) + float((_move_level(id) - 1) * 4)
+			enemy.stamina = maxf(0.0, enemy.stamina - body_drain)
 
-		if id == "haymaker" and rng.randf() < 0.2:
+		if id == "haymaker" and dmg_dealt == 0:
 			player.stamina = maxf(0.0, player.stamina - 8.0)
 
-		if id == "uppercut" and rng.randf() < 0.12:
+		if id == "uppercut" and dmg_dealt > 0 and rng.randf() < (0.28 + 0.08 * float(_move_level(id) - 1)):
 			enemy.stamina = maxf(0.0, enemy.stamina - 15.0)
+			enemy_staggered = true
 
 	if game_state != "combat":
 		return
@@ -1636,6 +2374,14 @@ func _player_move(id: String) -> void:
 	var enemy_stamina_delta := float(enemy.stamina) - enemy_stamina_before_action
 	if absf(enemy_stamina_delta) >= 1.0:
 		_show_floating_number(absf(enemy_stamina_delta), true, true, enemy_stamina_delta > 0.0)
+
+	if player_momentum and not training_active:
+		player_blocking = false
+		player_slipping = false
+		animate_combat_banner = not combat_banner_title.is_empty()
+		animate_phase_banner = true
+		_show_combat()
+		return
 
 	_enemy_turn()
 	if energy_penalty_pending and game_state == "combat":
@@ -1654,6 +2400,8 @@ func _player_move(id: String) -> void:
 		if training_turn >= TRAINING_EXCHANGES:
 			_finish_training()
 			return
+		if training_turn == 7:
+			adrenaline = 100.0
 		_prepare_enemy_telegraph()
 		animate_combat_banner = not combat_banner_title.is_empty()
 		animate_phase_banner = true
@@ -1710,7 +2458,13 @@ func _show_floating_number(amount: float, is_stamina: bool, over_opponent: bool,
 	tween.chain().tween_callback(label.queue_free)
 
 func _deal_player_damage(move: Dictionary, multiplier: float) -> void:
-	if rng.randf() * 100.0 > float(move.get("accuracy", 100.0)):
+	var acc := float(move.get("accuracy", 100.0))
+	var m_id := str(move.get("id", ""))
+	if player_combo_ready and m_id in ["hook", "uppercut", "haymaker", "overhand", "body_shot"]:
+		acc += 12.0
+	if player_counter_window:
+		acc += 15.0
+	if rng.randf() * 100.0 > acc:
 		_log("%s misses. The crowd groans." % str(move.get("name", "Your move")))
 		if is_instance_valid(audio_engine):
 			audio_engine.play_sfx("crowd_gasp", -6.5)
@@ -1726,57 +2480,107 @@ func _deal_player_damage(move: Dictionary, multiplier: float) -> void:
 	)
 
 	amount += float(player.get("damage", 0.0)) * 0.45
+	if has_perk("glass_knuckles"):
+		amount += 5.0
+	var lv := _move_level(m_id)
+	if lv > 1:
+		amount *= (1.0 + 0.22 * float(lv - 1))
+	if has_perk("iron_chin") and float(player.get("health", 100.0)) <= float(player.get("max_health", 100.0)) * 0.35:
+		amount *= 1.30
+	if has_perk("combo_addict") and combo_streak > 0:
+		amount *= (1.0 + minf(0.60, 0.15 * float(combo_streak)))
+	if has_perk("sucker_punch") and round_first_hit_available:
+		round_first_hit_available = false
+		amount *= 1.55
+		enemy.stamina = maxf(0.0, enemy.stamina - 8.0)
+	else:
+		round_first_hit_available = false
+	if momentum_spent_turn and has_perk("momentum_king"):
+		amount *= 1.25
+		_grant_adrenaline(12.0)
+	momentum_spent_turn = false
 	amount *= multiplier
 	amount += loaded_bonus
 	loaded_bonus = 0
+	if brass_charges > 0:
+		brass_charges -= 1
+		amount += 12.0
+		enemy_staggered = true
+
+	var is_finisher := (adrenaline >= 100.0)
+	if is_finisher:
+		adrenaline = 0.0
+		amount *= 1.75
+		enemy_staggered = true
+		if not training_active:
+			cash += 25
+			fight_big_hits += 1
+			respect += 5
 
 	if loaded_tape_risk:
 		loaded_tape_risk = false
-		if rng.randf() < 0.12:
+		var tape_dq := 0.06 if str(current_bout_modifier.get("id", "")) == "back_alley" else 0.12
+		if rng.randf() < tape_dq:
 			_log("The referee spots the loaded tape. DISQUALIFIED.")
 			_end_run(false, "Disqualified for using loaded tape.")
 			return
 
-	var critical := id_is_crit()
-	if critical:
+	var critical := id_is_crit() or is_finisher
+	if critical and not is_finisher:
 		amount *= 1.5
+		fight_big_hits += 1
+		enemy_staggered = true
 
 	var reduced := maxf(
 		1.0,
 		amount * (1.0 - float(enemy.defence) / 100.0)
 	)
 
-	# Tanks keep a compact guard while they have stamina. Exhaust them to
-	# remove this additional damage reduction.
 	if str(enemy.get("trick", "")) == "guard" and float(enemy.stamina) > 0.0:
 		reduced *= 0.88
 		_log("Their tight guard absorbs part of the impact.")
 
 	enemy.health = maxf(0.0, enemy.health - reduced)
+	run_highest_hit = maxi(run_highest_hit, roundi(reduced))
+	if has_perk("bloodthirst") and critical:
+		var heal_bt := minf(10.0, float(player.max_health) - float(player.health))
+		player.health += heal_bt
+		if heal_bt > 0.5:
+			_show_floating_number(heal_bt, false, false, true)
+	if not is_finisher:
+		_grant_adrenaline(22.0)
+
+	# Opponent Phase 2 Enrage at <= 50% HP for Berserker & Champion
+	if not enemy_enraged and float(enemy.health) > 0.0 and float(enemy.health) <= float(enemy.max_health) * 0.50 and str(enemy.get("trick", "")) in ["berserker", "boss"]:
+		enemy_enraged = true
+		enemy.damage = float(enemy.damage) * 1.18
+		enemy.stamina = minf(float(enemy.max_stamina), float(enemy.stamina) + 25.0)
+		var mid_lore := TLRStory.get_fighter_lore(str(enemy.get("id", "")))
+		var mid_txt := str(mid_lore.get("mid_line", "shifts into overdrive!"))
+		_log("PHASE 2! %s: “%s”" % [str(enemy.get("name", "Opponent")), mid_txt])
+		if is_instance_valid(audio_engine):
+			audio_engine.play_sfx("crowd_gasp", -3.5)
+
 	_show_floating_number(reduced, false, true)
 
 	if arena_visuals and arena_visuals.has_method("opponent_hit"):
 		arena_visuals.opponent_hit()
 	if screen_shake and arena_visuals and arena_visuals.has_method("impact_shake") and (critical or multiplier > 1.1 or reduced >= 14.0):
-		arena_visuals.impact_shake(1.3 if critical else 0.85)
+		arena_visuals.impact_shake(1.45 if is_finisher else (1.3 if critical else 0.85))
 	if is_instance_valid(audio_engine):
-		if critical:
+		if critical or is_finisher:
 			audio_engine.play_sfx("crit_ko", -2.0)
-			audio_engine.play_sfx("crowd_cheer", -5.0)
-			_trigger_impact_flash(Color(1.0, 0.92, 0.80, 0.20))
+			audio_engine.play_sfx("crowd_cheer", -4.5)
+			_trigger_impact_flash(Color(1.0, 0.72, 0.28, 0.25) if is_finisher else Color(1.0, 0.92, 0.80, 0.20))
 		else:
 			audio_engine.play_sfx("punch_heavy" if multiplier > 1.1 else "punch_jab", -3.0)
 
-	if critical:
-		_log("CRITICAL! %s lands for %d." % [
-			str(move.get("name", "Your move")),
-			int(reduced)
-		])
+	if is_finisher:
+		_log("LIGHTS OUT FINISHER! %s obliterates for %d (+$25)!" % [str(move.get("name", "Your move")), int(reduced)])
+	elif critical:
+		_log("CRITICAL! %s lands for %d." % [str(move.get("name", "Your move")), int(reduced)])
 	else:
-		_log("%s connects for %d damage." % [
-			str(move.get("name", "Your move")),
-			int(reduced)
-		])
+		_log("%s connects for %d damage." % [str(move.get("name", "Your move")), int(reduced)])
 
 
 func id_is_crit() -> bool:
@@ -1784,6 +2588,10 @@ func id_is_crit() -> bool:
 
 	if player.health <= player.max_health * 0.25:
 		chance += 0.08
+	if str(current_bout_modifier.get("id", "")) == "glass_pit":
+		chance += 0.10
+	elif str(current_bout_modifier.get("id", "")) == "championship":
+		chance += 0.12
 
 	return rng.randf() < chance
 
@@ -1791,16 +2599,25 @@ func id_is_crit() -> bool:
 func _prepare_enemy_telegraph() -> void:
 	if training_active:
 		var drills: Array[Dictionary] = [
-			{"name": "Heavy Right", "tell": "Coach loads his right shoulder and draws the glove back.", "damage": 1.0, "accuracy": 100.0, "cost": 0.0},
-			{"name": "Body Shot", "tell": "Coach dips his level and turns toward your ribs.", "damage": 0.85, "accuracy": 100.0, "cost": 0.0},
-			{"name": "Quick Jab", "tell": "Coach steps in with a short, quick jab.", "damage": 0.65, "accuracy": 100.0, "cost": 0.0},
-			{"name": "Heavy Right", "tell": "Coach repeats the loaded right. He wants to see if you learned.", "damage": 1.0, "accuracy": 100.0, "cost": 0.0},
-			{"name": "Reset", "tell": "Coach lowers his gloves and gives you room to breathe.", "damage": 0.0, "accuracy": 100.0, "cost": 0.0},
-			{"name": "Combination", "tell": "Coach rolls his shoulders and steps in with a controlled two-punch combination.", "damage": 1.05, "accuracy": 100.0, "cost": 0.0}
+			{"name": "Heavy Right", "tell": "Coach loads his right shoulder and draws the glove back.", "damage": 1.0, "accuracy": 100.0, "cost": 0.0, "kind": "attack"},
+			{"name": "Body Shot", "tell": "Coach dips his level and turns toward your ribs.", "damage": 0.85, "accuracy": 100.0, "cost": 0.0, "kind": "attack"},
+			{"name": "Quick Jab", "tell": "Coach steps in with a short, quick jab.", "damage": 0.65, "accuracy": 100.0, "cost": 0.0, "kind": "attack"},
+			{"name": "Heavy Right", "tell": "Coach repeats the loaded right. He wants to see if you learned.", "damage": 1.0, "accuracy": 100.0, "cost": 0.0, "kind": "attack"},
+			{"name": "Reset", "tell": "Coach lowers his gloves and gives you room to breathe.", "damage": 0.0, "accuracy": 100.0, "cost": 0.0, "kind": "recovery"},
+			{"name": "Combination", "tell": "Coach rolls his shoulders and steps in with a controlled two-punch combination.", "damage": 1.05, "accuracy": 100.0, "cost": 0.0, "kind": "attack"},
+			{"name": "High Guard", "tell": "Coach shells both gloves tight! Crack guard with Body Shot or Feint (triggers Momentum!).", "damage": 0.45, "accuracy": 75.0, "cost": 0.0, "kind": "guard"},
+			{"name": "Showboat Taunt", "tell": "Coach drops his gloves to showboat! Unleash your 100% Lights Out Finisher now!", "damage": 0.0, "accuracy": 100.0, "cost": 0.0, "kind": "taunt"}
 		]
 		enemy_next_action = drills[mini(training_turn, drills.size() - 1)].duplicate(true)
 		if arena_visuals and arena_visuals.has_method("show_enemy_telegraph"):
-			arena_visuals.show_enemy_telegraph(str(enemy_next_action.get("name", "")))
+			var t_pose := str(enemy_next_action.get("name", ""))
+			if str(enemy_next_action.get("kind", "")) == "guard":
+				t_pose = "guard"
+			elif str(enemy_next_action.get("kind", "")) == "taunt":
+				t_pose = "taunt"
+			elif str(enemy_next_action.get("kind", "")) == "recovery":
+				t_pose = "recovery"
+			arena_visuals.show_enemy_telegraph(t_pose)
 		return
 
 	var trick := str(enemy.get("trick", "")).to_lower()
@@ -1840,22 +2657,75 @@ func _prepare_enemy_telegraph() -> void:
 				{"name": "Short Hook", "tell": "Turns his lead shoulder toward you.", "damage": 0.92, "accuracy": 94.0, "cost": 10.0}
 			]
 
-	if enemy.stamina < 18.0:
-		enemy_next_action = {
-			"name": "Desperate Swing",
-			"tell": "Breathes heavily and drops his guard.",
-			"damage": 0.72,
-			"accuracy": 70.0,
-			"cost": 5.0
-		}
+	if enemy.stamina < float(enemy.max_stamina) * 0.30:
+		if enemy.stamina < 14.0:
+			enemy_next_action = {
+				"name": "Catching Breath",
+				"tell": "Drops his gloves and breathes heavily — clean opening!",
+				"damage": 0.0,
+				"accuracy": 0.0,
+				"cost": 0.0,
+				"kind": "recovery"
+			}
+		else:
+			enemy_next_action = {
+				"name": "Desperate Swing",
+				"tell": "Breathes heavily and drops his guard.",
+				"damage": 0.72,
+				"accuracy": 70.0,
+				"cost": 5.0,
+				"kind": "attack"
+			}
 	else:
-		enemy_next_action = options[rng.randi_range(0, options.size() - 1)].duplicate(true)
+		# Inject real tactical stances (High Guard & Recovery) alongside attacks
+		var roll := rng.randf()
+		var guard_chance := 0.30 if trick == "guard" else (0.20 if trick in ["counter", "boss"] else 0.14)
+		var rec_chance := 0.18 if float(enemy.stamina) < float(enemy.max_stamina) * 0.55 else 0.06
+		if enemy_staggered:
+			guard_chance = 0.0
+		if roll < guard_chance:
+			enemy_next_action = {
+				"name": "High Guard",
+				"tell": "Raises both gloves tight around his jaw. Crack with Body Shot or Overhand.",
+				"damage": 0.45,
+				"accuracy": 75.0,
+				"cost": 0.0,
+				"kind": "guard"
+			}
+		elif trick in ["showboat", "boss"] and not enemy_staggered and roll < guard_chance + 0.20:
+			enemy_next_action = {
+				"name": "Showboat Taunt",
+				"tell": "Waves you in with gloves dropped! Hit now to interrupt or he surges +35%!",
+				"damage": 0.0,
+				"accuracy": 100.0,
+				"cost": 0.0,
+				"kind": "taunt"
+			}
+		elif roll < guard_chance + rec_chance:
+			enemy_next_action = {
+				"name": "Catching Breath",
+				"tell": "Drops his gloves slightly to catch his breath — punish or rest.",
+				"damage": 0.0,
+				"accuracy": 0.0,
+				"cost": 0.0,
+				"kind": "recovery"
+			}
+		else:
+			enemy_next_action = options[rng.randi_range(0, options.size() - 1)].duplicate(true)
+			enemy_next_action["kind"] = "attack"
 
 	# Keep the existing fighter-specific tell as a fallback for custom data.
 	if str(enemy_next_action.get("tell", "")).is_empty():
 		enemy_next_action["tell"] = str(enemy.get("tell", "Studies your guard."))
 	if arena_visuals and arena_visuals.has_method("show_enemy_telegraph"):
-		arena_visuals.show_enemy_telegraph(str(enemy_next_action.get("name", "")))
+		var pose_key := str(enemy_next_action.get("name", ""))
+		if str(enemy_next_action.get("kind", "")) == "guard":
+			pose_key = "guard"
+		elif str(enemy_next_action.get("kind", "")) == "recovery":
+			pose_key = "recovery"
+		elif str(enemy_next_action.get("kind", "")) == "taunt":
+			pose_key = "taunt"
+		arena_visuals.show_enemy_telegraph(pose_key)
 
 
 	# The enemy response is resolved as one turn; show its resource changes as feedback.
@@ -1865,29 +2735,66 @@ func _enemy_turn() -> void:
 		enemy.stamina = maxf(0.0, enemy.stamina - 8.0)
 		enemy_drained -= 1
 
-	if enemy.stamina <= 0.0:
-		enemy.stamina = minf(
-			enemy.max_stamina,
-			enemy.stamina + 12.0
-		)
-		_log("Opponent is gassed and struggles to recover.")
-		player.stamina = minf(player.max_stamina, player.stamina + 4.0)
-		_show_floating_number(4.0, true, false, true)
-		return
-
 	var action := enemy_next_action
 	if action.is_empty():
 		_prepare_enemy_telegraph()
 		action = enemy_next_action
 
+	var action_kind := str(action.get("kind", "attack"))
+	if action_kind == "recovery":
+		var rec_sta := 9.0 if bool(action.get("recover_interrupted", false)) else 18.0
+		enemy.stamina = minf(enemy.max_stamina, enemy.stamina + rec_sta)
+		_log("Opponent catches their breath (+%d STA)." % int(rec_sta))
+		enemy_staggered = false
+		return
+
+	if action_kind == "taunt":
+		if bool(action.get("taunt_broken", false)) or enemy_staggered:
+			enemy_staggered = false
+			_log("You shut his mouth mid-taunt!")
+		else:
+			enemy_taunt_buff = true
+			enemy.stamina = minf(enemy.max_stamina, enemy.stamina + 10.0)
+			_log("Opponent showboats to the crowd! Next swing hits +35% harder!")
+		return
+
+	if action_kind == "guard":
+		enemy.stamina = minf(enemy.max_stamina, enemy.stamina + 6.0)
+		if enemy_staggered:
+			enemy_staggered = false
+			_log("Their guard was cracked — too shaken to fire back!")
+			return
+
+	if enemy.stamina <= 0.0:
+		enemy.stamina = minf(
+			enemy.max_stamina,
+			enemy.stamina + 12.0
+		)
+		player_counter_window = true
+		_log("Opponent is gassed and struggles to recover — Counter Window open!")
+		player.stamina = minf(player.max_stamina, player.stamina + 4.0)
+		_show_floating_number(4.0, true, false, true)
+		enemy_staggered = false
+		return
+
 	var enemy_accuracy := float(action.get("accuracy", enemy.accuracy))
 	if enemy_blinded > 0:
 		enemy_accuracy -= 15.0
 		enemy_blinded -= 1
+	if enemy_staggered:
+		enemy_accuracy -= 15.0
 
 	var archetype_damage_bonus := 1.0
 	if str(enemy.get("trick", "")) == "aggressive" and str(action.get("name", "")) == "Heavy Right":
 		archetype_damage_bonus = 1.12
+	if str(current_bout_modifier.get("id", "")) == "short_fuse" and float(action.get("damage", 1.0)) >= 1.1:
+		archetype_damage_bonus *= 1.18
+	if enemy_taunt_buff:
+		archetype_damage_bonus *= 1.35
+		enemy_taunt_buff = false
+	if enemy_staggered:
+		archetype_damage_bonus *= 0.65
+		enemy_staggered = false
 
 	var enemy_damage := maxf(
 		0.0,
@@ -1910,7 +2817,16 @@ func _enemy_turn() -> void:
 	)
 
 	if dodged:
-		_log("DODGED! " + str(action.get("name", "Their attack")) + " cuts through empty air.")
+		player_counter_window = true
+		_grant_adrenaline(24.0)
+		_log("DODGED! " + str(action.get("name", "Their attack")) + " misses cleanly — Counter Window open!")
+		if has_perk("greasy_gloves"):
+			enemy.health = maxf(0.0, enemy.health - 6.0)
+			_show_floating_number(6.0, false, true)
+			_log("Greasy Gloves snap a free 6 DMG counter-jab!")
+			if enemy.health <= 0.0:
+				_win_fight()
+				return
 		if is_instance_valid(audio_engine):
 			audio_engine.play_sfx("foot_shuffle", -5.0)
 		var wind_recovery := minf(float(passive.get("wind", 0.0)), player.max_stamina - player.stamina)
@@ -1920,15 +2836,35 @@ func _enemy_turn() -> void:
 		return
 
 	if rng.randf() * 100.0 > enemy_accuracy:
-		_log("Opponent's %s misses." % str(action.get("name", "attack")))
+		player_counter_window = true
+		_log("Opponent's %s whiffs wide — Counter Window open!" % str(action.get("name", "attack")))
 		return
 
+	var eff_def := float(player.defence) + (5.0 if (has_perk("iron_chin") and float(player.health) <= float(player.max_health) * 0.35) else 0.0)
 	var damage := enemy_damage * (
-		1.0 - float(player.defence) / 100.0
+		1.0 - minf(65.0, eff_def) / 100.0
 	)
 
 	if player_blocking:
-		damage *= 0.32
+		damage *= (0.15 if has_perk("rope_a_dope") else 0.32)
+		if has_perk("rope_a_dope"):
+			enemy.health = maxf(0.0, enemy.health - 5.0)
+			_show_floating_number(5.0, false, true)
+			if enemy.health <= 0.0:
+				_win_fight()
+				return
+	else:
+		combo_streak = 0
+		_grant_adrenaline(12.0)
+
+	# Bleeder inflicts lingering cut damage unless blocked or dodged
+	if str(enemy.get("trick", "")) == "bleeder" and not player_blocking:
+		player_bleeding = 2
+		_log("A sharp slice opens a cut! (-4 HP per turn)")
+	if player_bleeding > 0:
+		player_bleeding -= 1
+		player.health = maxf(0.0, player.health - 4.0)
+		_show_floating_number(4.0, false, false)
 
 	# The speedster's flurries tax stamina when they get through.
 	if str(enemy.get("trick", "")) == "quick":
@@ -1989,23 +2925,27 @@ func _enemy_turn() -> void:
 
 
 func _check_round() -> void:
+	fight_turns_total += 1
 	turn_no += 1
 
 	if turn_no > 6:
 		round_no += 1
 		turn_no = 1
+		round_first_hit_available = true
 
 		player.stamina = minf(
 			player.max_stamina,
 			player.stamina + 14.0
 		)
+		if has_perk("second_heart"):
+			player.health = minf(player.max_health, player.health + 8.0)
 
 		enemy.stamina = minf(
 			enemy.max_stamina,
 			enemy.stamina + 10.0
 		)
 
-		_log("BELL! Corner break. You recover 14 stamina.")
+		_log("BELL! Corner break. You recover 14 stamina." + (" (+8 HP Second Heart)" if has_perk("second_heart") else ""))
 		if is_instance_valid(audio_engine):
 			audio_engine.play_sfx("bell_end", -4.0, 0.01)
 
@@ -2037,11 +2977,60 @@ func _win_fight() -> void:
 
 	game_state = "reward"
 	respect += 10 + fight_index * 3
+	run_knockouts += 1
+	var bout_pay := 30 + fight_index * 8
+	var bonus_msg := ""
+	var bounty_tag := _current_bout_bounty()
+	if fight_turns_total <= 7:
+		bout_pay += 15
+		bonus_msg += " +$15 Fast KO"
+	if bounty_tag == "cash":
+		bout_pay += 35
+		bonus_msg += " +$35 Purse"
+	elif bounty_tag == "recovery":
+		player.health = minf(player.max_health, player.health + 22.0)
+		bonus_msg += " +22 HP Recovery"
+	elif bounty_tag == "skill_manual" and not owned_moves.is_empty():
+		var m_pick := str(owned_moves[rng.randi_range(0, owned_moves.size() - 1)])
+		move_levels[m_pick] = mini(3, _move_level(m_pick) + 1)
+		bonus_msg += " +1 Move Lv"
+	if has_perk("belt_hunter"):
+		bout_pay += 22
+		bonus_msg += " +$22 Hunter"
+	if contract_accepted:
+		var c := _contract_for_fight(fight_index)
+		var cid := str(c.get("id", ""))
+		var c_won := false
+		match cid:
+			"speed_ko": c_won = fight_turns_total <= 8
+			"no_block": c_won = not fight_used_block
+			"showstopper": c_won = fight_big_hits >= 2
+			"untouched": c_won = float(player.health) >= float(player.max_health) * 0.55
+		if c_won:
+			var cb := int(c.get("bonus", 50))
+			bout_pay += cb
+			bonus_msg += " +$%d Contract!" % cb
+		contract_accepted = false
+	if str(current_bout_modifier.get("id", "")) == "high_roller":
+		bout_pay = roundi(float(bout_pay) * 1.5)
+		bonus_msg += " ×1.5 High Roller"
+	cash += bout_pay
+	shop_bought_flags.clear()
+	shop_reroll_count = 0
+	hub_event_done = false
 
-	_log("KNOCKOUT! The crowd is chanting your name.")
+	_log("KNOCKOUT! Won $%d Pit Cash%s." % [bout_pay, bonus_msg])
 
 	if fight_index == FIGHT_COUNT - 1:
-		_end_run(true, "You became the underground champion.")
+		var def_lore := TLRStory.get_fighter_lore(str(enemy.get("id", "")))
+		var def_txt := str(def_lore.get("defeat_line", ""))
+		if not def_txt.is_empty():
+			_log("%s: “%s”" % [str(enemy.get("name", "Champion")), def_txt])
+		if bool(settings.get("story_cutscenes", true)) and not story_seen_ids.has("epilogue") and DisplayServer.get_name() != "headless":
+			story_seen_ids.append("epilogue")
+			_play_story_cutscene("epilogue", _end_run.bind(true, "You became the underground champion."))
+		else:
+			_end_run(true, "You became the underground champion.")
 		return
 
 	if is_instance_valid(audio_engine):
@@ -2052,6 +3041,32 @@ func _win_fight() -> void:
 	_show_rewards()
 
 
+func _weighted_random_item(min_rarity: String = "common") -> Dictionary:
+	var rank := {"common": 0, "uncommon": 1, "rare": 2, "contraband": 3}
+	var min_rank := int(rank.get(min_rarity, 0))
+	var weighted: Array[Dictionary] = []
+	var hunter_bonus := 1.8 if has_perk("belt_hunter") else 1.0
+	for item_variant in item_templates:
+		var candidate: Dictionary = item_variant
+		var cid := str(candidate.get("id", ""))
+		if cid == "salts" and (inventory.has("salts") or revive_used):
+			continue
+		var rar := str(candidate.get("rarity", "common")).to_lower()
+		var r_rank := int(rank.get(rar, 0))
+		if r_rank < min_rank:
+			continue
+		var copies := 4
+		match rar:
+			"uncommon": copies = 3 + mini(2, fight_index / 2)
+			"rare": copies = roundi((1.0 + float(fight_index) * 0.45) * hunter_bonus)
+			"contraband": copies = roundi((0.5 if fight_index < 2 else (1.0 + float(fight_index - 1) * 0.35)) * hunter_bonus)
+		for _c in range(maxi(1, copies)):
+			weighted.append(candidate)
+	if weighted.is_empty():
+		return item_templates[0] if not item_templates.is_empty() else {}
+	return weighted[rng.randi_range(0, weighted.size() - 1)]
+
+
 func _show_rewards() -> void:
 	game_state = "reward"
 	_disable_realtime_combat()
@@ -2059,6 +3074,7 @@ func _show_rewards() -> void:
 	animate_cards_enter = true
 	_clear_ui()
 
+	var bounty_tag := _current_bout_bounty()
 	var options: Array = []
 
 	var has_move_space := (
@@ -2071,50 +3087,75 @@ func _show_rewards() -> void:
 			return owned_moves.has(id) or has_move_space
 	)
 
-	if fight_index < 3 and not pool.is_empty():
+	var unowned_pool := pool.filter(
+		func(move):
+			return not owned_moves.has(str(move.get("id", "")))
+	)
+	if not pool.is_empty():
+		var m_src := unowned_pool if (has_move_space and not unowned_pool.is_empty()) else pool
 		options.append({
 			"type": "move",
-			"data": pool[rng.randi_range(0, pool.size() - 1)]
+			"data": m_src[rng.randi_range(0, m_src.size() - 1)]
 		})
 
-	var available_items: Array = []
-	for item_variant in item_templates:
-		var candidate: Dictionary = item_variant
-		var candidate_id := str(candidate.get("id", ""))
-		# Smelling Salts are a once-per-run revive. Never offer a duplicate
-		# while one is owned or after its revive has already been spent.
-		if candidate_id == "salts" and (inventory.has("salts") or revive_used):
-			continue
-		available_items.append(candidate)
+	# Build distinct reward categories: Move/Upgrade, Fighting Trait, Rarity-weighted Item, or Stat
+	var unowned_perks: Array[Dictionary] = []
+	for p in PERK_CATALOG:
+		if not owned_perks.has(str(p.get("id", ""))):
+			unowned_perks.append(p.duplicate(true))
 
+	var force_trait := (bounty_tag == "trait_drop")
+	if owned_perks.size() < PERK_MAX and not unowned_perks.is_empty() and (force_trait or fight_index % 2 == 0 or not has_move_space):
+		options.append({
+			"type": "perk",
+			"data": unowned_perks[rng.randi_range(0, unowned_perks.size() - 1)]
+		})
+
+	var force_rare_item := (bounty_tag == "rare_item")
 	if (
-		inventory.size() < 3
-		and rng.randf() < 0.55
-		and not available_items.is_empty()
+		options.size() < 3
+		and inventory.size() < 3
+		and (force_rare_item or rng.randf() < 0.72)
+		and not item_templates.is_empty()
 	):
-		var item: Dictionary = available_items[
-			rng.randi_range(0, available_items.size() - 1)
-		]
-		options.append({"type": "item", "data": item})
-	else:
-		options.append({
-			"type": "stat",
-			"data": _random_upgrade()
-		})
+		var item: Dictionary = _weighted_random_item("rare" if force_rare_item else "common")
+		if not item.is_empty():
+			options.append({"type": "item", "data": item})
 
-	while options.size() > 3:
-		options.pop_back()
+	if options.size() < 3 and owned_perks.size() < PERK_MAX and not unowned_perks.is_empty():
+		var already_perk := false
+		for o in options:
+			if str(o.get("type", "")) == "perk":
+				already_perk = true
+				break
+		if not already_perk and rng.randf() < 0.65:
+			options.append({
+				"type": "perk",
+				"data": unowned_perks[rng.randi_range(0, unowned_perks.size() - 1)]
+			})
 
+	var used_stats: Array[String] = []
 	while options.size() < 3:
+		var upg := _random_upgrade(used_stats)
+		used_stats.append(str(upg.get("name", "")))
 		options.append({
 			"type": "stat",
-			"data": _random_upgrade()
+			"data": upg
 		})
 
 	options.shuffle()
 	reward_options = options
 	selected_reward_index = -1
 	TLRScreens.build_rewards(self, screen_canvas, reward_options)
+
+
+func _reroll_rewards() -> void:
+	if cash < 20 or game_state != "reward":
+		return
+	cash -= 20
+	if is_instance_valid(audio_engine):
+		audio_engine.play_sfx("ui_confirm", -4.0)
+	_show_rewards()
 
 
 func _select_reward_option(idx: int) -> void:
@@ -2136,12 +3177,14 @@ func _confirm_selected_reward() -> void:
 			_choose_move(str(opt.data.get("id", "")))
 		"item":
 			_choose_item(str(opt.data.get("id", "")))
+		"perk":
+			_choose_perk(str(opt.data.get("id", "")))
 		_:
 			_choose_upgrade(opt.data)
 
 
 
-func _random_upgrade() -> Dictionary:
+func _random_upgrade(exclude_names: Array[String] = []) -> Dictionary:
 	var pool := [
 		{
 			"name": "Roadwork",
@@ -2186,8 +3229,17 @@ func _random_upgrade() -> Dictionary:
 			"value": 12
 		}
 	]
+	if int(passive.get("slots", 0)) < 2:
+		pool.append({
+			"name": "Open Stance",
+			"description": "+1 Move Slot (max 6) and +6 max stamina.",
+			"stat": "slots",
+			"value": 1
+		})
 
-	return pool[rng.randi_range(0, pool.size() - 1)].duplicate(true)
+	var filtered := pool.filter(func(u): return not exclude_names.has(str(u.get("name", ""))))
+	var src := filtered if not filtered.is_empty() else pool
+	return src[rng.randi_range(0, src.size() - 1)].duplicate(true)
 
 
 func _choose_move(id: String) -> void:
@@ -2196,21 +3248,40 @@ func _choose_move(id: String) -> void:
 	var detail := ""
 	var summary := ""
 	if owned_moves.has(id):
+		var new_lv := mini(3, _move_level(id) + 1)
+		move_levels[id] = new_lv
 		player.damage += 1.0
-		_log("%s levels up. Your hands are learning." % m_name)
-		detail = "Loadout upgrade applied: +1 overall player damage for this run."
-		summary = "LOADOUT / %s UPGRADED (DAMAGE NOW %d)" % [m_name.to_upper(), int(player.damage)]
+		_log("%s upgraded to Lv.%d! (+22%% move damage, -1 STA, +1 DMG)" % [m_name, new_lv])
+		detail = "%s Lv.%d unlocked: +22%% move power, -1 STA cost, and +1 fighter damage." % [m_name, new_lv]
+		summary = "LOADOUT / %s UPGRADED TO LV.%d (BASE DMG %d)" % [m_name.to_upper(), new_lv, int(player.damage)]
 	else:
 		if owned_moves.size() >= 4 + int(passive.get("slots", 0)):
 			_show_rewards()
 			return
 
 		owned_moves.append(id)
+		move_levels[id] = 1
 		_log("New move unlocked: " + m_name)
 		detail = _move_reward_details(move)
 		summary = "LOADOUT / %s ADDED TO YOUR MOVES" % m_name.to_upper()
 
 	_after_reward(m_name, detail, summary)
+
+
+func _choose_perk(perk_id: String) -> void:
+	var p := _get_perk_data(perk_id)
+	if p.is_empty():
+		return
+	if not owned_perks.has(perk_id) and owned_perks.size() < PERK_MAX:
+		owned_perks.append(perk_id)
+		if perk_id == "glass_knuckles":
+			player.max_health = maxf(40.0, float(player.max_health) - 15.0)
+			player.health = minf(float(player.health), float(player.max_health))
+		elif perk_id == "greasy_gloves":
+			player.speed = minf(60.0, float(player.speed) + 8.0)
+	var p_name := str(p.get("name", perk_id))
+	_log("Trait unlocked: " + p_name + "!")
+	_after_reward(p_name, str(p.get("desc", "")), "CORNER TRAITS (%d / %d): %s" % [owned_perks.size(), PERK_MAX, ", ".join(owned_perks).to_upper()])
 
 
 func _choose_item(id: String) -> void:
@@ -2256,6 +3327,11 @@ func _choose_upgrade(upgrade: Dictionary) -> void:
 		"wind":
 			passive["wind"] = int(upgrade.value)
 
+		"slots":
+			passive["slots"] = mini(2, int(passive.get("slots", 0)) + int(upgrade.value))
+			player.max_stamina += 6.0
+			player.stamina = minf(player.max_stamina, player.stamina + 6.0)
+
 		"heal":
 			player.health = minf(
 				player.max_health,
@@ -2284,6 +3360,8 @@ func _after_reward(headline: String = "", detail: String = "", summary: String =
 		player.max_stamina,
 		player.stamina + 20.0
 	)
+	_generate_shop_stock(true)
+	_roll_hub_event()
 
 	_save_run()
 	if headline.is_empty():
@@ -2296,9 +3374,518 @@ func _after_reward(headline: String = "", detail: String = "", summary: String =
 
 
 func _opponent_template_index(index: int) -> int:
+	if index >= 0 and index < bout_branches.size() and int(bout_branches[index]) == 1 and index < alt_roster.size():
+		return int(alt_roster[index])
+	if index >= 0 and index < run_roster.size():
+		return int(run_roster[index])
 	if index < 0 or index >= FIGHT_ROSTER.size():
 		return -1
 	return int(FIGHT_ROSTER[index])
+
+
+func _select_bout_branch(branch: int) -> void:
+	if fight_index >= 0 and fight_index < bout_branches.size():
+		bout_branches[fight_index] = clampi(branch, 0, 1)
+	var b_tag := _current_bout_bounty()
+	hub_notice = "CHALLENGER LOCKED: %s  (%s)" % [_next_opponent_name().to_upper(), _bounty_label(b_tag)]
+	animate_screen_enter = false
+	animate_cards_enter = false
+	_clear_ui()
+	TLRScreens.build_hub(self, screen_canvas)
+
+
+func _toggle_hub_contract() -> void:
+	contract_accepted = not contract_accepted
+	var c := _contract_for_fight(fight_index)
+	hub_notice = "CONTRACT ACCEPTED: %s" % str(c.get("name", "")) if contract_accepted else "Side contract declined."
+	animate_screen_enter = false
+	animate_cards_enter = false
+	_clear_ui()
+	TLRScreens.build_hub(self, screen_canvas)
+
+
+func _generate_shop_stock(reset_bought: bool = true) -> void:
+	if reset_bought:
+		shop_bought_flags.clear()
+	var items_stock: Array = []
+	var used_ids: Array[String] = []
+	for slot_i in range(3):
+		var min_rar := "uncommon" if slot_i == 2 else ("rare" if (slot_i == 1 and fight_index >= 3) else "common")
+		var cand: Dictionary = _weighted_random_item(min_rar)
+		var guard := 0
+		while used_ids.has(str(cand.get("id", ""))) and guard < 8:
+			cand = _weighted_random_item(min_rar)
+			guard += 1
+		if not cand.is_empty():
+			used_ids.append(str(cand.get("id", "")))
+			items_stock.append({
+				"id": str(cand.get("id", "ice")),
+				"price": int(cand.get("price", 20)),
+				"rarity": str(cand.get("rarity", "common")),
+				"sold": false
+			})
+
+	var unowned_perks: Array[Dictionary] = []
+	for p in PERK_CATALOG:
+		if not owned_perks.has(str(p.get("id", ""))):
+			unowned_perks.append(p)
+	var perk_offer := {}
+	if not unowned_perks.is_empty():
+		var pk: Dictionary = unowned_perks[rng.randi_range(0, unowned_perks.size() - 1)]
+		perk_offer = {"id": str(pk.get("id", "")), "price": int(pk.get("price", 42)), "rarity": str(pk.get("rarity", "common")), "sold": false}
+
+	var move_offer := {}
+	var max_slots := 4 + int(passive.get("slots", 0))
+	var cand_moves := moves.filter(func(mv): return not owned_moves.has(str(mv.get("id", ""))))
+	if owned_moves.size() < max_slots and not cand_moves.is_empty():
+		var mv: Dictionary = cand_moves[rng.randi_range(0, cand_moves.size() - 1)]
+		move_offer = {"id": str(mv.get("id", "")), "price": 42 + fight_index * 2, "is_upgrade": false, "sold": false}
+	elif not owned_moves.is_empty():
+		var upg_candidates: Array[String] = []
+		for om in owned_moves:
+			if _move_level(om) < 3:
+				upg_candidates.append(om)
+		var m_src := upg_candidates if not upg_candidates.is_empty() else owned_moves
+		var m_id := str(m_src[rng.randi_range(0, m_src.size() - 1)])
+		move_offer = {"id": m_id, "price": 38 + _move_level(m_id) * 10, "is_upgrade": true, "sold": false}
+
+	shop_stock = {"items": items_stock, "perk": perk_offer, "move": move_offer}
+
+
+func _open_shop() -> void:
+	_disable_realtime_combat()
+	if shop_stock.is_empty() or not shop_stock.has("items"):
+		_generate_shop_stock(false)
+	game_state = "shop"
+	animate_screen_enter = true
+	animate_cards_enter = true
+	_clear_ui()
+	TLRScreens.build_shop(self, screen_canvas)
+
+
+func _reroll_shop() -> void:
+	if cash < 15:
+		return
+	cash -= 15
+	shop_reroll_count += 1
+	_generate_shop_stock(false)
+	hub_notice = "Shop stock refreshed (-$15)."
+	if is_instance_valid(audio_engine):
+		audio_engine.play_sfx("ui_confirm", -4.0)
+	animate_screen_enter = false
+	animate_cards_enter = false
+	_clear_ui()
+	TLRScreens.build_shop(self, screen_canvas)
+
+
+func _shop_buy_item(idx: int) -> void:
+	var items_arr: Array = shop_stock.get("items", [])
+	if idx < 0 or idx >= items_arr.size() or inventory.size() >= 3:
+		return
+	var entry: Dictionary = items_arr[idx]
+	if bool(entry.get("sold", false)):
+		return
+	var cost := int(entry.get("price", 20))
+	if cash < cost:
+		return
+	cash -= cost
+	entry["sold"] = true
+	items_arr[idx] = entry
+	shop_stock["items"] = items_arr
+	var item_id := str(entry.get("id", "ice"))
+	inventory.append(item_id)
+	hub_notice = "Bought %s (-$%d)." % [_get_item_name(item_id), cost]
+	if is_instance_valid(audio_engine):
+		audio_engine.play_sfx("item_use", -4.0)
+	animate_screen_enter = false
+	animate_cards_enter = false
+	_clear_ui()
+	TLRScreens.build_shop(self, screen_canvas)
+
+
+func _shop_sell_bag_item(inv_slot: int) -> void:
+	if inv_slot < 0 or inv_slot >= inventory.size():
+		return
+	var item_id := str(inventory[inv_slot])
+	var data := _get_item_data(item_id)
+	var refund := maxi(8, int(roundf(float(data.get("price", 18)) * 0.5)))
+	inventory.remove_at(inv_slot)
+	cash += refund
+	selected_hub_item_slot = clampi(selected_hub_item_slot, 0, maxi(0, inventory.size() - 1))
+	hub_notice = "Sold %s (+$%d Pit Cash)." % [_get_item_name(item_id), refund]
+	if is_instance_valid(audio_engine):
+		audio_engine.play_sfx("ui_confirm", -5.0)
+	animate_screen_enter = false
+	animate_cards_enter = false
+	_clear_ui()
+	TLRScreens.build_shop(self, screen_canvas)
+
+
+func _shop_buy_perk() -> void:
+	var pk: Dictionary = shop_stock.get("perk", {})
+	if pk.is_empty() or bool(pk.get("sold", false)) or owned_perks.size() >= PERK_MAX:
+		return
+	var cost := int(pk.get("price", 42))
+	if cash < cost:
+		return
+	var pid := str(pk.get("id", ""))
+	if pid.is_empty() or owned_perks.has(pid):
+		return
+	cash -= cost
+	pk["sold"] = true
+	shop_stock["perk"] = pk
+	owned_perks.append(pid)
+	if pid == "glass_knuckles":
+		player.max_health = maxf(40.0, float(player.max_health) - 15.0)
+		player.health = minf(float(player.health), float(player.max_health))
+	elif pid == "greasy_gloves":
+		player.speed = minf(60.0, float(player.speed) + 8.0)
+	var pdata := _get_perk_data(pid)
+	hub_notice = "Bought Trait '%s' (-$%d)!" % [str(pdata.get("name", pid)), cost]
+	if is_instance_valid(audio_engine):
+		audio_engine.play_sfx("ui_confirm", -3.0)
+	animate_screen_enter = false
+	animate_cards_enter = false
+	_clear_ui()
+	TLRScreens.build_shop(self, screen_canvas)
+
+
+func _shop_buy_move() -> void:
+	var mo: Dictionary = shop_stock.get("move", {})
+	if mo.is_empty() or bool(mo.get("sold", false)):
+		return
+	var cost := int(mo.get("price", 42))
+	if cash < cost:
+		return
+	var m_id := str(mo.get("id", ""))
+	var is_upg := bool(mo.get("is_upgrade", false))
+	var max_slots := 4 + int(passive.get("slots", 0))
+	if not is_upg and owned_moves.size() >= max_slots:
+		return
+	cash -= cost
+	mo["sold"] = true
+	shop_stock["move"] = mo
+	if owned_moves.has(m_id):
+		var n_lv := mini(3, _move_level(m_id) + 1)
+		move_levels[m_id] = n_lv
+		player.damage += 1.0
+		hub_notice = "Mastered %s -> Lv.%d (-$%d)!" % [str(_get_move(m_id).get("name", m_id)), n_lv, cost]
+	else:
+		owned_moves.append(m_id)
+		move_levels[m_id] = 1
+		hub_notice = "Learned %s (-$%d)!" % [str(_get_move(m_id).get("name", m_id)), cost]
+	if is_instance_valid(audio_engine):
+		audio_engine.play_sfx("ui_confirm", -3.0)
+	animate_screen_enter = false
+	animate_cards_enter = false
+	_clear_ui()
+	TLRScreens.build_shop(self, screen_canvas)
+
+
+func _shop_buy_service(svc: String) -> void:
+	if bool(shop_bought_flags.get(svc, false)):
+		return
+	match svc:
+		"heal":
+			if cash < 20 or float(player.health) >= float(player.max_health):
+				return
+			cash -= 20
+			shop_bought_flags["heal"] = true
+			player.health = minf(float(player.max_health), float(player.health) + 25.0)
+			hub_notice = "Cutman stitched you up (+25 HP)."
+		"train":
+			if cash < 35:
+				return
+			cash -= 35
+			shop_bought_flags["train"] = true
+			player.damage += 2.0
+			hub_notice = "Heavy bag drill complete (+2 Base DMG)."
+		"sta":
+			if cash < 26:
+				return
+			cash -= 26
+			shop_bought_flags["sta"] = true
+			player.max_stamina += 12.0
+			player.stamina = minf(float(player.max_stamina), float(player.stamina) + 12.0)
+			hub_notice = "Roadwork complete (+12 Max STA)."
+	if is_instance_valid(audio_engine):
+		audio_engine.play_sfx("item_use", -4.0)
+	animate_screen_enter = false
+	animate_cards_enter = false
+	_clear_ui()
+	if game_state == "shop":
+		TLRScreens.build_shop(self, screen_canvas)
+	else:
+		TLRScreens.build_hub(self, screen_canvas)
+
+
+func _hub_buy_heal() -> void:
+	_shop_buy_service("heal")
+
+
+func _hub_buy_train() -> void:
+	_shop_buy_service("train")
+
+
+func _hub_buy_perk() -> void:
+	if cash < 45 or owned_perks.size() >= PERK_MAX or bool(shop_bought_flags.get("perk", false)):
+		return
+	var unowned: Array[Dictionary] = []
+	for p in PERK_CATALOG:
+		if not owned_perks.has(str(p.get("id", ""))):
+			unowned.append(p)
+	if unowned.is_empty():
+		return
+	var pick: Dictionary = unowned[rng.randi_range(0, unowned.size() - 1)]
+	var pid := str(pick.get("id", ""))
+	cash -= 45
+	shop_bought_flags["perk"] = true
+	owned_perks.append(pid)
+	if pid == "glass_knuckles":
+		player.max_health = maxf(40.0, float(player.max_health) - 15.0)
+		player.health = minf(float(player.health), float(player.max_health))
+	elif pid == "greasy_gloves":
+		player.speed = minf(60.0, float(player.speed) + 8.0)
+	hub_notice = "Paid $45: Learned Trait '%s'!" % str(pick.get("name", pid))
+	if is_instance_valid(audio_engine):
+		audio_engine.play_sfx("ui_confirm", -3.0)
+	animate_screen_enter = false
+	animate_cards_enter = false
+	_clear_ui()
+	TLRScreens.build_hub(self, screen_canvas)
+
+
+func _roll_hub_event() -> void:
+	var events: Array[Dictionary] = [
+		{
+			"id": "alley_cutman",
+			"title": "BACK-ALLEY CUTMAN",
+			"desc": "An unlicensed medic leans out of a doorway under flickering sodium light, holding smelling salts and mystery tape.",
+			"choices": [
+				{"label": "PATCH WOUNDS ($20)", "detail": "Pay $20 Cash -> Heal +28 HP.", "cost_cash": 20},
+				{"label": "MYSTERY VIAL (-12 HP)", "detail": "Suffer -12 HP now -> Gain 1 Rare Item (requires >16 HP).", "min_hp": 17},
+				{"label": "SWAP STORIES", "detail": "Save your skin and pocket +$12 in corner tips.", "cost_cash": 0}
+			]
+		},
+		{
+			"id": "contraband_drop",
+			"title": "SMUGGLED RING LOCKER",
+			"desc": "A promoter left the equipment locker cracked open beside the freight elevator.",
+			"choices": [
+				{"label": "CRACK CONTRABAND ($35)", "detail": "Pay $35 -> Guaranteed Contraband Item!", "cost_cash": 35},
+				{"label": "DRILL TAPE ($22)", "detail": "Pay $22 -> Upgrade a random Move (+1 Level).", "cost_cash": 22},
+				{"label": "GRAB WATER BOTTLES", "detail": "Free: Gain 1 Uncommon/Common Item + 10 HP.", "cost_cash": 0}
+			]
+		},
+		{
+			"id": "iron_spar",
+			"title": "BASEMENT IRON SPAR",
+			"desc": "Old bare-knuckle veterans are trading heavy leather behind closed doors. Step in for a round?",
+			"choices": [
+				{"label": "HARD ROUNDS (-16 HP)", "detail": "Take 16 HP wear -> Permanent +3 Base DMG & +1 DEF.", "min_hp": 22},
+				{"label": "FOOTWORK COACH ($20)", "detail": "Pay $20 -> Permanent +5% Speed.", "cost_cash": 20},
+				{"label": "STRETCH & BREATHE", "detail": "Safe: +14 Max STA immediately.", "cost_cash": 0}
+			]
+		},
+		{
+			"id": "shady_bookie",
+			"title": "THE PIT BOOKIE",
+			"desc": "A slick bookie waves a wad of singles. He wants you to bend the odds before the next bell.",
+			"choices": [
+				{"label": "TAKE THE ADVANCE (+$55)", "detail": "Instant +$55 Cash, but next opponent gets +6% Speed.", "cost_cash": 0},
+				{"label": "BUY INSIDER TRAIT ($42)", "detail": "Pay $42 -> Gain 1 random Fighting Trait!", "cost_cash": 42},
+				{"label": "DOUBLE DOWN BET ($25)", "detail": "Bet $25 -> 65% chance to win +$65 right now!", "cost_cash": 25}
+			]
+		}
+	]
+	current_hub_event = events[rng.randi_range(0, events.size() - 1)].duplicate(true)
+	hub_event_done = false
+
+
+func _open_hub_event() -> void:
+	if hub_event_done:
+		return
+	if current_hub_event.is_empty():
+		_roll_hub_event()
+	game_state = "event"
+	animate_screen_enter = true
+	animate_cards_enter = true
+	_clear_ui()
+	TLRScreens.build_event(self, screen_canvas, current_hub_event)
+
+
+func _resolve_hub_event(choice_idx: int) -> void:
+	if hub_event_done or current_hub_event.is_empty():
+		_show_bracket()
+		return
+	var eid := str(current_hub_event.get("id", ""))
+	var ev_title := str(current_hub_event.get("title", "STREET ENCOUNTER"))
+	var out_status := "win"
+	var out_headline := "DEAL COMPLETE"
+	var out_detail := ""
+	var out_summary := ""
+	match eid:
+		"alley_cutman":
+			match choice_idx:
+				0:
+					if cash < 20: return
+					cash -= 20
+					var before_h := float(player.health)
+					player.health = minf(player.max_health, player.health + 28.0)
+					var gained_h := int(roundf(float(player.health) - before_h))
+					out_status = "trade"
+					out_headline = "PATCHED UP (+%d HP)" % gained_h
+					out_detail = "You paid the back-alley cutman $20 for quick stitches and ice."
+					out_summary = "CASH: -$20 (Now $%d)  •  HEALTH: +%d HP (Now %d/%d)" % [cash, gained_h, int(player.health), int(player.max_health)]
+				1:
+					if float(player.health) <= 16.0: return
+					player.health = maxf(1.0, player.health - 12.0)
+					var rare_it := _weighted_random_item("rare")
+					if inventory.size() < 3 and not rare_it.is_empty():
+						var r_name := _get_item_name(str(rare_it.get("id", "")))
+						inventory.append(str(rare_it.get("id", "adrenaline_shot")))
+						out_status = "win"
+						out_headline = "SECURED %s!" % r_name.to_upper()
+						out_detail = "You endured a sting from the mystery vial and pocketed rare corner gear."
+						out_summary = "HEALTH: -12 HP  •  ADDED ITEM: %s (%s)" % [r_name.to_upper(), str(rare_it.get("rarity", "rare")).to_upper()]
+					else:
+						cash += 35
+						out_status = "trade"
+						out_headline = "SOLD VIAL FOR +$35"
+						out_detail = "Your Corner Bag was full, so you flipped the vial to another cornerman."
+						out_summary = "HEALTH: -12 HP  •  CASH: +$35 (Now $%d)" % cash
+				2:
+					cash += 12
+					out_status = "win"
+					out_headline = "POCKETED +$12 IN TIPS"
+					out_detail = "No risks taken. You kept healthy and left with a few extra bucks."
+					out_summary = "CASH: +$12 (Now $%d)  •  HEALTH INTACT" % cash
+		"contraband_drop":
+			match choice_idx:
+				0:
+					if cash < 35: return
+					cash -= 35
+					var c_it := _weighted_random_item("contraband")
+					var cid := str(c_it.get("id", "nitro_salts"))
+					if inventory.size() < 3:
+						var cn := _get_item_name(cid)
+						inventory.append(cid)
+						out_status = "win"
+						out_headline = "CONTRABAND ACQUIRED: %s!" % cn.to_upper()
+						out_detail = "You popped the smuggled locker and stashed Contraband gear."
+						out_summary = "CASH: -$35 (Now $%d)  •  GAINED: %s" % [cash, cn.to_upper()]
+					else:
+						player.damage += 3.0
+						out_status = "win"
+						out_headline = "WEIGHTED WRAPS (+3 BASE DMG)!"
+						out_detail = "Bag full — you laced dense brass wraps directly under your gloves."
+						out_summary = "CASH: -$35  •  BASE DAMAGE: +3 (Now %d DMG)" % int(player.damage)
+				1:
+					if cash < 22: return
+					cash -= 22
+					if not owned_moves.is_empty():
+						var mid := str(owned_moves[rng.randi_range(0, owned_moves.size() - 1)])
+						move_levels[mid] = mini(3, _move_level(mid) + 1)
+						var mv_n := str(_get_move(mid).get("name", mid)).to_upper()
+						out_status = "win"
+						out_headline = "%s MASTERED -> LV.%d!" % [mv_n, _move_level(mid)]
+						out_detail = "Secret corner notes sharpen your technique power and efficiency."
+						out_summary = "CASH: -$22  •  %s LV.%d (+22%% DMG, -1 STA)" % [mv_n, _move_level(mid)]
+				2:
+					var before_h2 := float(player.health)
+					player.health = minf(player.max_health, player.health + 10.0)
+					var gh2 := int(roundf(float(player.health) - before_h2))
+					var unc := _weighted_random_item("common")
+					if inventory.size() < 3 and not unc.is_empty():
+						var un := _get_item_name(str(unc.get("id", "")))
+						inventory.append(str(unc.get("id", "ice")))
+						out_status = "win"
+						out_headline = "FREE LOOT: %s!" % un.to_upper()
+						out_detail = "Quietly grabbed supplies from the open crate with zero downside."
+						out_summary = "HEALTH: +%d HP  •  ADDED ITEM: %s" % [gh2, un.to_upper()]
+					else:
+						out_status = "win"
+						out_headline = "CORNER REFRESH (+%d HP)" % gh2
+						out_detail = "Grabbed fresh cold water and recovered safely."
+						out_summary = "HEALTH: +%d HP (Now %d/%d)" % [gh2, int(player.health), int(player.max_health)]
+		"iron_spar":
+			match choice_idx:
+				0:
+					if float(player.health) <= 21.0: return
+					player.health = maxf(1.0, player.health - 16.0)
+					player.damage += 3.0
+					player.defence += 1.0
+					out_status = "trade"
+					out_headline = "FORGED IN STEEL (+3 DMG / +1 DEF)"
+					out_detail = "Bruising bare-knuckle rounds hardened both your fists and guard."
+					out_summary = "HEALTH: -16 HP  •  DAMAGE +3 (%d)  •  DEFENCE +1 (%d)" % [int(player.damage), int(player.defence)]
+				1:
+					if cash < 20: return
+					cash -= 20
+					player.speed = minf(60.0, float(player.speed) + 5.0)
+					out_status = "win"
+					out_headline = "FOOTWORK SHARPENED (+5% SPD)"
+					out_detail = "Clean pad drills paid off immediately."
+					out_summary = "CASH: -$20  •  DODGE SPEED: %d%%" % int(_speed_chance(float(player.speed)))
+				2:
+					player.max_stamina += 14.0
+					player.stamina = minf(player.max_stamina, player.stamina + 14.0)
+					out_status = "win"
+					out_headline = "LUNG CAPACITY (+14 MAX STA)"
+					out_detail = "Deep conditioning leaves more gas for combos."
+					out_summary = "MAX STAMINA: +14 (Now %d/%d STA)" % [int(player.stamina), int(player.max_stamina)]
+		"shady_bookie":
+			match choice_idx:
+				0:
+					cash += 55
+					event_enemy_speed_buff += 6.0
+					out_status = "trade"
+					out_headline = "ADVANCE COLLECTED (+$55 CASH)"
+					out_detail = "You pocketed the bookie's advance, though word got back to your next challenger."
+					out_summary = "CASH: +$55 (Now $%d)  •  NEXT OPPONENT +6%% SPEED" % cash
+				1:
+					if cash < 42 or owned_perks.size() >= PERK_MAX: return
+					var unowned: Array[Dictionary] = []
+					for p in PERK_CATALOG:
+						if not owned_perks.has(str(p.get("id", ""))):
+							unowned.append(p)
+					if unowned.is_empty(): return
+					cash -= 42
+					var pk: Dictionary = unowned[rng.randi_range(0, unowned.size() - 1)]
+					var pid := str(pk.get("id", ""))
+					owned_perks.append(pid)
+					if pid == "glass_knuckles":
+						player.max_health = maxf(40.0, float(player.max_health) - 15.0)
+						player.health = minf(float(player.health), float(player.max_health))
+					elif pid == "greasy_gloves":
+						player.speed = minf(60.0, float(player.speed) + 8.0)
+					var pk_n := str(pk.get("name", pid)).to_upper()
+					out_status = "win"
+					out_headline = "TRAIT UNLOCKED: %s!" % pk_n
+					out_detail = str(pk.get("desc", ""))
+					out_summary = "CASH: -$42  •  TRAITS: %d / %d" % [owned_perks.size(), PERK_MAX]
+				2:
+					if cash < 25: return
+					cash -= 25
+					if rng.randf() < 0.65:
+						cash += 65
+						out_status = "win"
+						out_headline = "WAGER WON! (+$65 PAYOUT)"
+						out_detail = "The bookie curses and counts out crisp bills (+40 net profit!)."
+						out_summary = "STAKE: $25  •  PAYOUT: +$65  •  CASH NOW: $%d" % cash
+					else:
+						out_status = "fail"
+						out_headline = "WAGER BUSTED! (-$25 LOST)"
+						out_detail = "Bad beat — the house swept your chips off the crate."
+						out_summary = "LOST: -$25 STAKE  •  CASH REMAINING: $%d" % cash
+	hub_event_done = true
+	hub_notice = ev_title + ": " + out_headline
+	if is_instance_valid(audio_engine):
+		audio_engine.play_sfx("ui_retry" if out_status == "fail" else "ui_confirm", -4.0)
+	game_state = "event_result"
+	animate_screen_enter = true
+	_clear_ui()
+	TLRScreens.build_event_result(self, screen_canvas, ev_title, out_headline, out_detail, out_summary, out_status)
 
 
 func _next_opponent_name() -> String:
@@ -2308,9 +3895,6 @@ func _next_opponent_name() -> String:
 	var roster_index := _opponent_template_index(fight_index)
 	if roster_index < 0 or roster_index >= enemy_templates.size():
 		return "UNKNOWN FIGHTER"
-
-	if fight_index == FIGHT_COUNT - 1:
-		return "THE UNDERTAKER"
 
 	return str(enemy_templates[roster_index].get("name", "Unknown Fighter"))
 
@@ -2332,10 +3916,16 @@ func _next_opponent_scouting_note() -> String:
 			return "Committed attack moves invite counters. Mix in defence, feints and utility."
 		"dirty":
 			return "Clean hits drain your stamina. Avoid wasting turns and protect your gas tank."
+		"bleeder":
+			return "Targets cuts to inflict Bleeding (-4 HP/turn). Guard clean or bring Vaseline."
+		"berserker":
+			return "Enrages below 50% HP (+25% power). Save Adrenaline to burst through Phase 2."
+		"showboat":
+			return "Taunts for +35% next-hit power. Land an attack to interrupt the showboat."
 		"boss":
 			return "The champion surges on turns 3 and 6. Keep stamina ready to defend those turns."
 		_:
-			return str(upcoming.get("tell", "Study the opponent's tell carefully."))
+			return "Watch the shoulders closely before committing heavy stamina."
 
 
 func _show_bracket() -> void:
@@ -2361,16 +3951,18 @@ func _select_hub_item_slot(slot: int) -> void:
 func _use_hub_item_slot(slot: int) -> void:
 	if slot < 0 or slot >= inventory.size():
 		return
-	if str(inventory[slot]) != "ice":
+	var item_id := str(inventory[slot])
+	if item_id not in ["ice", "sparring_tonics"]:
 		return
 	inventory.remove_at(slot)
 	var before_hp := float(player.health)
-	player.health = minf(
-		player.max_health,
-		player.health + 22.0
-	)
+	if item_id == "sparring_tonics":
+		player.max_health += 12.0
+		player.health = minf(player.max_health, player.health + 18.0)
+	else:
+		player.health = minf(player.max_health, player.health + 22.0)
 	var gained := int(roundf(float(player.health) - before_hp))
-	hub_notice = "RECOVERED +%d HP / %d CAP" % [gained, int(player.max_health)]
+	hub_notice = ("TONIC +12 MAX HP / +%d HP" % gained) if item_id == "sparring_tonics" else ("RECOVERED +%d HP / %d CAP" % [gained, int(player.max_health)])
 	selected_hub_item_slot = clampi(selected_hub_item_slot, 0, maxi(0, inventory.size() - 1))
 	animate_screen_enter = false
 	_clear_ui()
@@ -2379,6 +3971,8 @@ func _use_hub_item_slot(slot: int) -> void:
 
 func _use_heal_between() -> void:
 	var idx := inventory.find("ice")
+	if idx == -1:
+		idx = inventory.find("sparring_tonics")
 	if idx != -1:
 		_use_hub_item_slot(idx)
 
@@ -2427,13 +4021,51 @@ func _use_item(id: String) -> void:
 		"crowd":
 			next_fight_speed_bonus = minf(5.0, 60.0 - float(player.get("speed", 0.0)))
 
+		"cutman_kit":
+			player_bleeding = 0
+			player.health = minf(player.max_health, player.health + 16.0)
+			player.stamina = minf(player.max_stamina, player.stamina + 12.0)
+
+		"pepper_wrap":
+			enemy.stamina = maxf(0.0, enemy.stamina - 10.0)
+			player_counter_window = true
+			enemy_taunt_buff = false
+
+		"adrenaline_shot":
+			adrenaline = 100.0
+			player.stamina = minf(player.max_stamina, player.stamina + 12.0)
+
+		"sparring_tonics":
+			player.max_health += 12.0
+			player.health = minf(player.max_health, player.health + 18.0)
+
+		"brass_duster":
+			if not bribe_ready and rng.randf() < (0.05 if str(current_bout_modifier.get("id", "")) == "back_alley" else 0.10):
+				_log("The referee spots the brass insert! DISQUALIFIED.")
+				_end_run(false, "Disqualified for wearing brass knuckles.")
+				return
+			bribe_ready = false
+			brass_charges = 3
+
+		"nitro_salts":
+			player.stamina = player.max_stamina
+			player.health = minf(player.max_health, player.health + 22.0)
+			player_combo_ready = true
+
 	var item_name := _get_item_name(id)
 	var item_data := _get_item_data(id)
-	combat_banner_title = "ITEM USED / %s" % item_name.to_upper()
-	combat_banner_sub = str(item_data.get("description", "Item activated."))
+	var quick_use: bool = (id in ["cutman_kit", "adrenaline_shot", "nitro_salts"]) and not training_active
+	combat_banner_title = ("QUICK ITEM / %s" if quick_use else "ITEM USED / %s") % item_name.to_upper()
+	combat_banner_sub = str(item_data.get("description", "Item activated.")) + (" • Turn kept!" if quick_use else "")
 	_log("Used " + item_name + ".")
 	if is_instance_valid(audio_engine):
 		audio_engine.play_sfx("item_use", -4.0)
+
+	if quick_use and game_state == "combat":
+		animate_combat_banner = true
+		animate_phase_banner = true
+		_show_combat()
+		return
 
 	if game_state == "combat":
 		_enemy_turn()
@@ -2558,8 +4190,26 @@ func _save_run() -> void:
 		"fight_index": fight_index,
 		"player": player,
 		"owned_moves": owned_moves,
+		"move_levels": move_levels,
+		"owned_perks": owned_perks,
+		"run_roster": run_roster,
+		"alt_roster": alt_roster,
+		"bout_branches": bout_branches,
+		"bout_bounties": bout_bounties,
+		"player_style": player_style,
 		"inventory": inventory,
 		"respect": respect,
+		"cash": cash,
+		"shop_bought_flags": shop_bought_flags,
+		"shop_stock": shop_stock,
+		"shop_reroll_count": shop_reroll_count,
+		"current_hub_event": current_hub_event,
+		"hub_event_done": hub_event_done,
+		"event_enemy_speed_buff": event_enemy_speed_buff,
+		"contract_accepted": contract_accepted,
+		"story_seen_ids": story_seen_ids,
+		"run_highest_hit": run_highest_hit,
+		"run_knockouts": run_knockouts,
 		"seed": run_seed,
 		"passive": passive,
 		"revive_used": revive_used,
@@ -2683,6 +4333,46 @@ func _continue_run(slot: int = -1) -> void:
 	inventory = saved_inventory.duplicate()
 	respect = maxi(0, int(data.get("respect", 0)))
 	run_seed = int(data.get("seed", 0))
+	move_levels = data.get("move_levels", {}).duplicate(true)
+	owned_perks.clear()
+	for pk in data.get("owned_perks", []):
+		owned_perks.append(str(pk))
+	var saved_roster = data.get("run_roster", [])
+	if saved_roster is Array and saved_roster.size() == FIGHT_COUNT:
+		run_roster.clear()
+		for ri in saved_roster:
+			run_roster.append(int(ri))
+	else:
+		run_roster = _generate_run_roster(run_seed)
+	var saved_alt = data.get("alt_roster", [])
+	if saved_alt is Array and saved_alt.size() == FIGHT_COUNT:
+		alt_roster.clear()
+		for ai in saved_alt:
+			alt_roster.append(int(ai))
+	var saved_branches = data.get("bout_branches", [])
+	if saved_branches is Array and saved_branches.size() == FIGHT_COUNT:
+		bout_branches.clear()
+		for bi in saved_branches:
+			bout_branches.append(int(bi))
+	else:
+		bout_branches = [0, 0, 0, 0, 0, 0, 0, 0]
+	var saved_bounties = data.get("bout_bounties", [])
+	if saved_bounties is Array and saved_bounties.size() == FIGHT_COUNT:
+		bout_bounties = saved_bounties.duplicate(true)
+	player_style = str(data.get("player_style", "slugger"))
+	cash = maxi(0, int(data.get("cash", 30)))
+	shop_bought_flags = data.get("shop_bought_flags", {}).duplicate(true)
+	shop_stock = data.get("shop_stock", {}).duplicate(true)
+	shop_reroll_count = int(data.get("shop_reroll_count", 0))
+	current_hub_event = data.get("current_hub_event", {}).duplicate(true)
+	hub_event_done = bool(data.get("hub_event_done", false))
+	event_enemy_speed_buff = float(data.get("event_enemy_speed_buff", 0.0))
+	contract_accepted = bool(data.get("contract_accepted", false))
+	story_seen_ids.clear()
+	for sid in data.get("story_seen_ids", []):
+		story_seen_ids.append(str(sid))
+	run_highest_hit = int(data.get("run_highest_hit", 0))
+	run_knockouts = int(data.get("run_knockouts", 0))
 	passive = saved_passive.duplicate(true)
 	revive_used = bool(data.get("revive_used", false))
 	bribe_ready = bool(data.get("bribe_ready", false))
@@ -2731,21 +4421,35 @@ func _remove_legacy_save_files() -> void:
 				push_warning("Could not remove legacy save file: " + legacy_path)
 
 
+func _has_any_slot_save() -> bool:
+	for s in range(SAVE_SLOT_COUNT):
+		if FileAccess.file_exists(_slot_save_path(s)):
+			return true
+	return false
+
+
 func _load_meta() -> void:
 	if not FileAccess.file_exists(META_PATH):
 		lifetime_respect = 0
+		tutorial_completed = _has_any_slot_save()
 		return
 
 	var file := FileAccess.open(META_PATH, FileAccess.READ)
 	if file == null:
 		lifetime_respect = 0
+		tutorial_completed = _has_any_slot_save()
 		return
 
 	var data = JSON.parse_string(file.get_as_text())
 	if data is Dictionary:
 		lifetime_respect = maxi(0, int(data.get("respect_total", 0)))
+		if data.has("tutorial_completed"):
+			tutorial_completed = bool(data.get("tutorial_completed", false))
+		else:
+			tutorial_completed = (lifetime_respect > 0 or _has_any_slot_save())
 	else:
 		lifetime_respect = 0
+		tutorial_completed = _has_any_slot_save()
 
 
 func _respect_rank() -> String:
@@ -2790,13 +4494,20 @@ func _career_perk_summary() -> String:
 	return " | ".join(perks)
 
 
-func _save_meta() -> void:
-	lifetime_respect += respect
-	var data := {"respect_total": lifetime_respect}
+func _save_meta_flags() -> void:
+	var data := {
+		"respect_total": lifetime_respect,
+		"tutorial_completed": tutorial_completed
+	}
 	var file := FileAccess.open(META_PATH, FileAccess.WRITE)
-
 	if file:
 		file.store_string(JSON.stringify(data))
+
+
+func _save_meta() -> void:
+	lifetime_respect += respect
+	tutorial_completed = true
+	_save_meta_flags()
 
 
 # ---------------------------------------------------------
@@ -2804,15 +4515,18 @@ func _save_meta() -> void:
 # ---------------------------------------------------------
 
 func _show_tutorial() -> void:
-	_start_training()
+	_start_training(false)
 
 
-func _start_training() -> void:
+func _start_training(is_first_run: bool = false) -> void:
 	_disable_realtime_combat()
 	training_active = true
 	training_retry_flag = false
+	pending_first_run_tutorial = is_first_run
+	tutorial_completed = true
+	_save_meta_flags()
 	training_turn = 0
-	training_feedback = "Eyes on my rear shoulder. Read the pose, then answer using slots 1–6."
+	training_feedback = "First time down the stairs? Read my shoulders before Bout 1 — or press SKIP TO RUN anytime." if is_first_run else "Eyes on my rear shoulder. Read the pose, then answer using slots 1–8."
 	animate_screen_enter = true
 	combat_paused = false
 	combat_drawer_open = false
@@ -2825,7 +4539,11 @@ func _start_training() -> void:
 	fight_index = 0
 	round_no = 1
 	turn_no = 1
-	owned_moves = ["jab", "block", "slip", "counter", "clinch", "rest"]
+	adrenaline = 0.0
+	player_momentum = false
+	move_levels.clear()
+	owned_perks.clear()
+	owned_moves = ["jab", "block", "slip", "counter", "clinch", "rest", "feint", "body_shot"]
 	inventory = ["energy", "ice", "salts"]
 	passive = {"damage": 0.0, "health": 0.0, "stamina": 0.0, "defence": 0.0, "speed": 0.0, "slots": 0, "wind": 0}
 	player = {
@@ -2886,9 +4604,25 @@ func _training_recommended_moves() -> Array:
 		["jab", "body_shot", "block", "slip"],
 		["block", "slip", "counter"],
 		["rest"],
-		["block", "slip", "clinch"]
+		["block", "slip", "clinch"],
+		["feint", "body_shot"],
+		["jab", "body_shot", "feint"]
 	]
 	return acceptable_by_exchange[mini(training_turn, acceptable_by_exchange.size() - 1)]
+
+
+func _training_lesson_prompt() -> String:
+	var prompts := [
+		"Eyes on the rear shoulder. Block [2], Slip [3], or Counter [4] the heavy right.",
+		"Watch the dip toward your ribs. Block [2], Slip [3], or Clinch [5].",
+		"Quick jab incoming! Answer with Jab [1], Body Shot [8], Block [2], or Slip [3].",
+		"Same loaded right again — read the shoulder and punish or defend cleanly.",
+		"Safe breathing window! Use Rest [6] now to refill stamina without risk.",
+		"Two-punch combination coming. Shut down the rush with Block, Slip, or Clinch.",
+		"Tight High Guard blocks normal punches! Crack it with Feint [7] or Body Shot [8] for Momentum.",
+		"Showboat leaves him open (+35% next hit)! Interrupt with Jab, Body Shot, or Feint."
+	]
+	return prompts[mini(training_turn, prompts.size() - 1)]
 
 
 func _training_move_is_acceptable(id: String) -> bool:
@@ -2910,6 +4644,10 @@ func _training_retry_feedback(id: String) -> String:
 			return "This is your safe breathing window. Choose Rest to recover stamina. This exchange will repeat."
 		"Combination":
 			return "The combination is coming. Choose Block, Slip or Clinch to handle the pressure. This exchange will repeat."
+		"High Guard":
+			return "Punches bounce off High Guard! Use Feint or Body Shot to crack it open and earn Momentum."
+		"Showboat Taunt":
+			return "He's wide open and about to buff +35%! Throw Jab, Body Shot, or Feint with 100% Lights Out!"
 	return "%s is not the lesson for this exchange. Choose a suggested response and try again." % move_name
 
 
@@ -2939,6 +4677,10 @@ func _training_feedback_for_move(id: String) -> String:
 		if id in ["block", "slip", "clinch"]:
 			return "Coach: Good defence. Block, Slip or Clinch can interrupt a combination and stop you getting overwhelmed."
 		return "Coach: Don't admire your work after landing a punch. Be ready for the follow-up."
+	if incoming == "High Guard":
+		return "Coach: CRACKED IT! Feint & Guard Breaks earn MOMENTUM — a free follow-up punch before the opponent swings!"
+	if incoming == "Showboat Taunt":
+		return "Coach: LIGHTS OUT! Interrupting taunts stops their +35% buff and unleashes your 100% Adrenaline Finisher!"
 	if id == "counter":
 		return "Coach: Counters need a read. Match the tell before you spend the stamina."
 	return "Coach: Keep reading my shoulders. Don't spend stamina just because you can."
@@ -2948,6 +4690,11 @@ func _finish_training() -> void:
 	if not training_active:
 		return
 	training_active = false
+	pending_first_run_tutorial = false
+	tutorial_completed = true
+	_save_meta_flags()
+	adrenaline = 0.0
+	player_momentum = false
 	_disable_realtime_combat()
 	_show_training_complete()
 

@@ -3,48 +3,112 @@
     "id": "vaseline",
     "name": "Vaseline in the Eyes",
     "description": "Opponent accuracy -15 for two turns.",
-    "effect": "blind"
+    "effect": "blind",
+    "rarity": "common",
+    "price": 18
   },
   {
     "id": "rosin",
     "name": "Rosin Dust",
     "description": "Opponent loses 8 stamina each turn for two turns.",
-    "effect": "drain"
-  },
-  {
-    "id": "salts",
-    "name": "Smelling Salts",
-    "description": "Once per run, recover from a knockdown with 30 health.",
-    "effect": "revive"
+    "effect": "drain",
+    "rarity": "common",
+    "price": 18
   },
   {
     "id": "energy",
     "name": "Energy Drink",
     "description": "Restore 35 stamina now; lose 10 next turn.",
-    "effect": "energy"
-  },
-  {
-    "id": "loaded_tape",
-    "name": "Loaded Tape",
-    "description": "Next landed attack deals +18 damage; 12% DQ risk.",
-    "effect": "loaded"
-  },
-  {
-    "id": "bribe",
-    "name": "Cheap-shot Bribe",
-    "description": "Your next dirty move cannot disqualify you.",
-    "effect": "bribe"
+    "effect": "energy",
+    "rarity": "common",
+    "price": 20
   },
   {
     "id": "ice",
     "name": "Corner Ice Pack",
     "description": "Restore 22 health between fights.",
-    "effect": "heal"
+    "effect": "heal",
+    "rarity": "common",
+    "price": 16
   },
   {
     "id": "crowd",
     "name": "Crowd's Favourite",
     "description": "Gain +5 speed for the next fight.",
-    "effect": "speed"
+    "effect": "speed",
+    "rarity": "uncommon",
+    "price": 28
+  },
+  {
+    "id": "bribe",
+    "name": "Cheap-shot Bribe",
+    "description": "Your next dirty move cannot disqualify you.",
+    "effect": "bribe",
+    "rarity": "uncommon",
+    "price": 30
+  },
+  {
+    "id": "cutman_kit",
+    "name": "Cutman Swab",
+    "description": "Cure Bleeding, restore +16 HP & +12 stamina now.",
+    "effect": "cutman",
+    "rarity": "uncommon",
+    "price": 28
+  },
+  {
+    "id": "pepper_wrap",
+    "name": "Stinging Liniment",
+    "description": "Disrupt opponent (-10 STA) and open a Counter Window.",
+    "effect": "pepper",
+    "rarity": "uncommon",
+    "price": 32
+  },
+  {
+    "id": "loaded_tape",
+    "name": "Loaded Tape",
+    "description": "Next landed attack deals +18 damage; 12% DQ risk.",
+    "effect": "loaded",
+    "rarity": "rare",
+    "price": 42
+  },
+  {
+    "id": "salts",
+    "name": "Smelling Salts",
+    "description": "Once per run, recover from a knockdown with 30 health.",
+    "effect": "revive",
+    "rarity": "rare",
+    "price": 45
+  },
+  {
+    "id": "adrenaline_shot",
+    "name": "Adrenaline Vial",
+    "description": "Fill Adrenaline to 100% (Lights Out Ready!) +12 STA.",
+    "effect": "adrenaline",
+    "rarity": "rare",
+    "price": 44
+  },
+  {
+    "id": "sparring_tonics",
+    "name": "Underground Tonic",
+    "description": "Gain +12 permanent max HP and heal +18 HP now.",
+    "effect": "tonic",
+    "rarity": "rare",
+    "price": 48
+  },
+  {
+    "id": "brass_duster",
+    "name": "Brass Insert",
+    "description": "Next 3 attacks deal +12 DMG & Stagger; 10% DQ check.",
+    "effect": "brass",
+    "rarity": "contraband",
+    "price": 62
+  },
+  {
+    "id": "nitro_salts",
+    "name": "Nitro Ammonia",
+    "description": "Full stamina refill, +22 HP & ready Combo Rhythm.",
+    "effect": "nitro",
+    "rarity": "contraband",
+    "price": 68
   }
 ]

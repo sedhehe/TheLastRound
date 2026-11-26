@@ -123,14 +123,14 @@ func set_ambience(mode: String) -> void:
 			_audience_ambience.volume_db = -12.5
 			if not _audience_ambience.playing:
 				_audience_ambience.play()
-	elif mode == "menu":
+	elif mode == "menu" or mode == "cutscene":
 		if is_instance_valid(_combat_music) and _combat_music.playing:
 			_combat_music.stop()
 		if is_instance_valid(_menu_music) and not _menu_music.playing:
 			_menu_music.play()
-		# Muffled underground crowd murmur audible behind walls in menu/hub
+		# Muffled underground crowd murmur audible behind walls in menu/hub/cutscene
 		if is_instance_valid(_audience_ambience):
-			_audience_ambience.volume_db = -17.0
+			_audience_ambience.volume_db = -19.5 if mode == "cutscene" else -17.0
 			if not _audience_ambience.playing:
 				_audience_ambience.play()
 	else:
@@ -164,6 +164,20 @@ func play_commentary_cue(volume_db: float = -6.0) -> void:
 	_comm_player.volume_db = volume_db
 	_comm_player.pitch_scale = _rng.randf_range(0.97, 1.04)
 	_comm_player.play()
+
+
+func play_typewriter_tick() -> void:
+	if DisplayServer.get_name() == "headless" or _sfx_players.is_empty():
+		return
+	var stream: AudioStreamWAV = _samples.get("ui_click")
+	if stream == null:
+		return
+	var p := _sfx_players[_sfx_cursor]
+	_sfx_cursor = (_sfx_cursor + 1) % _sfx_players.size()
+	p.stream = stream
+	p.volume_db = -22.0
+	p.pitch_scale = _rng.randf_range(1.18, 1.38)
+	p.play()
 
 
 # ---------------------------------------------------------
