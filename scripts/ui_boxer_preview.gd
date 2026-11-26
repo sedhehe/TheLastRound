@@ -129,10 +129,10 @@ func _apply_pose(pose: String, t: float = 0.0) -> void:
 	boxer_root.position = Vector3.ZERO
 	boxer_root.rotation = Vector3.ZERO
 
-	var l_shoulder := Vector3(-0.345, 1.75, 0.0)
-	var r_shoulder := Vector3(0.345, 1.75, 0.0)
-	var l_elbow := Vector3(-0.40, 1.40, 0.16)
-	var r_elbow := Vector3(0.40, 1.40, 0.16)
+	var l_shoulder := Vector3(-0.305, 1.72, 0.0)
+	var r_shoulder := Vector3(0.305, 1.72, 0.0)
+	var l_elbow := Vector3(-0.37, 1.39, 0.15)
+	var r_elbow := Vector3(0.37, 1.39, 0.15)
 	var l_hand := Vector3(-0.18, 1.88, 0.34)
 	var r_hand := Vector3(0.18, 1.88, 0.34)
 
@@ -183,16 +183,8 @@ func _apply_pose(pose: String, t: float = 0.0) -> void:
 				boxer_root.position.y = sin(t * 2.2) * 0.02
 				boxer_root.rotation.y = sin(t * 0.9) * 0.08
 
-	left_glove.position = l_hand
-	right_glove.position = r_hand
-	if is_instance_valid(left_elbow):
-		left_elbow.position = l_elbow
-	if is_instance_valid(right_elbow):
-		right_elbow.position = r_elbow
-	TLRBoxerMesh.place_limb(left_upper_arm, l_shoulder, l_elbow)
-	TLRBoxerMesh.place_limb(right_upper_arm, r_shoulder, r_elbow)
-	TLRBoxerMesh.place_limb(left_forearm, l_elbow, l_hand)
-	TLRBoxerMesh.place_limb(right_forearm, r_elbow, r_hand)
+	TLRBoxerMesh.pose_arm(left_upper_arm, left_forearm, left_elbow, left_glove, l_shoulder, l_elbow, l_hand)
+	TLRBoxerMesh.pose_arm(right_upper_arm, right_forearm, right_elbow, right_glove, r_shoulder, r_elbow, r_hand)
 
 
 func _box(p: Node3D, s: Vector3, pos: Vector3, m: Material) -> MeshInstance3D:

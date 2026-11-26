@@ -110,12 +110,12 @@ static func build_title_screen(main: Node, parent: Control) -> void:
 	TLRTheme.make_abs_label(parent, "AN UNDERGROUND BOXING ROGUELIKE", Rect2(52, 40, 520, 20), 13, TLRTheme.TEXT_MUTED, true)
 
 	# Stacked Condensed Hero Title
-	TLRTheme.make_abs_label(parent, "THE LAST", Rect2(38, 92, 760, 112), 116, TLRTheme.TEXT_PRIMARY, true, HORIZONTAL_ALIGNMENT_LEFT, VERTICAL_ALIGNMENT_TOP, true)
-	TLRTheme.make_abs_label(parent, "ROUND", Rect2(38, 192, 760, 112), 116, TLRTheme.ACCENT_ORANGE, true, HORIZONTAL_ALIGNMENT_LEFT, VERTICAL_ALIGNMENT_TOP, true)
+	var hero_1 := TLRTheme.make_abs_label(parent, "THE LAST", Rect2(38, 92, 760, 112), 116, TLRTheme.TEXT_PRIMARY, true, HORIZONTAL_ALIGNMENT_LEFT, VERTICAL_ALIGNMENT_TOP, true)
+	var hero_2 := TLRTheme.make_abs_label(parent, "ROUND", Rect2(38, 192, 760, 112), 116, TLRTheme.ACCENT_ORANGE, true, HORIZONTAL_ALIGNMENT_LEFT, VERTICAL_ALIGNMENT_TOP, true)
 
 	# Tagline
-	TLRTheme.make_abs_label(parent, "NO CONTRACT. NO CORNER. NO WAY OUT.", Rect2(40, 326, 650, 24), 15, TLRTheme.TEXT_PRIMARY, true)
-	TLRTheme.make_abs_label(parent, "Eight fights stand between you and the Crown.", Rect2(40, 354, 650, 24), 16, TLRTheme.TEXT_MUTED, false)
+	var tag_1 := TLRTheme.make_abs_label(parent, "NO CONTRACT. NO CORNER. NO WAY OUT.", Rect2(40, 326, 650, 24), 15, TLRTheme.TEXT_PRIMARY, true)
+	var tag_2 := TLRTheme.make_abs_label(parent, "Eight fights stand between you and the Crown.", Rect2(40, 354, 650, 24), 16, TLRTheme.TEXT_MUTED, false)
 
 	# Notice banner if present
 	if not str(main.menu_notice).is_empty():
@@ -155,6 +155,12 @@ static func build_title_screen(main: Node, parent: Control) -> void:
 	var mile_text := "%d / %d RESPECT  •  UNLOCK %s" % [main.lifetime_respect, target, str(milestone.label)] if main.lifetime_respect < 1000 else "%d RESPECT  •  MAX RANK" % main.lifetime_respect
 	TLRTheme.make_abs_label(parent, mile_text, Rect2(cr_x, 180, 370, 20), 11, TLRTheme.TEXT_MUTED, true)
 	TLRTheme.make_abs_label(parent, "CAREER PERKS: " + str(main._career_perk_summary()), Rect2(cr_x, 204, 370, 42), 11, TLRTheme.TEXT_DIM, false)
+	if int(main.lifetime_respect) > 0:
+		var rst_lbl := "CONFIRM RESET RECORD?" if bool(main.confirm_career_reset) else "RESET CAREER RECORD"
+		var rst_btn := TLRTheme.make_abs_button(parent, rst_lbl, Rect2(cr_x, 250, 190, 28), main._reset_career_record, "ghost", false, 11)
+		rst_btn.alignment = HORIZONTAL_ALIGNMENT_LEFT
+		if bool(main.confirm_career_reset):
+			rst_btn.add_theme_color_override("font_color", TLRTheme.CORAL)
 
 	# Bottom section header
 	TLRTheme.make_abs_label(parent, "CHOOSE YOUR CORNER", Rect2(40, 542, 400, 24), 17, TLRTheme.TEXT_PRIMARY, true)
@@ -237,7 +243,9 @@ static func build_title_screen(main: Node, parent: Control) -> void:
 	TLRTheme.make_abs_button(parent, "SETTINGS", Rect2(1270, 828, 130, 42), main._show_settings, "ghost", false, 14)
 	TLRTheme.make_abs_button(parent, "QUIT GAME", Rect2(1410, 828, 150, 42), main._quit_game, "ghost", false, 14)
 
-	TLRTheme.stagger_enter(main, slot_cards, Vector2(0.0, 20.0), 0.26, 0.05)
+	if bool(main.animate_cards_enter):
+		main.animate_cards_enter = false
+		TLRTheme.stagger_enter(main, slot_cards, Vector2(0.0, 10.0), 0.16, 0.025)
 
 
 # ---------------------------------------------------------
@@ -389,8 +397,8 @@ static func build_hub(main: Node, parent: Control) -> void:
 			i_card.add_child(icon)
 			var tag_txt := "SELECTED" if is_sel_item else "×1"
 			TLRTheme.make_abs_label(i_card, tag_txt, Rect2(54, 14, i_w - 66, 18), 10, TLRTheme.CYAN if is_sel_item else TLRTheme.BLUE, true, HORIZONTAL_ALIGNMENT_RIGHT)
-			TLRTheme.make_abs_label(i_card, str(main._get_item_name(item_id)).to_upper(), Rect2(12, 58, i_w - 24, 34), 15, TLRTheme.TEXT_PRIMARY, true)
-			TLRTheme.make_abs_label(i_card, _item_short_hint(item_id), Rect2(12, 98, i_w - 24, 26), 11, TLRTheme.TEXT_MUTED, false)
+			TLRTheme.make_abs_label(i_card, str(main._get_item_name(item_id)).to_upper(), Rect2(12, 48, i_w - 24, 38), 14, TLRTheme.TEXT_PRIMARY, true)
+			TLRTheme.make_abs_label(i_card, _item_short_hint(item_id), Rect2(12, 96, i_w - 24, 28), 11, TLRTheme.TEXT_MUTED, false)
 			var idata: Dictionary = main._get_item_data(item_id)
 			i_card.tooltip_text = str(idata.get("description", "")) + "\n" + str(main._item_timing(item_id))
 			var hit := Button.new()
@@ -589,7 +597,9 @@ static func build_rewards(main: Node, parent: Control, options: Array) -> void:
 		confirm_label = "CONFIRM %s   →" % c_name.to_upper()
 
 	TLRTheme.make_abs_button(parent, confirm_label, Rect2(1010, 800, 550, 48), main._confirm_selected_reward, "teal" if not confirm_disabled else "default", confirm_disabled, 15)
-	TLRTheme.stagger_enter(main, reward_cards, Vector2(0.0, 22.0), 0.25, 0.05)
+	if bool(main.animate_cards_enter):
+		main.animate_cards_enter = false
+		TLRTheme.stagger_enter(main, reward_cards, Vector2(0.0, 22.0), 0.25, 0.05)
 
 
 static func build_reward_confirmed(main: Node, parent: Control, headline: String, detail: String, summary: String) -> void:
@@ -957,13 +967,26 @@ static func build_telegraph_practice(main: Node, parent: Control) -> void:
 		TLRTheme.make_abs_label(card, str(t.desc), Rect2(24, 94, 250, 64), 14, TLRTheme.TEXT_MUTED, false)
 		TLRTheme.make_abs_label(card, str(t.counter), Rect2(24, 166, 250, 44), 12, TLRTheme.CYAN if is_watching else TLRTheme.TEXT_DIM, true)
 		card.add_child(TLRBoxerPreview.new(Rect2(286, 18, 194, 250), Color(0.55, 0.36, 0.26), str(t.pose), is_watching, false))
-		TLRTheme.make_abs_button(card, "WATCHING ✓" if is_watching else "WATCH  →", Rect2(14, 226, 200, 42), main._select_practice_pose.bind(str(t.pose)), "teal" if is_watching else "ghost", false, 13)
+		TLRTheme.make_abs_label(card, "WATCHING ✓" if is_watching else "CLICK CARD TO WATCH →", Rect2(24, 240, 240, 24), 12, TLRTheme.CYAN if is_watching else TLRTheme.TEXT_MUTED, true)
+		var card_hit := Button.new()
+		card_hit.position = Vector2.ZERO
+		card_hit.size = Vector2(cw, ch)
+		card_hit.focus_mode = Control.FOCUS_ALL
+		card_hit.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+		card_hit.add_theme_stylebox_override("normal", TLRTheme.style_box(Color(0, 0, 0, 0), Color(0, 0, 0, 0), 0, 0, 0, 0))
+		card_hit.add_theme_stylebox_override("hover", TLRTheme.style_box(Color(0.14, 0.36, 0.46, 0.14), TLRTheme.BORDER_HOVER if not is_watching else TLRTheme.BORDER_TEAL, 2, 0, 0, 0))
+		card_hit.add_theme_stylebox_override("focus", TLRTheme.style_box(Color(0.14, 0.36, 0.46, 0.14), TLRTheme.BORDER_TEAL, 2, 0, 0, 0))
+		card_hit.add_theme_stylebox_override("pressed", TLRTheme.style_box(Color(0.08, 0.25, 0.32, 0.22), TLRTheme.BORDER_TEAL, 2, 0, 0, 0))
+		card_hit.pressed.connect(main._select_practice_pose.bind(str(t.pose)))
+		card.add_child(card_hit)
 
 	var back_cb: Callable = main._show_bracket if main.game_state == "hub" else main._show_main_menu
 	var back_txt := "BACK TO YOUR CORNER" if main.game_state == "hub" else "MAIN MENU"
 	TLRTheme.make_abs_button(parent, back_txt, Rect2(40, 814, 260, 48), back_cb, "default", false, 14)
 	TLRTheme.make_abs_button(parent, "COACH SPAR  →", Rect2(1180, 814, 380, 48), main._start_training, "teal", false, 14)
-	TLRTheme.stagger_enter(main, tell_cards, Vector2(0.0, 18.0), 0.22, 0.03)
+	if bool(main.animate_cards_enter):
+		main.animate_cards_enter = false
+		TLRTheme.stagger_enter(main, tell_cards, Vector2(0.0, 18.0), 0.22, 0.03)
 
 
 # ---------------------------------------------------------
@@ -1048,10 +1071,10 @@ static func build_settings(main: Node, parent: Control) -> void:
 				TLRTheme.make_abs_button(am_card, o, Rect2(24 + float(j) * 184.0, 38, 172, 34), main._set_setting_value.bind("aspect_mode", o), "teal" if cur_am == o else "default", false, 13)
 
 			var res_opts := [
-				"1280 × 720", "1600 × 900", "1920 × 1080", "2560 × 1440",
-				"1920 × 1200", "2560 × 1080", "1280 × 960"
+				"Auto", "1280 × 720", "1600 × 900", "1920 × 1080",
+				"2560 × 1440", "1920 × 1200", "2560 × 1080", "1280 × 960"
 			]
-			var cur_res := str(main.settings.get("resolution", "1600 × 900"))
+			var cur_res := str(main.settings.get("resolution", "Auto"))
 			var res_card := TLRTheme.make_panel(parent, Rect2(rx, 360, rw, 126), TLRTheme.SURFACE_SOLID, TLRTheme.BORDER_SUBTLE, 1, 0, 0)
 			TLRTheme.make_abs_label(res_card, "RESOLUTION", Rect2(24, 10, 400, 22), 16, TLRTheme.TEXT_PRIMARY, true)
 			TLRTheme.make_abs_label(res_card, cur_res, Rect2(rw - 200, 10, 176, 22), 14, TLRTheme.CYAN, true, HORIZONTAL_ALIGNMENT_RIGHT)

@@ -52,25 +52,25 @@ func _build_players() -> void:
 	_menu_music = AudioStreamPlayer.new()
 	_menu_music.bus = "Music"
 	_menu_music.stream = _samples.get("music_menu")
-	_menu_music.volume_db = -10.5
+	_menu_music.volume_db = -6.0
 	add_child(_menu_music)
 
 	_combat_music = AudioStreamPlayer.new()
 	_combat_music.bus = "Music"
 	_combat_music.stream = _samples.get("music_combat")
-	_combat_music.volume_db = -10.0
+	_combat_music.volume_db = -5.5
 	add_child(_combat_music)
 
 	_room_ambience = AudioStreamPlayer.new()
 	_room_ambience.bus = "Music"
 	_room_ambience.stream = _samples.get("ambience_room")
-	_room_ambience.volume_db = -20.0
+	_room_ambience.volume_db = -24.0
 	add_child(_room_ambience)
 
 	_audience_ambience = AudioStreamPlayer.new()
 	_audience_ambience.bus = "SFX"
 	_audience_ambience.stream = _samples.get("ambience_audience")
-	_audience_ambience.volume_db = -3.0
+	_audience_ambience.volume_db = -12.5
 	add_child(_audience_ambience)
 
 
@@ -120,7 +120,7 @@ func set_ambience(mode: String) -> void:
 		if is_instance_valid(_combat_music) and not _combat_music.playing:
 			_combat_music.play()
 		if is_instance_valid(_audience_ambience):
-			_audience_ambience.volume_db = -2.2
+			_audience_ambience.volume_db = -12.5
 			if not _audience_ambience.playing:
 				_audience_ambience.play()
 	elif mode == "menu":
@@ -130,7 +130,7 @@ func set_ambience(mode: String) -> void:
 			_menu_music.play()
 		# Muffled underground crowd murmur audible behind walls in menu/hub
 		if is_instance_valid(_audience_ambience):
-			_audience_ambience.volume_db = -8.0
+			_audience_ambience.volume_db = -17.0
 			if not _audience_ambience.playing:
 				_audience_ambience.play()
 	else:
@@ -441,36 +441,29 @@ func _make_room_noise(duration: float) -> AudioStreamWAV:
 
 
 func _make_muffled_audience_loop(duration: float) -> AudioStreamWAV:
-	# Natural muffled underground crowd cheering & arena murmur (filtered noise swells, zero sine buzz)
+	# Smooth muffled underground crowd cheering & murmur (no rhythmic pulsing / helicopter effect)
 	var n := int(duration * SAMPLE_RATE)
 	var buf := PackedFloat32Array()
 	buf.resize(n)
 	var lp1 := 0.0
 	var lp2 := 0.0
 	var lp3 := 0.0
-	var clap_lp := 0.0
-	var cheer_peaks := [1.4, 4.1, 6.6]
+	var cheer_peaks := [1.6, 4.4, 6.9]
 	for i in range(n):
 		var t := float(i) / float(SAMPLE_RATE)
 		var raw := _rng.randf_range(-1.0, 1.0)
-		# Multi-stage warm low-pass (< 420 Hz) for muffled behind-the-glass/focused boxer feel
-		lp1 = lerpf(lp1, raw, 0.11)
-		lp2 = lerpf(lp2, lp1, 0.13)
-		lp3 = lerpf(lp3, lp2, 0.16)
+		# Warm 3-stage low-pass (< 350 Hz) for distant muffled crowd roar
+		lp1 = lerpf(lp1, raw, 0.085)
+		lp2 = lerpf(lp2, lp1, 0.105)
+		lp3 = lerpf(lp3, lp2, 0.125)
 
-		var swell := 0.42 + 0.14 * sin(TAU * t / duration) + 0.10 * cos(TAU * 2.0 * t / duration)
-		var clap_boost := 0.0
+		var swell := 0.45 + 0.12 * sin(TAU * t / duration)
 		for pk in cheer_peaks:
 			var dt := absf(t - float(pk))
-			if dt < 1.15:
-				var c := pow(cos((dt / 1.15) * PI * 0.5), 1.6)
-				swell += c * 0.58
-				clap_boost += c
-		# Distant muffled claps inside cheer swells
-		clap_lp = lerpf(clap_lp, _rng.randf_range(-1.0, 1.0), 0.18)
-		var clap_pulse := maxf(0.0, sin(TAU * 7.5 * t + lp1 * 2.0)) * clap_boost * clap_lp * 0.26
-		var edge := minf(1.0, minf(t / 0.12, (duration - t) / 0.12))
-		buf[i] = clampf((lp3 * 1.45 * swell + clap_pulse) * edge, -0.95, 0.95)
+			if dt < 1.35:
+				swell += pow(cos((dt / 1.35) * PI * 0.5), 1.5) * 0.55
+		var edge := minf(1.0, minf(t / 0.14, (duration - t) / 0.14))
+		buf[i] = clampf(lp3 * 1.35 * swell * edge, -0.95, 0.95)
 	return _pack_wav(buf, true)
 
 

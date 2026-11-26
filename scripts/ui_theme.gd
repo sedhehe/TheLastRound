@@ -305,8 +305,8 @@ static func add_progress_bar(
 	return track
 
 
-static func stagger_enter(main: Node, nodes: Array, offset: Vector2 = Vector2(0.0, 18.0), duration: float = 0.24, step_delay: float = 0.045) -> void:
-	if bool(main.settings.get("reduced_motion", false)):
+static func stagger_enter(main: Node, nodes: Array, offset: Vector2 = Vector2(0.0, 10.0), duration: float = 0.16, step_delay: float = 0.025) -> void:
+	if DisplayServer.get_name() == "headless" or bool(main.settings.get("reduced_motion", false)):
 		return
 	for i in range(nodes.size()):
 		var ctrl := nodes[i] as Control
@@ -314,12 +314,9 @@ static func stagger_enter(main: Node, nodes: Array, offset: Vector2 = Vector2(0.
 			continue
 		var target_pos := ctrl.position
 		ctrl.position = target_pos + offset
-		ctrl.modulate.a = 0.0
 		var tw := main.create_tween()
-		tw.set_parallel(true)
 		var d := float(i) * step_delay
 		tw.tween_property(ctrl, "position", target_pos, duration).set_delay(d).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
-		tw.tween_property(ctrl, "modulate:a", 1.0, duration * 0.9).set_delay(d).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 
 
 class UISlantedBar extends Control:

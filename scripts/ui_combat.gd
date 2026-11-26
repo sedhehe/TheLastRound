@@ -346,9 +346,12 @@ static func build_combat_hud(main: Node, root_ui: Control) -> Control:
 			if item_id == "energy": short_name = "ENERGY"
 			elif item_id == "ice": short_name = "CORNER ICE"
 			elif item_id == "salts": short_name = "LAST STAND"
-			TLRTheme.make_abs_label(btn, short_name, Rect2(10 * cs, 60 * s, iw - 28 * cs, 24 * s), roundi(17 * card_scale), TLRTheme.TEXT_PRIMARY if usable else TLRTheme.TEXT_MUTED, true)
-			TLRTheme.make_abs_label(btn, item_key, Rect2(iw - 24 * cs, 62 * s, 16 * cs, 20 * s), 11, TLRTheme.TEXT_MUTED, true, HORIZONTAL_ALIGNMENT_RIGHT)
-			TLRTheme.make_abs_label(btn, TLRScreens._item_short_hint(item_id), Rect2(10 * cs, 90 * s, iw - 18 * cs, 26 * s), 11, TLRTheme.TEXT_MUTED if usable else TLRTheme.TEXT_DIM, false)
+			elif item_id == "crowd": short_name = "CROWD FAVOUR"
+			elif item_id == "loaded_tape": short_name = "LOADED TAPE"
+			var name_lbl := TLRTheme.make_abs_label(btn, short_name, Rect2(10 * cs, 50 * s, iw - 30 * cs, 34 * s), roundi(14 * card_scale), TLRTheme.TEXT_PRIMARY if usable else TLRTheme.TEXT_MUTED, true)
+			name_lbl.clip_text = true
+			TLRTheme.make_abs_label(btn, item_key, Rect2(iw - 24 * cs, 52 * s, 16 * cs, 20 * s), 11, TLRTheme.TEXT_MUTED, true, HORIZONTAL_ALIGNMENT_RIGHT)
+			TLRTheme.make_abs_label(btn, TLRScreens._item_short_hint(item_id), Rect2(10 * cs, 90 * s, iw - 18 * cs, 26 * s), 10, TLRTheme.TEXT_MUTED if usable else TLRTheme.TEXT_DIM, false)
 
 			var idata: Dictionary = main._get_item_data(item_id)
 			var t_cat := "ITEM / COMBAT USE" if usable else ("ITEM / HUB ONLY" if item_id == "ice" else "ITEM / PASSIVE")
@@ -392,10 +395,11 @@ static func build_combat_hud(main: Node, root_ui: Control) -> Control:
 		TLRTheme.make_abs_label(btn, "%d STA" % int(move_cost), Rect2(36 * cs, 12 * s, mw - 46 * cs, 18 * s), 11, TLRTheme.BLUE if enough else TLRTheme.TEXT_DIM, true, HORIZONTAL_ALIGNMENT_RIGHT)
 
 		var m_name := str(md.get("name", move_id)).to_upper()
-		TLRTheme.make_abs_label(btn, m_name, Rect2(10 * cs, 58 * s, mw - 24 * cs, 24 * s), roundi(18 * card_scale), TLRTheme.TEXT_PRIMARY if enough else TLRTheme.TEXT_DIM, true)
-		TLRTheme.make_abs_label(btn, slot_key, Rect2(mw - 22 * cs, 60 * s, 14 * cs, 18 * s), 11, TLRTheme.TEXT_MUTED, true, HORIZONTAL_ALIGNMENT_RIGHT)
+		var m_lbl := TLRTheme.make_abs_label(btn, m_name, Rect2(10 * cs, 52 * s, mw - 26 * cs, 32 * s), roundi(16 * card_scale), TLRTheme.TEXT_PRIMARY if enough else TLRTheme.TEXT_DIM, true)
+		m_lbl.clip_text = true
+		TLRTheme.make_abs_label(btn, slot_key, Rect2(mw - 22 * cs, 54 * s, 14 * cs, 18 * s), 11, TLRTheme.TEXT_MUTED, true, HORIZONTAL_ALIGNMENT_RIGHT)
 		var sub_hint := TLRScreens._move_short_hint(move_id, md) if enough else ("Need %d STA" % int(move_cost))
-		TLRTheme.make_abs_label(btn, sub_hint, Rect2(10 * cs, 88 * s, mw - 18 * cs, 28 * s), 11, TLRTheme.TEXT_MUTED if enough else TLRTheme.TEXT_DIM, false)
+		TLRTheme.make_abs_label(btn, sub_hint, Rect2(10 * cs, 88 * s, mw - 18 * cs, 28 * s), 10, TLRTheme.TEXT_MUTED if enough else TLRTheme.TEXT_DIM, false)
 
 		var dmg: Array = md.get("damage", [0, 0])
 		var dmg_line := "%d–%d base damage • %d%% accuracy" % [int(dmg[0]), int(dmg[1]), int(md.get("accuracy", 100))] if dmg.size() >= 2 and int(dmg[1]) > 0 else ("%d%% accuracy • %s" % [int(md.get("accuracy", 100)), str(md.get("kind", "utility")).capitalize()])

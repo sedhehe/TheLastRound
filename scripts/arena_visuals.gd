@@ -39,6 +39,7 @@ var glove_action_rot := Vector3.ZERO
 var _spectators: Array[Dictionary] = []
 var _dust_particles: CPUParticles3D
 var _impact_particles: CPUParticles3D
+var _active_camera: Camera3D
 
 var rng := RandomNumberGenerator.new()
 
@@ -614,6 +615,7 @@ func _create_player_glove(
 func attach_player_camera(player_camera: Camera3D) -> void:
 	if not is_instance_valid(player_camera) or not is_instance_valid(left_glove) or not is_instance_valid(right_glove):
 		return
+	_active_camera = player_camera
 	if left_glove.get_parent() != player_camera:
 		left_glove.reparent(player_camera)
 		left_glove.position = glove_home_left
@@ -823,8 +825,8 @@ func enemy_attack(action_name: String = "") -> void:
 	opponent_attack_timer = 0.30
 
 
-func impact_shake() -> void:
-	impact_timer = 0.14
+func impact_shake(strength: float = 1.0) -> void:
+	impact_timer = maxf(impact_timer, 0.20 * clampf(strength, 0.7, 1.5))
 
 
 func _update_opponent_animation(delta: float) -> void:
@@ -835,10 +837,10 @@ func _update_opponent_animation(delta: float) -> void:
 	var target_position := opponent_home_position + Vector3(0.0, bob, 0.0)
 	var target_rotation := Vector3.ZERO
 
-	var l_shoulder := Vector3(-0.345, 1.75, 0.0)
-	var r_shoulder := Vector3(0.345, 1.75, 0.0)
-	var l_elbow := Vector3(-0.40, 1.40, 0.16)
-	var r_elbow := Vector3(0.40, 1.40, 0.16)
+	var l_shoulder := Vector3(-0.305, 1.72, 0.0)
+	var r_shoulder := Vector3(0.305, 1.72, 0.0)
+	var l_elbow := Vector3(-0.37, 1.39, 0.15)
+	var r_elbow := Vector3(0.37, 1.39, 0.15)
 	var l_hand := Vector3(-0.18, 1.88, 0.34)
 	var r_hand := Vector3(0.18, 1.88, 0.34)
 
@@ -907,27 +909,28 @@ func _update_opponent_animation(delta: float) -> void:
 	opponent_body.position = opponent_body.position.lerp(target_position, blend)
 	opponent_body.rotation = opponent_body.rotation.lerp(target_rotation, blend)
 	if is_instance_valid(opponent_left_glove) and is_instance_valid(opponent_right_glove):
-		opponent_left_glove.position = opponent_left_glove.position.lerp(l_hand, blend)
-		opponent_right_glove.position = opponent_right_glove.position.lerp(r_hand, blend)
-		if is_instance_valid(opponent_left_elbow):
-			opponent_left_elbow.position = opponent_left_elbow.position.lerp(l_elbow, blend)
-		if is_instance_valid(opponent_right_elbow):
-			opponent_right_elbow.position = opponent_right_elbow.position.lerp(r_elbow, blend)
-		TLRBoxerMesh.place_limb(opponent_left_upper_arm, l_shoulder, opponent_left_elbow.position if is_instance_valid(opponent_left_elbow) else l_elbow)
-		TLRBoxerMesh.place_limb(opponent_right_upper_arm, r_shoulder, opponent_right_elbow.position if is_instance_valid(opponent_right_elbow) else r_elbow)
-		TLRBoxerMesh.place_limb(opponent_left_forearm, opponent_left_elbow.position if is_instance_valid(opponent_left_elbow) else l_elbow, opponent_left_glove.position)
-		TLRBoxerMesh.place_limb(opponent_right_forearm, opponent_right_elbow.position if is_instance_valid(opponent_right_elbow) else r_elbow, opponent_right_glove.position)
+		var cur_l_hand := opponent_left_glove.position.lerp(l_hand, blend)
+		var cur_r_hand := opponent_right_glove.position.lerp(r_hand, blend)
+		var cur_l_elbow := opponent_left_elbow.position.lerp(l_elbow, blend) if is_instance_valid(opponent_left_elbow) else l_elbow
+		var cur_r_elbow := opponent_right_elbow.position.lerp(r_elbow, blend) if is_instance_valid(opponent_right_elbow) else r_elbow
+		TLRBoxerMesh.pose_arm(opponent_left_upper_arm, opponent_left_forearm, opponent_left_elbow, opponent_left_glove, l_shoulder, cur_l_elbow, cur_l_hand)
+		TLRBoxerMesh.pose_arm(opponent_right_upper_arm, opponent_right_forearm, opponent_right_elbow, opponent_right_glove, r_shoulder, cur_r_elbow, cur_r_hand)
 
 
 func _update_camera_shake(delta: float) -> void:
-	if not is_instance_valid(camera):
+	var shake_cam: Camera3D = _active_camera if is_instance_valid(_active_camera) else camera
+	if not is_instance_valid(shake_cam):
 		return
 	if impact_timer > 0.0:
 		impact_timer = maxf(0.0, impact_timer - delta)
-		camera.position.x = rng.randf_range(-0.025, 0.025)
-		camera.position.y = 1.62 + rng.randf_range(-0.02, 0.02)
+		var k := clampf(impact_timer / 0.20, 0.0, 1.0)
+		shake_cam.h_offset = rng.randf_range(-0.075, 0.075) * k
+		shake_cam.v_offset = rng.randf_range(-0.060, 0.060) * k
 	else:
-		camera.position = camera.position.lerp(Vector3(0.0, 1.62, 0.0), delta * 12.0)
+		if absf(shake_cam.v_offset) > 0.0005:
+			shake_cam.v_offset = lerpf(shake_cam.v_offset, 0.0, delta * 14.0)
+		if shake_cam == camera and absf(shake_cam.h_offset) > 0.0005:
+			shake_cam.h_offset = lerpf(shake_cam.h_offset, 0.0, delta * 14.0)
 
 
 # ---------------------------------------------------------

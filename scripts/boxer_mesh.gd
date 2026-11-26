@@ -161,82 +161,87 @@ static func build_boxer_rig(
 	var lace_mat := make_flat_material(Color(0.62, 0.64, 0.68), 0.85)
 
 	# Athletic V-taper chest + sloped trapezius bridge + sculpted abs & obliques
-	var traps := _add_mesh(parent, "Traps", make_faceted_taper(Vector2(0.14, 0.11), Vector2(0.34, 0.175), 0.15, 10, 1.02), Vector3(0.0, 1.84, 0.0), torso_mat)
+	var traps := _add_mesh(parent, "Traps", make_faceted_taper(Vector2(0.135, 0.105), Vector2(0.31, 0.165), 0.15, 10, 1.02), Vector3(0.0, 1.83, 0.0), torso_mat)
 	traps.rotation.x = 0.06
-	var chest := _add_mesh(parent, "Chest", make_faceted_taper(Vector2(0.35, 0.21), Vector2(0.235, 0.165), 0.42, 10, 1.05), Vector3(0.0, 1.59, 0.015), torso_mat)
-	var l_pec := _add_mesh(parent, "LPec", make_faceted_box(Vector3(0.185, 0.125, 0.075)), Vector3(-0.118, 1.66, 0.158), torso_mat)
+	var chest := _add_mesh(parent, "Chest", make_faceted_taper(Vector2(0.32, 0.195), Vector2(0.225, 0.155), 0.42, 10, 1.05), Vector3(0.0, 1.58, 0.015), torso_mat)
+	var l_pec := _add_mesh(parent, "LPec", make_faceted_box(Vector3(0.17, 0.115, 0.07)), Vector3(-0.108, 1.65, 0.148), torso_mat)
 	l_pec.rotation_degrees = Vector3(-8.0, -14.0, 5.0)
-	var r_pec := _add_mesh(parent, "RPec", make_faceted_box(Vector3(0.185, 0.125, 0.075)), Vector3(0.118, 1.66, 0.158), torso_mat)
+	var r_pec := _add_mesh(parent, "RPec", make_faceted_box(Vector3(0.17, 0.115, 0.07)), Vector3(0.108, 1.65, 0.148), torso_mat)
 	r_pec.rotation_degrees = Vector3(-8.0, 14.0, -5.0)
 	# Ribcage/Abdominal taper + 6-pack abs & obliques
-	_add_mesh(parent, "Waist", make_faceted_taper(Vector2(0.235, 0.165), Vector2(0.255, 0.175), 0.30, 10, 0.98), Vector3(0.0, 1.26, 0.01), torso_mat)
+	_add_mesh(parent, "Waist", make_faceted_taper(Vector2(0.225, 0.155), Vector2(0.245, 0.165), 0.30, 10, 0.98), Vector3(0.0, 1.25, 0.01), torso_mat)
 	for ab_row in range(3):
-		var ay := 1.44 - float(ab_row) * 0.092
-		var az := 0.162 - float(ab_row) * 0.005
-		_add_mesh(parent, "LAbs_%d" % ab_row, make_faceted_box(Vector3(0.082, 0.068, 0.04)), Vector3(-0.052, ay, az), torso_mat)
-		_add_mesh(parent, "RAbs_%d" % ab_row, make_faceted_box(Vector3(0.082, 0.068, 0.04)), Vector3(0.052, ay, az), torso_mat)
+		var ay := 1.43 - float(ab_row) * 0.090
+		var az := 0.152 - float(ab_row) * 0.004
+		_add_mesh(parent, "LAbs_%d" % ab_row, make_faceted_box(Vector3(0.078, 0.066, 0.038)), Vector3(-0.048, ay, az), torso_mat)
+		_add_mesh(parent, "RAbs_%d" % ab_row, make_faceted_box(Vector3(0.078, 0.066, 0.038)), Vector3(0.048, ay, az), torso_mat)
 	for side_s in [-1.0, 1.0]:
-		var ob := _add_mesh(parent, "Oblique_%s" % ("L" if side_s < 0.0 else "R"), make_faceted_box(Vector3(0.05, 0.22, 0.13)), Vector3(side_s * 0.215, 1.32, 0.02), torso_mat)
+		var ob := _add_mesh(parent, "Oblique_%s" % ("L" if side_s < 0.0 else "R"), make_faceted_box(Vector3(0.048, 0.22, 0.12)), Vector3(side_s * 0.205, 1.31, 0.02), torso_mat)
 		ob.rotation_degrees = Vector3(0.0, 0.0, side_s * -7.0)
 
-	# Muscular neck + clean human-proportioned boxer head (no forehead clipping)
-	_add_mesh(parent, "Neck", make_faceted_taper(Vector2(0.105, 0.10), Vector2(0.135, 0.118), 0.17, 10, 1.0), Vector3(0.0, 1.94, 0.01), skin_mat)
-	var head := _add_mesh(parent, "Head", make_faceted_sphere(0.142, Vector3(0.92, 1.14, 1.04), 5, 12), Vector3(0.0, 2.13, 0.035), skin_mat)
+	# Muscular neck + clean human-proportioned boxer head
+	_add_mesh(parent, "Neck", make_faceted_taper(Vector2(0.10, 0.095), Vector2(0.128, 0.112), 0.17, 10, 1.0), Vector3(0.0, 1.93, 0.01), skin_mat)
+	var head := _add_mesh(parent, "Head", make_faceted_sphere(0.138, Vector3(0.92, 1.15, 1.04), 5, 12), Vector3(0.0, 2.12, 0.035), skin_mat)
 	head.rotation_degrees.x = 5.0
-	_add_mesh(head, "Brow", make_faceted_box(Vector3(0.175, 0.032, 0.055)), Vector3(0.0, 0.042, 0.112), skin_mat)
-	_add_mesh(head, "EyeShadow", make_faceted_box(Vector3(0.155, 0.024, 0.032)), Vector3(0.0, 0.016, 0.122), make_flat_material(Color(0.035, 0.025, 0.025), 0.96))
-	_add_mesh(head, "Nose", make_faceted_box(Vector3(0.038, 0.060, 0.052)), Vector3(0.0, -0.012, 0.134), skin_mat)
-	_add_mesh(head, "MouthLine", make_faceted_box(Vector3(0.064, 0.012, 0.024)), Vector3(0.0, -0.062, 0.120), make_flat_material(Color(0.05, 0.03, 0.03), 0.94))
-	_add_mesh(head, "Jaw", make_faceted_taper(Vector2(0.112, 0.108), Vector2(0.075, 0.092), 0.09, 8, 1.0), Vector3(0.0, -0.105, 0.018), skin_mat)
-	_add_mesh(head, "LEar", make_faceted_box(Vector3(0.022, 0.062, 0.038)), Vector3(-0.132, 0.0, 0.0), skin_mat)
-	_add_mesh(head, "REar", make_faceted_box(Vector3(0.022, 0.062, 0.038)), Vector3(0.132, 0.0, 0.0), skin_mat)
-	# Clean dark cropped hair cap sitting flush on upper cranium
-	_add_mesh(head, "HairTop", make_faceted_sphere(0.145, Vector3(0.94, 0.68, 1.06), 4, 12), Vector3(0.0, 0.078, -0.012), hair_mat)
-	_add_mesh(head, "HairBack", make_faceted_taper(Vector2(0.128, 0.128), Vector2(0.105, 0.105), 0.13, 8, 1.0), Vector3(0.0, 0.015, -0.048), hair_mat)
+	_add_mesh(head, "Brow", make_faceted_box(Vector3(0.168, 0.030, 0.052)), Vector3(0.0, 0.042, 0.110), skin_mat)
+	_add_mesh(head, "EyeShadow", make_faceted_box(Vector3(0.148, 0.022, 0.030)), Vector3(0.0, 0.016, 0.118), make_flat_material(Color(0.035, 0.025, 0.025), 0.96))
+	_add_mesh(head, "Nose", make_faceted_box(Vector3(0.036, 0.058, 0.048)), Vector3(0.0, -0.012, 0.130), skin_mat)
+	_add_mesh(head, "MouthLine", make_faceted_box(Vector3(0.060, 0.012, 0.022)), Vector3(0.0, -0.060, 0.116), make_flat_material(Color(0.05, 0.03, 0.03), 0.94))
+	_add_mesh(head, "Jaw", make_faceted_taper(Vector2(0.108, 0.104), Vector2(0.072, 0.088), 0.09, 8, 1.0), Vector3(0.0, -0.102, 0.016), skin_mat)
+	_add_mesh(head, "LEar", make_faceted_box(Vector3(0.020, 0.058, 0.036)), Vector3(-0.128, 0.0, 0.0), skin_mat)
+	_add_mesh(head, "REar", make_faceted_box(Vector3(0.020, 0.058, 0.036)), Vector3(0.128, 0.0, 0.0), skin_mat)
+	_add_mesh(head, "HairTop", make_faceted_sphere(0.140, Vector3(0.94, 0.68, 1.06), 4, 12), Vector3(0.0, 0.076, -0.012), hair_mat)
+	_add_mesh(head, "HairBack", make_faceted_taper(Vector2(0.124, 0.124), Vector2(0.100, 0.100), 0.13, 8, 1.0), Vector3(0.0, 0.015, -0.046), hair_mat)
 
-	# Tailored boxing trunks (waistband + fitted legs)
-	_add_mesh(parent, "Belt", make_faceted_taper(Vector2(0.265, 0.185), Vector2(0.285, 0.195), 0.09, 10, 1.0), Vector3(0.0, 1.11, 0.0), band_mat)
-	var pelvis := _add_mesh(parent, "Shorts", make_faceted_taper(Vector2(0.285, 0.195), Vector2(0.305, 0.205), 0.22, 10, 1.02), Vector3(0.0, 0.96, 0.0), shorts_mat)
-	var l_cuff := _add_limb_faceted(pelvis, Vector3(-0.165, -0.04, 0.02), Vector3(-0.195, -0.26, 0.07), 0.148, shorts_mat)
-	var r_cuff := _add_limb_faceted(pelvis, Vector3(0.165, -0.04, -0.02), Vector3(0.205, -0.26, -0.06), 0.148, shorts_mat)
+	# Tailored boxing trunks (waistband + fitted legs seamlessly meeting thighs)
+	_add_mesh(parent, "Belt", make_faceted_taper(Vector2(0.255, 0.175), Vector2(0.275, 0.185), 0.09, 10, 1.0), Vector3(0.0, 1.10, 0.0), band_mat)
+	var pelvis := _add_mesh(parent, "Shorts", make_faceted_taper(Vector2(0.275, 0.185), Vector2(0.295, 0.195), 0.22, 10, 1.02), Vector3(0.0, 0.95, 0.0), shorts_mat)
+	var l_cuff := _add_limb_faceted(pelvis, Vector3(-0.15, -0.03, 0.01), Vector3(-0.175, -0.25, 0.04), 0.145, shorts_mat)
+	var r_cuff := _add_limb_faceted(pelvis, Vector3(0.15, -0.03, -0.01), Vector3(0.185, -0.25, -0.04), 0.145, shorts_mat)
 	l_cuff.name = "LShortLeg"
 	r_cuff.name = "RShortLeg"
 
-	# Realistic athletic human legs (50% of total body height) with knee joints & high-top boxing boots
-	var l_knee_pos := Vector3(-0.205, 0.52, 0.10)
-	var r_knee_pos := Vector3(0.225, 0.52, -0.08)
-	var l_ankle_pos := Vector3(-0.205, 0.14, 0.08)
-	var r_ankle_pos := Vector3(0.235, 0.14, -0.12)
-	var l_thigh := _add_limb_faceted(parent, Vector3(-0.175, 0.88, 0.02), l_knee_pos, 0.122, skin_mat)
-	var r_thigh := _add_limb_faceted(parent, Vector3(0.175, 0.88, -0.02), r_knee_pos, 0.122, skin_mat)
-	_add_mesh(parent, "LKnee", make_faceted_sphere(0.104, Vector3(0.95, 1.0, 1.02), 4, 8), l_knee_pos, skin_mat)
-	_add_mesh(parent, "RKnee", make_faceted_sphere(0.104, Vector3(0.95, 1.0, 1.02), 4, 8), r_knee_pos, skin_mat)
-	var l_calf := _add_limb_faceted(parent, l_knee_pos, l_ankle_pos, 0.098, skin_mat)
-	var r_calf := _add_limb_faceted(parent, r_knee_pos, r_ankle_pos, 0.098, skin_mat)
-	var l_boot := _add_mesh(parent, "LBoot", make_faceted_taper(Vector2(0.082, 0.12), Vector2(0.092, 0.16), 0.14, 8, 1.05), Vector3(-0.205, 0.07, 0.115), hair_mat)
-	l_boot.rotation_degrees.y = 8.0
-	_add_mesh(l_boot, "LLace", make_faceted_box(Vector3(0.022, 0.10, 0.02)), Vector3(0.0, 0.015, 0.13), lace_mat)
-	var r_boot := _add_mesh(parent, "RBoot", make_faceted_taper(Vector2(0.082, 0.12), Vector2(0.092, 0.16), 0.14, 8, 1.05), Vector3(0.235, 0.07, -0.09), hair_mat)
-	r_boot.rotation_degrees.y = -20.0
-	_add_mesh(r_boot, "RLace", make_faceted_box(Vector3(0.022, 0.10, 0.02)), Vector3(0.0, 0.015, 0.13), lace_mat)
+	# Realistic athletic human legs + aligned ankles & flat-soled boxing shoes
+	var l_knee_pos := Vector3(-0.18, 0.52, 0.05)
+	var r_knee_pos := Vector3(0.20, 0.52, -0.04)
+	var l_ankle_pos := Vector3(-0.18, 0.12, 0.02)
+	var r_ankle_pos := Vector3(0.20, 0.12, -0.08)
+	var l_thigh := _add_limb_faceted(parent, Vector3(-0.16, 0.90, 0.01), l_knee_pos, 0.118, skin_mat)
+	var r_thigh := _add_limb_faceted(parent, Vector3(0.16, 0.90, -0.01), r_knee_pos, 0.118, skin_mat)
+	_add_mesh(parent, "LKnee", make_faceted_sphere(0.098, Vector3(0.95, 1.0, 1.02), 4, 8), l_knee_pos, skin_mat)
+	_add_mesh(parent, "RKnee", make_faceted_sphere(0.098, Vector3(0.95, 1.0, 1.02), 4, 8), r_knee_pos, skin_mat)
+	var l_calf := _add_limb_faceted(parent, l_knee_pos, l_ankle_pos, 0.092, skin_mat)
+	var r_calf := _add_limb_faceted(parent, r_knee_pos, r_ankle_pos, 0.092, skin_mat)
 
-	# Sculpted rounded low-poly delts + continuous elbow joints
-	_add_mesh(parent, "LShoulder", make_faceted_sphere(0.138, Vector3(1.06, 0.96, 0.96), 4, 10), Vector3(-0.345, 1.75, 0.0), skin_mat)
-	_add_mesh(parent, "RShoulder", make_faceted_sphere(0.138, Vector3(1.06, 0.96, 0.96), 4, 10), Vector3(0.345, 1.75, 0.0), skin_mat)
-	var l_elbow_pos := Vector3(-0.40, 1.40, 0.16)
-	var r_elbow_pos := Vector3(0.40, 1.40, 0.16)
-	var l_elbow_joint := _add_mesh(parent, "LElbow", make_faceted_sphere(0.096, Vector3.ONE, 4, 8), l_elbow_pos, skin_mat)
-	var r_elbow_joint := _add_mesh(parent, "RElbow", make_faceted_sphere(0.096, Vector3.ONE, 4, 8), r_elbow_pos, skin_mat)
+	var l_boot := _add_mesh(parent, "LBoot", make_faceted_taper(Vector2(0.078, 0.082), Vector2(0.082, 0.092), 0.12, 8, 1.02), Vector3(l_ankle_pos.x, 0.06, l_ankle_pos.z), hair_mat)
+	l_boot.rotation_degrees.y = 8.0
+	_add_mesh(l_boot, "LFoot", make_faceted_box(Vector3(0.115, 0.065, 0.21)), Vector3(0.0, -0.027, 0.065), hair_mat)
+	_add_mesh(l_boot, "LLace", make_faceted_box(Vector3(0.022, 0.085, 0.02)), Vector3(0.0, 0.015, 0.085), lace_mat)
+
+	var r_boot := _add_mesh(parent, "RBoot", make_faceted_taper(Vector2(0.078, 0.082), Vector2(0.082, 0.092), 0.12, 8, 1.02), Vector3(r_ankle_pos.x, 0.06, r_ankle_pos.z), hair_mat)
+	r_boot.rotation_degrees.y = -18.0
+	_add_mesh(r_boot, "RFoot", make_faceted_box(Vector3(0.115, 0.065, 0.21)), Vector3(0.0, -0.027, 0.065), hair_mat)
+	_add_mesh(r_boot, "RLace", make_faceted_box(Vector3(0.022, 0.085, 0.02)), Vector3(0.0, 0.015, 0.085), lace_mat)
+
+	# Tucked human shoulders + continuous elbow joints
+	_add_mesh(parent, "LShoulder", make_faceted_sphere(0.128, Vector3(1.02, 0.96, 0.96), 4, 10), Vector3(-0.305, 1.72, 0.0), skin_mat)
+	_add_mesh(parent, "RShoulder", make_faceted_sphere(0.128, Vector3(1.02, 0.96, 0.96), 4, 10), Vector3(0.305, 1.72, 0.0), skin_mat)
+	var l_elbow_pos := Vector3(-0.37, 1.39, 0.15)
+	var r_elbow_pos := Vector3(0.37, 1.39, 0.15)
+	var l_elbow_joint := _add_mesh(parent, "LElbow", make_faceted_sphere(0.088, Vector3.ONE, 4, 8), l_elbow_pos, skin_mat)
+	var r_elbow_joint := _add_mesh(parent, "RElbow", make_faceted_sphere(0.088, Vector3.ONE, 4, 8), r_elbow_pos, skin_mat)
 
 	# Articulated muscular biceps & forearms
-	var l_upper := _add_limb_faceted(parent, Vector3(-0.345, 1.75, 0.0), l_elbow_pos, 0.108, skin_mat)
-	var r_upper := _add_limb_faceted(parent, Vector3(0.345, 1.75, 0.0), r_elbow_pos, 0.108, skin_mat)
-	var l_fore := _add_limb_faceted(parent, l_elbow_pos, Vector3(-0.18, 1.88, 0.34), 0.094, skin_mat)
-	var r_fore := _add_limb_faceted(parent, r_elbow_pos, Vector3(0.18, 1.88, 0.34), 0.094, skin_mat)
+	var l_upper := _add_limb_faceted(parent, Vector3(-0.305, 1.72, 0.0), l_elbow_pos, 0.102, skin_mat)
+	var r_upper := _add_limb_faceted(parent, Vector3(0.305, 1.72, 0.0), r_elbow_pos, 0.102, skin_mat)
+	var l_fore := _add_limb_faceted(parent, l_elbow_pos, Vector3(-0.18, 1.88, 0.34), 0.088, skin_mat)
+	var r_fore := _add_limb_faceted(parent, r_elbow_pos, Vector3(0.18, 1.88, 0.34), 0.088, skin_mat)
 
-	# Proper elongated padded Boxing Gloves with longer wrist cuff, tucked thumb & knuckle pad
+	# Proper elongated padded Boxing Gloves aligned along the forearm (+Y = fist tip, -Y = cuff)
 	var l_glove := _build_glove_mesh(parent, "LeftGlove", Vector3(-0.18, 1.88, 0.34), true, glove_mat, band_mat, tape_mat)
 	var r_glove := _build_glove_mesh(parent, "RightGlove", Vector3(0.18, 1.88, 0.34), false, glove_mat, band_mat, tape_mat)
+	pose_arm(l_upper, l_fore, l_elbow_joint, l_glove, Vector3(-0.305, 1.72, 0.0), l_elbow_pos, Vector3(-0.18, 1.88, 0.34))
+	pose_arm(r_upper, r_fore, r_elbow_joint, r_glove, Vector3(0.305, 1.72, 0.0), r_elbow_pos, Vector3(0.18, 1.88, 0.34))
 
 	return {
 		"torso_mat": torso_mat,
@@ -266,18 +271,36 @@ static func _build_glove_mesh(
 	band_mat: Material,
 	tape_mat: Material
 ) -> MeshInstance3D:
-	# Elongated padded boxing glove body (not a short round ball)
-	var glove := _add_mesh(parent, node_name, make_faceted_sphere(0.145, Vector3(0.88, 1.14, 1.28), 5, 10), pos, glove_mat)
-	glove.rotation_degrees = Vector3(14.0, -10.0 if is_left else 10.0, 0.0)
-	_add_mesh(glove, "KnucklePad", make_faceted_box(Vector3(0.165, 0.085, 0.09)), Vector3(0.0, 0.045, 0.13), glove_mat)
-	# Extended padded wrist cuff + strap wrapping down the forearm
-	_add_mesh(glove, "LongCuff", make_faceted_taper(Vector2(0.112, 0.118), Vector2(0.102, 0.108), 0.22, 8, 1.02), Vector3(0.0, -0.20, -0.025), glove_mat)
-	_add_mesh(glove, "Strap", make_faceted_taper(Vector2(0.108, 0.114), Vector2(0.106, 0.112), 0.075, 8, 1.0), Vector3(0.0, -0.25, -0.03), band_mat)
-	_add_mesh(glove, "Tape", make_faceted_taper(Vector2(0.095, 0.098), Vector2(0.095, 0.098), 0.05, 8, 1.0), Vector3(0.0, -0.31, -0.035), tape_mat)
-	# Tucked thumb along inner side
-	var thumb := _add_mesh(glove, "Thumb", make_faceted_taper(Vector2(0.048, 0.052), Vector2(0.042, 0.046), 0.13, 6, 1.12), Vector3(0.105 if is_left else -0.105, 0.02, 0.035), glove_mat)
-	thumb.rotation_degrees = Vector3(26.0, 0.0, -18.0 if is_left else 18.0)
+	# +Y = fist/knuckle direction, -Y = wrist cuff wrapping straight onto the forearm
+	var glove := _add_mesh(parent, node_name, make_faceted_sphere(0.135, Vector3(0.92, 1.24, 0.98), 5, 10), pos, glove_mat)
+	_add_mesh(glove, "KnucklePad", make_faceted_box(Vector3(0.155, 0.095, 0.085)), Vector3(0.0, 0.105, 0.045), glove_mat)
+	_add_mesh(glove, "LongCuff", make_faceted_taper(Vector2(0.108, 0.112), Vector2(0.096, 0.100), 0.22, 8, 1.02), Vector3(0.0, -0.17, 0.0), glove_mat)
+	_add_mesh(glove, "Strap", make_faceted_taper(Vector2(0.102, 0.106), Vector2(0.100, 0.104), 0.075, 8, 1.0), Vector3(0.0, -0.24, 0.0), band_mat)
+	_add_mesh(glove, "Tape", make_faceted_taper(Vector2(0.090, 0.092), Vector2(0.090, 0.092), 0.055, 8, 1.0), Vector3(0.0, -0.30, 0.0), tape_mat)
+	var thumb := _add_mesh(glove, "Thumb", make_faceted_taper(Vector2(0.045, 0.048), Vector2(0.040, 0.044), 0.125, 6, 1.1), Vector3(0.102 if is_left else -0.102, 0.03, 0.035), glove_mat)
+	thumb.rotation_degrees = Vector3(12.0, 0.0, -14.0 if is_left else 14.0)
 	return glove
+
+
+static func pose_arm(
+	upper: MeshInstance3D,
+	forearm: MeshInstance3D,
+	elbow_joint: MeshInstance3D,
+	glove: MeshInstance3D,
+	shoulder: Vector3,
+	elbow: Vector3,
+	hand: Vector3
+) -> void:
+	if is_instance_valid(elbow_joint):
+		elbow_joint.position = elbow
+	place_limb(upper, shoulder, elbow)
+	var diff := hand - elbow
+	var fore_dir := diff.normalized() if diff.length() > 0.001 else Vector3.UP
+	var wrist := hand - fore_dir * 0.16
+	place_limb(forearm, elbow, wrist)
+	if is_instance_valid(glove):
+		glove.position = hand
+		glove.quaternion = Quaternion(Vector3.UP, fore_dir)
 
 
 static func place_limb(limb: MeshInstance3D, start: Vector3, end: Vector3) -> void:

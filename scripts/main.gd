@@ -94,6 +94,8 @@ var animate_drawer_open := false
 var animate_pause_open := false
 var animate_phase_banner := false
 var animate_screen_enter := false
+var animate_cards_enter := false
+var confirm_career_reset := false
 var hud_player_hp := -1.0
 var hud_player_stamina := -1.0
 var hud_enemy_hp := -1.0
@@ -116,14 +118,14 @@ var settings: Dictionary = {
 	"music_volume": 60,
 	"sfx_volume": 80,
 	"commentary_volume": 80,
-	"window_mode": "Windowed",
+	"window_mode": "Fullscreen",
 	"aspect_mode": "Auto (Fill)",
-	"resolution": "1600 × 900",
+	"resolution": "Auto",
 	"vsync": true,
 	"brightness": 50,
 	"crt_enabled": true,
 	"reduced_motion": false,
-	"screen_shake": false,
+	"screen_shake": true,
 	"flash_effects": true,
 	"text_size": "Standard",
 	"subtitles": true,
@@ -311,6 +313,7 @@ func _ready() -> void:
 	_build_ui()
 	_apply_settings()
 	_show_main_menu()
+	_play_boot_splash()
 
 
 func _build_audio() -> void:
@@ -668,15 +671,11 @@ func _clear_ui() -> void:
 		for child in screen_canvas.get_children():
 			child.queue_free()
 		screen_canvas.show()
-		if animate_screen_enter and not bool(settings.get("reduced_motion", false)):
+		if animate_screen_enter and DisplayServer.get_name() != "headless" and not bool(settings.get("reduced_motion", false)):
 			animate_screen_enter = false
 			screen_canvas.modulate.a = 0.0
-			var target_y := screen_canvas.position.y
-			screen_canvas.position.y = target_y + 14.0
 			var tw := create_tween()
-			tw.set_parallel(true)
-			tw.tween_property(screen_canvas, "modulate:a", 1.0, 0.22).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
-			tw.tween_property(screen_canvas, "position:y", target_y, 0.22).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+			tw.tween_property(screen_canvas, "modulate:a", 1.0, 0.16).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 		else:
 			animate_screen_enter = false
 			screen_canvas.modulate.a = 1.0
@@ -762,6 +761,39 @@ func _heading(fighter_name: String, sub: String) -> void:
 # MENUS AND RUN START
 # ---------------------------------------------------------
 
+func _play_boot_splash() -> void:
+	if DisplayServer.get_name() == "headless" or not is_instance_valid(root_ui):
+		return
+	var splash_tex: Texture2D = load("res://splash.png")
+	if splash_tex == null:
+		return
+
+	var splash := ColorRect.new()
+	splash.name = "BootSplashOverlay"
+	splash.color = Color(0.071, 0.071, 0.071, 1.0)
+	splash.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	splash.z_index = 250
+	splash.mouse_filter = Control.MOUSE_FILTER_STOP
+	root_ui.add_child(splash)
+
+	var logo := TextureRect.new()
+	logo.texture = splash_tex
+	logo.stretch_mode = TextureRect.STRETCH_KEEP_CENTERED
+	logo.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	logo.pivot_offset = root_ui.size * 0.5
+	logo.modulate.a = 0.0
+	logo.scale = Vector2(0.94, 0.94)
+	splash.add_child(logo)
+
+	var tw := create_tween()
+	tw.set_parallel(true)
+	tw.tween_property(logo, "modulate:a", 1.0, 0.34).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	tw.tween_property(logo, "scale", Vector2.ONE, 0.36).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	tw.chain().tween_interval(0.45)
+	tw.chain().tween_property(splash, "modulate:a", 0.0, 0.34).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN_OUT)
+	tw.chain().tween_callback(splash.queue_free)
+
+
 func _show_main_menu() -> void:
 	training_active = false
 	game_state = "menu"
@@ -771,6 +803,7 @@ func _show_main_menu() -> void:
 	if is_instance_valid(audio_engine):
 		audio_engine.set_ambience("menu")
 	animate_screen_enter = true
+	animate_cards_enter = true
 	_clear_ui()
 	TLRScreens.build_title_screen(self, screen_canvas)
 
@@ -779,8 +812,29 @@ func _select_slot(slot: int) -> void:
 	if slot < 0 or slot >= SAVE_SLOT_COUNT:
 		return
 	selected_slot = slot
+	confirm_career_reset = false
 	if game_state == "menu":
-		_show_main_menu()
+		animate_screen_enter = false
+		animate_cards_enter = false
+		_clear_ui()
+		TLRScreens.build_title_screen(self, screen_canvas)
+
+
+func _reset_career_record() -> void:
+	if not confirm_career_reset:
+		confirm_career_reset = true
+	else:
+		confirm_career_reset = false
+		lifetime_respect = 0
+		var file := FileAccess.open(META_PATH, FileAccess.WRITE)
+		if file:
+			file.store_string(JSON.stringify({"respect_total": 0}))
+		menu_notice = "Career record reset to 0 Respect."
+	if game_state == "menu":
+		animate_screen_enter = false
+		animate_cards_enter = false
+		_clear_ui()
+		TLRScreens.build_title_screen(self, screen_canvas)
 
 
 func _quit_game() -> void:
@@ -1703,6 +1757,8 @@ func _deal_player_damage(move: Dictionary, multiplier: float) -> void:
 
 	if arena_visuals and arena_visuals.has_method("opponent_hit"):
 		arena_visuals.opponent_hit()
+	if screen_shake and arena_visuals and arena_visuals.has_method("impact_shake") and (critical or multiplier > 1.1 or reduced >= 14.0):
+		arena_visuals.impact_shake(1.3 if critical else 0.85)
 	if is_instance_valid(audio_engine):
 		if critical:
 			audio_engine.play_sfx("crit_ko", -2.0)
@@ -2000,6 +2056,7 @@ func _show_rewards() -> void:
 	game_state = "reward"
 	_disable_realtime_combat()
 	animate_screen_enter = true
+	animate_cards_enter = true
 	_clear_ui()
 
 	var options: Array = []
@@ -2064,6 +2121,8 @@ func _select_reward_option(idx: int) -> void:
 	if idx < 0 or idx >= reward_options.size():
 		return
 	selected_reward_index = idx
+	animate_screen_enter = false
+	animate_cards_enter = false
 	_clear_ui()
 	TLRScreens.build_rewards(self, screen_canvas, reward_options)
 
@@ -2284,6 +2343,7 @@ func _show_bracket() -> void:
 	_disable_realtime_combat()
 	selected_hub_item_slot = clampi(selected_hub_item_slot, 0, maxi(0, inventory.size() - 1))
 	animate_screen_enter = true
+	animate_cards_enter = true
 	_clear_ui()
 	TLRScreens.build_hub(self, screen_canvas)
 
@@ -2293,6 +2353,7 @@ func _select_hub_item_slot(slot: int) -> void:
 		return
 	selected_hub_item_slot = slot
 	animate_screen_enter = false
+	animate_cards_enter = false
 	_clear_ui()
 	TLRScreens.build_hub(self, screen_canvas)
 
@@ -2446,6 +2507,7 @@ func _end_run(won: bool, reason: String) -> void:
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(completed_slot_path))
 
 	animate_screen_enter = true
+	animate_cards_enter = true
 	_clear_ui()
 	TLRScreens.build_run_end(self, screen_canvas, won, reason)
 
@@ -2893,6 +2955,7 @@ func _finish_training() -> void:
 func _show_training_complete() -> void:
 	game_state = "training_complete"
 	animate_screen_enter = true
+	animate_cards_enter = true
 	_clear_ui()
 	TLRScreens.build_training_complete(self, screen_canvas)
 
@@ -2901,6 +2964,7 @@ func _show_training_items() -> void:
 	_disable_realtime_combat()
 	game_state = "training_items"
 	animate_screen_enter = true
+	animate_cards_enter = true
 	_clear_ui()
 	TLRScreens.build_training_items(self, screen_canvas)
 
@@ -2925,6 +2989,7 @@ func _show_telegraph_practice() -> void:
 	if game_state != "hub":
 		game_state = "telegraph_practice"
 	animate_screen_enter = true
+	animate_cards_enter = true
 	_clear_ui()
 	TLRScreens.build_telegraph_practice(self, screen_canvas)
 
@@ -2932,6 +2997,7 @@ func _show_telegraph_practice() -> void:
 func _select_practice_pose(pose: String) -> void:
 	practice_pose = pose
 	animate_screen_enter = false
+	animate_cards_enter = false
 	_clear_ui()
 	TLRScreens.build_telegraph_practice(self, screen_canvas)
 
@@ -2941,6 +3007,7 @@ func _show_codex() -> void:
 	if game_state != "hub":
 		game_state = "codex"
 	animate_screen_enter = true
+	animate_cards_enter = true
 	_clear_ui()
 	TLRScreens.build_codex(self, screen_canvas)
 
@@ -2956,6 +3023,7 @@ func _show_settings() -> void:
 	_disable_realtime_combat()
 	game_state = "settings"
 	animate_screen_enter = true
+	animate_cards_enter = true
 	_clear_ui()
 	TLRScreens.build_settings(self, screen_canvas)
 
@@ -3051,16 +3119,22 @@ func _apply_settings() -> void:
 			DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
 		else:
 			DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
-			var res_parts := str(settings.get("resolution", "1600 × 900")).split("×")
-			if res_parts.size() >= 2:
-				var rw := int(res_parts[0].strip_edges())
-				var rh := int(res_parts[1].strip_edges())
-				if rw >= 800 and rh >= 600:
-					DisplayServer.window_set_size(Vector2i(rw, rh))
-					var scr_size := DisplayServer.screen_get_usable_rect().size
-					var scr_pos := DisplayServer.screen_get_usable_rect().position
-					if scr_size.x >= rw and scr_size.y >= rh:
-						DisplayServer.window_set_position(scr_pos + (scr_size - Vector2i(rw, rh)) / 2)
+			var res_str := str(settings.get("resolution", "Auto"))
+			var scr_rect := DisplayServer.screen_get_usable_rect()
+			if res_str == "Auto":
+				var auto_w := maxi(1280, int(roundf(float(scr_rect.size.x) * 0.85)))
+				var auto_h := maxi(720, int(roundf(float(scr_rect.size.y) * 0.85)))
+				DisplayServer.window_set_size(Vector2i(auto_w, auto_h))
+				DisplayServer.window_set_position(scr_rect.position + (scr_rect.size - Vector2i(auto_w, auto_h)) / 2)
+			else:
+				var res_parts := res_str.split("×")
+				if res_parts.size() >= 2:
+					var rw := int(res_parts[0].strip_edges())
+					var rh := int(res_parts[1].strip_edges())
+					if rw >= 800 and rh >= 600:
+						DisplayServer.window_set_size(Vector2i(rw, rh))
+						if scr_rect.size.x >= rw and scr_rect.size.y >= rh:
+							DisplayServer.window_set_position(scr_rect.position + (scr_rect.size - Vector2i(rw, rh)) / 2)
 	call_deferred("_layout_ui")
 	call_deferred("_update_scene_framing")
 
